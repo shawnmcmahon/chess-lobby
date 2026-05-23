@@ -1,41 +1,57 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
-import { useMutation } from "convex/react";
-import { useEffect, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { api } from "../../../../convex/_generated/api";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link, Navigate } from "react-router-dom";
 
 export function Login() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signIn } = useAuthActions();
-  const syncProfile = useMutation(api.users.syncProfile);
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      void syncProfile().then(() => navigate("/dashboard"));
+      setPending(false);
     }
-  }, [isLoading, isAuthenticated, syncProfile, navigate]);
+  }, [isLoading, isAuthenticated]);
 
   if (!isLoading && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  async function onEmailSubmit(e: FormEvent) {
+  async function onEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
     setError(null);
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    formData.set("flow", flow);
+
     try {
-      await signIn("password", { email, password, flow });
-      await syncProfile();
-      navigate("/dashboard");
+      const result = await signIn("password", formData);
+      if (result.redirect) {
+        return;
+      }
+      if (!result.signingIn) {
+        setError(
+          flow === "signUp"
+            ? "Could not create account. If you already signed up, use Sign in instead."
+            : "Sign in failed. Check your email and password.",
+        );
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed");
+      const message = err instanceof Error ? err.message : "Sign in failed";
+      if (message.includes("already exists")) {
+        setError("An account with this email already exists. Use Sign in instead.");
+        setFlow("signIn");
+      } else if (message.includes("Invalid password")) {
+        setError("Incorrect password. Try again or create a new account with a different email.");
+      } else {
+        setError(message);
+      }
     } finally {
       setPending(false);
     }
@@ -48,44 +64,66 @@ export function Login() {
       <button
         type="button"
         disabled={pending}
-        onClick={() => void signIn("google")}
-        className="w-full rounded-lg border border-stone-600 py-2 hover:border-amber-600"
+        onClick={async () => {
+          setPending(true);
+          setError(null);
+          try {
+            await signIn("google");
+          } catch (err) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Google sign-in failed. Set AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET on Convex.",
+            );
+          } finally {
+            setPending(false);
+          }
+        }}
+        className="w-full rounded-lg border border-stone-600 py-2 hover:border-amber-600 disabled:opacity-50"
       >
         Continue with Google
       </button>
 
       <div className="text-center text-xs text-stone-500">or</div>
 
-      <form onSubmit={(e) => void onEmailSubmit(e)} className="space-y-3">
+      <form ref={formRef} onSubmit={(e) => void onEmailSubmit(e)} className="space-y-3">
         <input
+          name="email"
           type="email"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
           placeholder="Email"
           className="w-full rounded border border-stone-700 bg-stone-900 px-3 py-2 outline-none focus:border-amber-600"
         />
         <input
+          name="password"
           type="password"
           required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          autoComplete={flow === "signUp" ? "new-password" : "current-password"}
+          placeholder="Password (min 8 characters)"
+          minLength={8}
           className="w-full rounded border border-stone-700 bg-stone-900 px-3 py-2 outline-none focus:border-amber-600"
         />
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || isLoading}
           className="w-full rounded-lg bg-amber-600 py-2 font-medium text-stone-950 hover:bg-amber-500 disabled:opacity-50"
         >
-          {flow === "signIn" ? "Sign in" : "Create account"}
+          {pending || isLoading
+            ? "Signing in…"
+            : flow === "signIn"
+              ? "Sign in"
+              : "Create account"}
         </button>
       </form>
 
       <button
         type="button"
         className="text-sm text-stone-400 hover:text-amber-300"
-        onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
+        onClick={() => {
+          setFlow(flow === "signIn" ? "signUp" : "signIn");
+          setError(null);
+        }}
       >
         {flow === "signIn"
           ? "Need an account? Sign up"

@@ -1,0 +1,33 @@
+---
+description: Push feature branches and open GitHub PRs after completed work
+alwaysApply: true
+---
+
+# Auto PR workflow
+
+When feature or fix work is **complete** (user confirms, or asks to commit/PR/save work):
+
+1. **Branch** — Never commit directly to `main`. Create or use a branch named `feature/...` or `fix/...`.
+2. **Commit** — Only when the user asked to commit, or as part of an explicit "commit and PR" request.
+3. **Push** — `git push -u origin HEAD` if the branch is not on the remote yet.
+4. **Pull request** — If no open PR exists for this branch, create one with `gh pr create`:
+   - Title: concise summary of the change
+   - Body: Summary (1–3 bullets) + Test plan checklist
+   - Base branch: `main`
+5. **Return the PR URL** to the user.
+
+## Skip when
+
+- User says not to commit, push, or open a PR
+- There are no changes to commit
+- An open PR already exists for the branch (link to it instead of creating a duplicate)
+
+## Close / merge (only when asked)
+
+- Close: `gh pr close <number>`
+- Merge: `gh pr merge <number>` (prefer squash unless user specifies otherwise)
+- Never force-push to `main`
+
+## GitHub Action backup
+
+Pushes to non-`main` branches also trigger `.github/workflows/auto-pr.yml`, which opens a PR if one does not exist.

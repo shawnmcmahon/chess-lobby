@@ -16,9 +16,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: npx convex codegen
-        env:
-          CONVEX_DEPLOYMENT: ${{ secrets.CONVEX_DEPLOYMENT }}
       - run: npm run build:web
         env:
           VITE_CONVEX_URL: https://placeholder.convex.cloud

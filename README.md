@@ -77,30 +77,30 @@ This creates `.env.local` with `CONVEX_URL`. Copy to the web app:
 VITE_CONVEX_URL=<same as CONVEX_URL from root .env.local>
 ```
 
-Configure Convex Auth (in the [Convex dashboard](https://dashboard.convex.dev) or CLI):
+Configure Convex Auth (required for sign-in):
 
 ```bash
-npx convex env set SITE_URL http://localhost:5173
-node generateKeys.mjs   # paste JWT_PRIVATE_KEY and JWKS into dashboard
-npx convex env set AUTH_GOOGLE_ID <google-oauth-client-id>
-npx convex env set AUTH_GOOGLE_SECRET <google-oauth-client-secret>
+node scripts/setup-auth.mjs
+npx convex env set AUTH_GOOGLE_ID <google-oauth-client-id>      # optional
+npx convex env set AUTH_GOOGLE_SECRET <google-oauth-client-secret> # optional
 ```
 
-### 3. Chess engine (optional for vs-computer)
+Google OAuth redirect URI: `https://<deployment>.convex.site/api/auth/callback/google`
+
+### 3. Play vs computer
+
+**Works out of the box** — Convex runs a built-in chess engine (minimax via chess.js) after your move. No local engine required for dev.
+
+For **Stockfish-level strength**, deploy the .NET engine service publicly and point Convex at it:
 
 ```bash
 cd apps/chess-engine
-dotnet run
-```
-
-Set on Convex:
-
-```bash
-npx convex env set ENGINE_API_URL http://localhost:5000
+dotnet run   # requires stockfish on PATH, or use docker compose up chess-engine
+npx convex env set ENGINE_API_URL https://your-public-engine-url
 npx convex env set ENGINE_API_KEY dev-secret
 ```
 
-Use the same key in `apps/chess-engine/appsettings.json` as `ENGINE_API_KEY`.
+`ENGINE_API_URL=http://localhost:5000` does **not** work with cloud Convex — localhost is only reachable on your PC, not from Convex servers.
 
 ### 4. Web app
 
