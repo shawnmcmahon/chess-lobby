@@ -3,6 +3,7 @@ import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { PresenceProvider } from "@/components/PresenceProvider";
 import { ThemeSwitcher } from "@/theme/ThemeSwitcher";
+import { DefaultLayout } from "@/theme/default/DefaultLayout";
 import { useTheme } from "@/theme/themeContext";
 
 export function Layout() {
@@ -54,12 +55,11 @@ function SignButton({
   isAuthenticated: boolean;
   isLoading: boolean;
   signOut: () => unknown;
-  variant: "default" | "bento" | "brutal" | "atelier";
+  variant: "bento" | "brutal" | "atelier";
 }) {
   if (isLoading) return null;
   if (isAuthenticated) {
     const classes = {
-      default: "rounded-md border border-stone-700 px-3 py-1 hover:border-amber-600",
       bento: "bento-btn bento-btn--ghost",
       brutal: "brutal-btn brutal-btn--ghost",
       atelier: "atelier-btn atelier-btn--ghost",
@@ -71,7 +71,6 @@ function SignButton({
     );
   }
   const classes = {
-    default: "rounded-md bg-amber-600 px-3 py-1 font-medium text-stone-950 hover:bg-amber-500",
     bento: "bento-btn",
     brutal: "brutal-btn",
     atelier: "atelier-btn",
@@ -80,43 +79,6 @@ function SignButton({
     <Link to="/login" className={classes[variant]}>
       Sign in
     </Link>
-  );
-}
-
-function DefaultLayout() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signOut } = useAuthActions();
-  return (
-    <PresenceProvider>
-      <div className="min-h-screen bg-[#1a1a1f] text-stone-100">
-        <header className="border-b border-stone-800 bg-[#121218]">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link
-              to={isAuthenticated ? "/dashboard" : "/"}
-              className="text-lg font-semibold tracking-tight text-amber-400"
-            >
-              Chess Lobby
-            </Link>
-            <nav className="flex items-center gap-4 text-sm">
-              <NavLinks
-                isAuthenticated={isAuthenticated}
-                className="hover:text-amber-300"
-              />
-              <SignButton
-                isAuthenticated={isAuthenticated}
-                isLoading={isLoading}
-                signOut={signOut}
-                variant="default"
-              />
-              <ThemeSwitcher />
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-6xl px-4 py-6">
-          <Outlet />
-        </main>
-      </div>
-    </PresenceProvider>
   );
 }
 

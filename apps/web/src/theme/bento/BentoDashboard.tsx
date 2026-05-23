@@ -1,4 +1,8 @@
+import { useQuery } from "convex/react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../../../../convex/_generated/api";
+import { ChessBoardView } from "@/components/ChessBoardView";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -332,7 +336,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
             Challenges <em>for you</em>
           </h3>
           <ul className="mt-4 space-y-2">
-            {ctrl.pendingInvites.map(({ invite, fromUser }) => (
+            {ctrl.pendingInvites.map(({ invite, fromUser, game }) => (
               <li
                 key={invite._id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-2"
@@ -362,7 +366,93 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                   >
                     Decline
                   </button>
+                  {game && (
+                    <Link
+                      to={`/game/${game._id}`}
+                      className="bento-mono text-[0.72rem] opacity-70 hover:underline"
+                      style={{ alignSelf: "center" }}
+                    >
+                      View game
+                    </Link>
+                  )}
                 </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ctrl.correspondenceGames && ctrl.correspondenceGames.length > 0 && (
+        <section
+          className="bento-tile col-span-12 lg:col-span-6"
+          style={{ padding: 24, animationDelay: "360ms" }}
+        >
+          <div className="bento-tile__eyebrow">Correspondence</div>
+          <h3
+            className="bento-tile__title"
+            style={{ fontSize: "1.45rem", marginTop: 4 }}
+          >
+            <em>Letters in play</em>
+          </h3>
+          <ul className="mt-4 space-y-2">
+            {ctrl.correspondenceGames.map((g) => {
+              const isMyTurn =
+                g.status === "active" &&
+                ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
+                  (g.currentTurn === "black" && g.blackUserId === u._id));
+              return (
+                <li key={g._id}>
+                  <Link
+                    to={`/game/${g._id}`}
+                    className="flex items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
+                    style={{
+                      background: isMyTurn
+                        ? "rgba(245, 176, 66, 0.12)"
+                        : "rgba(14,14,16,0.04)",
+                      border: isMyTurn ? "1px solid rgba(245, 176, 66, 0.35)" : undefined,
+                    }}
+                  >
+                    <span>
+                      <span className="capitalize">{g.status}</span>
+                      {g.daysPerTurn ? ` · ${g.daysPerTurn}d/turn` : ""} ·{" "}
+                      {ctrl.formatCorrespondenceDeadline(g)}
+                    </span>
+                    {isMyTurn && (
+                      <span style={{ color: "var(--bento-jade)" }}>your turn →</span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {ctrl.liveActiveGames && ctrl.liveActiveGames.length > 0 && (
+        <section
+          className="bento-tile col-span-12 lg:col-span-6"
+          style={{ padding: 24, animationDelay: "380ms" }}
+        >
+          <div className="bento-tile__eyebrow">Live games</div>
+          <h3
+            className="bento-tile__title"
+            style={{ fontSize: "1.45rem", marginTop: 4 }}
+          >
+            <em>On the clock</em>
+          </h3>
+          <ul className="mt-4 space-y-2">
+            {ctrl.liveActiveGames.map((g) => (
+              <li key={g._id}>
+                <Link
+                  to={`/game/${g._id}`}
+                  className="flex items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
+                  style={{ background: "rgba(14,14,16,0.04)" }}
+                >
+                  <span>
+                    {g.timeControlCategory ?? "live"} · {g.status}
+                  </span>
+                  <span className="opacity-60">→</span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -412,6 +502,19 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
           background: "var(--bento-paper)",
         }}
       >
+        <BentoLiveSpectate />
+      </section>
+    </div>
+  );
+}
+
+function BentoLiveSpectate() {
+  const liveGames = useQuery(api.games.listActiveForSpectate, { limit: 20 });
+  const [index, setIndex] = useState(0);
+
+  if (!liveGames || liveGames.length === 0) {
+    return (
+      <>
         <div className="bento-tile__eyebrow">Live · spectate</div>
         <h3
           className="bento-tile__title"
@@ -419,33 +522,69 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
         >
           <em>Boards in flight</em>
         </h3>
-        <p className="bento-mono mt-3 text-[0.72rem] opacity-65">
-          {ctrl.liveActiveGames?.length ?? 0} live ·{" "}
-          {ctrl.correspondenceGames?.length ?? 0} correspondence
+        <p className="bento-mono mt-3 text-[0.72rem] opacity-60">
+          No live games to spectate right now.
         </p>
-        <ul className="mt-3 space-y-2">
-          {(ctrl.activeGames ?? []).slice(0, 4).map((g) => (
-            <li key={g._id}>
-              <Link
-                to={`/game/${g._id}`}
-                className="flex items-center justify-between rounded-xl px-3 py-2 bento-mono text-[0.78rem] hover:bg-stone-100"
-                style={{ background: "rgba(14,14,16,0.03)" }}
-              >
-                <span>
-                  {g.timeControlCategory ?? g.playType ?? "live"} · {g.status}
-                </span>
-                <span className="opacity-60">→</span>
-              </Link>
-            </li>
-          ))}
-          {(ctrl.activeGames ?? []).length === 0 && (
-            <li className="bento-mono text-[0.72rem] opacity-60">
-              No active games — start one above
-            </li>
-          )}
-        </ul>
-      </section>
-    </div>
+      </>
+    );
+  }
+
+  const current = liveGames[index % liveGames.length];
+
+  return (
+    <>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <div className="bento-tile__eyebrow">Live · spectate</div>
+          <h3
+            className="bento-tile__title"
+            style={{ fontSize: "1.45rem", marginTop: 4 }}
+          >
+            <em>Boards in flight</em>
+          </h3>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() =>
+              setIndex((i) => (i - 1 + liveGames.length) % liveGames.length)
+            }
+            className="bento-mono rounded-lg px-2 py-0.5 text-xs"
+            style={{ border: "1px solid rgba(14,14,16,0.12)" }}
+          >
+            ←
+          </button>
+          <span className="bento-mono px-2 text-[0.68rem] opacity-60">
+            {(index % liveGames.length) + 1} / {liveGames.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => (i + 1) % liveGames.length)}
+            className="bento-mono rounded-lg px-2 py-0.5 text-xs"
+            style={{ border: "1px solid rgba(14,14,16,0.12)" }}
+          >
+            →
+          </button>
+        </div>
+      </div>
+      <Link
+        to={`/game/${current.game._id}?spectate=1`}
+        className="mt-4 block rounded-2xl p-3 hover:bg-stone-100"
+        style={{ background: "rgba(14,14,16,0.03)", border: "1px solid rgba(14,14,16,0.06)" }}
+      >
+        <p className="bento-mono text-sm">
+          <span className="font-medium">{current.whiteName}</span>
+          <span className="opacity-50"> vs </span>
+          <span className="font-medium">{current.blackName}</span>
+        </p>
+        <div className="pointer-events-none origin-top-left scale-75">
+          <ChessBoardView fen={current.game.fen} readOnly allowDrawingArrows />
+        </div>
+        <p className="bento-mono mt-1 text-[0.68rem] capitalize opacity-60">
+          {current.game.timeControlCategory ?? "live"} · click to spectate
+        </p>
+      </Link>
+    </>
   );
 }
 

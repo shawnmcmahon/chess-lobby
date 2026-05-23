@@ -90,6 +90,14 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
               ? ` · you play ${ctrl.myColor}`
               : ""}
         </p>
+        {game.endReason?.startsWith("engine_error:") && (
+          <p
+            className="atelier-smallcaps mt-2"
+            style={{ color: "var(--atelier-oxblood)" }}
+          >
+            Engine error · {game.endReason.replace(/^engine_error:\s*/, "")}
+          </p>
+        )}
         <div className="mt-3">
           <Link to="/dashboard" className="atelier-btn atelier-btn--ghost">
             ← Salon

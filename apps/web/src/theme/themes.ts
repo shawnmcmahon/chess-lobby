@@ -1,8 +1,8 @@
 export const THEMES = [
   {
     id: "default",
-    label: "Default",
-    tagline: "Midnight amber — the original",
+    label: "Ember Observatory",
+    tagline: "Cinematic nocturnal chess dome",
   },
   {
     id: "bento",

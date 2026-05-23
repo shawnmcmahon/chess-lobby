@@ -1,4 +1,8 @@
+import { useQuery } from "convex/react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../../../../convex/_generated/api";
+import { ChessBoardView } from "@/components/ChessBoardView";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -98,7 +102,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             {ctrl.pendingInvites.length} CHALLENGER{ctrl.pendingInvites.length === 1 ? "" : "S"} WAIT
           </h2>
           <ul className="mt-4 space-y-3">
-            {ctrl.pendingInvites.map(({ invite, fromUser }) => (
+            {ctrl.pendingInvites.map(({ invite, fromUser, game }) => (
               <li
                 key={invite._id}
                 className="brutal-card brutal-card--paper flex flex-wrap items-center justify-between gap-2"
@@ -128,7 +132,95 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   >
                     ✗ NOPE
                   </button>
+                  {game && (
+                    <Link
+                      to={`/game/${game._id}`}
+                      className="brutal-display hover:underline"
+                      style={{ fontSize: "0.8rem", alignSelf: "center" }}
+                    >
+                      VIEW GAME
+                    </Link>
+                  )}
                 </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ctrl.correspondenceGames && ctrl.correspondenceGames.length > 0 && (
+        <section
+          className="brutal-card brutal-card--paper relative"
+          style={{ padding: 22 }}
+          data-tilt="left"
+        >
+          <span className="brutal-sticker" style={{ top: -16, left: 24 }} data-tilt="right">
+            POSTAL
+          </span>
+          <h2 className="brutal-display" style={{ fontSize: "1.4rem" }}>
+            CORRESPONDENCE GAMES
+          </h2>
+          <ul className="mt-4 space-y-2">
+            {ctrl.correspondenceGames.map((g) => {
+              const isMyTurn =
+                g.status === "active" &&
+                ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
+                  (g.currentTurn === "black" && g.blackUserId === u._id));
+              return (
+                <li key={g._id}>
+                  <Link
+                    to={`/game/${g._id}`}
+                    className="brutal-card flex items-center justify-between gap-2"
+                    style={{
+                      padding: 12,
+                      boxShadow: "4px 4px 0 var(--brutal-ink)",
+                      background: isMyTurn ? "var(--brutal-yellow)" : undefined,
+                    }}
+                  >
+                    <span className="brutal-chunk text-[0.95rem]">
+                      <span className="capitalize">{g.status}</span>
+                      {g.daysPerTurn ? ` · ${g.daysPerTurn}D/TURN` : ""} ·{" "}
+                      {ctrl.formatCorrespondenceDeadline(g).toUpperCase()}
+                    </span>
+                    {isMyTurn && (
+                      <span className="brutal-display" style={{ fontSize: "0.8rem" }}>
+                        YOUR TURN ▶
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {ctrl.liveActiveGames && ctrl.liveActiveGames.length > 0 && (
+        <section
+          className="brutal-card brutal-card--blue relative"
+          style={{ padding: 22 }}
+          data-tilt="right"
+        >
+          <span className="brutal-sticker brutal-sticker--magenta" style={{ top: -16, right: 24 }} data-tilt="left">
+            LIVE
+          </span>
+          <h2 className="brutal-display" style={{ fontSize: "1.4rem" }}>
+            LIVE GAMES
+          </h2>
+          <ul className="mt-4 space-y-2">
+            {ctrl.liveActiveGames.map((g) => (
+              <li key={g._id}>
+                <Link
+                  to={`/game/${g._id}`}
+                  className="brutal-card brutal-card--paper flex items-center justify-between"
+                  style={{ padding: 12, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
+                >
+                  <span className="brutal-display" style={{ fontSize: "0.95rem" }}>
+                    {(g.timeControlCategory ?? "LIVE").toUpperCase()} ·{" "}
+                    {g.status.toUpperCase()}
+                  </span>
+                  <span className="brutal-display text-[0.85rem]">→</span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -392,33 +484,81 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
         </section>
       )}
 
-      {ctrl.activeGames && ctrl.activeGames.length > 0 && (
-        <section className="brutal-card relative" style={{ padding: 22 }}>
-          <span className="brutal-tape" style={{ position: "absolute", top: -14, right: 32 }}>
-            ★ NEWSDESK
-          </span>
-          <h2 className="brutal-display" style={{ fontSize: "1.3rem" }}>
-            ALL YOUR GAMES
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-            {ctrl.activeGames.map((g) => (
-              <Link
-                key={g._id}
-                to={`/game/${g._id}`}
-                className="brutal-card brutal-card--paper flex items-center justify-between"
-                style={{ padding: 12, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
-              >
-                <span className="brutal-chunk text-[0.95rem]">
-                  {g.timeControlCategory ?? g.playType ?? "live"} ·{" "}
-                  <span style={{ color: "var(--brutal-magenta)" }}>{g.status}</span>
-                </span>
-                <span className="brutal-display text-[0.85rem]">→</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="brutal-card relative" style={{ padding: 22 }}>
+        <span className="brutal-tape" style={{ position: "absolute", top: -14, right: 32 }}>
+          ★ SPECTATE
+        </span>
+        <BrutalLiveSpectate />
+      </section>
     </div>
+  );
+}
+
+function BrutalLiveSpectate() {
+  const liveGames = useQuery(api.games.listActiveForSpectate, { limit: 20 });
+  const [index, setIndex] = useState(0);
+
+  if (!liveGames || liveGames.length === 0) {
+    return (
+      <>
+        <h2 className="brutal-display" style={{ fontSize: "1.3rem" }}>
+          LIVE SPECTATOR FEED
+        </h2>
+        <p className="brutal-chunk mt-3">NO LIVE GAMES TO WATCH RIGHT NOW.</p>
+      </>
+    );
+  }
+
+  const current = liveGames[index % liveGames.length];
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="brutal-display" style={{ fontSize: "1.3rem" }}>
+          LIVE SPECTATOR FEED
+        </h2>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() =>
+              setIndex((i) => (i - 1 + liveGames.length) % liveGames.length)
+            }
+            className="brutal-btn brutal-btn--ink"
+            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+          >
+            ←
+          </button>
+          <span className="brutal-display px-2" style={{ fontSize: "0.75rem" }}>
+            {(index % liveGames.length) + 1}/{liveGames.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => (i + 1) % liveGames.length)}
+            className="brutal-btn brutal-btn--ink"
+            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+          >
+            →
+          </button>
+        </div>
+      </div>
+      <Link
+        to={`/game/${current.game._id}?spectate=1`}
+        className="brutal-card brutal-card--yellow mt-4 block"
+        style={{ padding: 14, boxShadow: "6px 6px 0 var(--brutal-ink)" }}
+      >
+        <p className="brutal-display" style={{ fontSize: "1rem" }}>
+          {current.whiteName.toUpperCase()}{" "}
+          <span style={{ color: "var(--brutal-magenta)" }}>VS</span>{" "}
+          {current.blackName.toUpperCase()}
+        </p>
+        <div className="pointer-events-none origin-top-left scale-75">
+          <ChessBoardView fen={current.game.fen} readOnly allowDrawingArrows />
+        </div>
+        <p className="brutal-chunk mt-1 text-[0.85rem] capitalize">
+          {(current.game.timeControlCategory ?? "live").toUpperCase()} · CLICK TO WATCH
+        </p>
+      </Link>
+    </>
   );
 }
 

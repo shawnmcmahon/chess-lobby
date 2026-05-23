@@ -1,8 +1,21 @@
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
+import { useTheme } from "@/theme/themeContext";
+import {
+  AtelierProfile,
+  type AtelierProfileStat,
+} from "@/theme/atelier/AtelierProfile";
+import {
+  BentoProfile,
+  type BentoGameHistoryRow,
+} from "@/theme/bento/BentoProfile";
+import {
+  BrutalProfile,
+  type BrutalProfileGameRow,
+} from "@/theme/brutal/BrutalProfile";
+import { DefaultProfile } from "@/theme/default/DefaultProfile";
 
 const CATEGORIES = [
   "bullet",
@@ -15,16 +28,20 @@ const CATEGORIES = [
 function gameResult(
   game: Doc<"games">,
   userId: Id<"users">,
-): { label: string; className: string } {
+): { label: string; className: string; tone: BentoGameHistoryRow["resultTone"] } {
   const isWhite = game.whiteUserId === userId;
   const isBlack = game.blackUserId === userId;
-  if (!isWhite && !isBlack) return { label: "—", className: "text-stone-400" };
-  if (!game.winner) return { label: "Draw", className: "text-stone-300" };
+  if (!isWhite && !isBlack) {
+    return { label: "—", className: "text-stone-400", tone: "neutral" };
+  }
+  if (!game.winner) {
+    return { label: "Draw", className: "text-stone-300", tone: "draw" };
+  }
   const won =
     (game.winner === "white" && isWhite) || (game.winner === "black" && isBlack);
   return won
-    ? { label: "Win", className: "text-green-400" }
-    : { label: "Loss", className: "text-red-400" };
+    ? { label: "Win", className: "text-green-400", tone: "win" }
+    : { label: "Loss", className: "text-red-400", tone: "loss" };
 }
 
 function opponentName(game: Doc<"games">, userId: Id<"users">): string {
@@ -46,6 +63,7 @@ export function Profile() {
     user ? {} : "skip",
     { initialNumItems: 10 },
   );
+  const { theme } = useTheme();
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [saved, setSaved] = useState(false);
@@ -64,114 +82,157 @@ export function Profile() {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  const gameHistory = useMemo((): BentoGameHistoryRow[] => {
+    if (!user) return [];
+    return finishedGames.map((game) => {
+      const result = gameResult(game, user._id);
+      return {
+        gameId: game._id,
+        opponent: opponentName(game, user._id),
+        resultLabel: result.label,
+        resultTone: result.tone,
+        category: game.timeControlCategory ?? "—",
+        date: new Date(game.updatedAt).toLocaleDateString(),
+      };
+    });
+  }, [finishedGames, user]);
+
+  const brutalGameRows = useMemo((): BrutalProfileGameRow[] => {
+    return gameHistory.map((row) => ({
+      gameId: row.gameId,
+      opponent: row.opponent,
+      resultLabel: row.resultLabel,
+      resultTone: row.resultTone,
+      category: row.category,
+      date: row.date,
+    }));
+  }, [gameHistory]);
+
   if (!user) {
-    return <p className="text-stone-400">Loading profile…</p>;
+    if (theme === "atelier") {
+      return (
+        <p className="atelier-smallcaps text-center mt-12" style={{ color: "var(--atelier-brass)" }}>
+          Opening the ledger…
+        </p>
+      );
+    }
+    if (theme === "bento") {
+      return (
+        <p className="bento-mono opacity-60" style={{ marginTop: 32 }}>
+          Loading profile…
+        </p>
+      );
+    }
+    if (theme === "brutal") {
+      return (
+        <p className="brutal-display" style={{ fontSize: "1.4rem", marginTop: 32 }}>
+          LOADING PROFILE…
+        </p>
+      );
+    }
+    return <p className="default-mono text-[var(--default-mist)]">Loading profile…</p>;
   }
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="rounded-xl border border-stone-800 bg-[#121218] p-6">
-        <h1 className="text-2xl font-semibold text-amber-400">Your profile</h1>
-        <p className="text-sm text-stone-500">Rating: {user.rating ?? 1200}</p>
-        <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3">
-          <input
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full rounded border border-stone-700 bg-stone-900 px-3 py-2"
-          />
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            className="w-full rounded border border-stone-700 bg-stone-900 px-3 py-2"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-amber-600 px-4 py-2 font-medium text-stone-950 hover:bg-amber-500"
-          >
-            Save changes
-          </button>
-        </form>
-        {saved && <p className="text-sm text-green-400">Profile saved.</p>}
-      </div>
+  const atelierStats: AtelierProfileStat[] | null = stats
+    ? CATEGORIES.map((cat) => ({
+        category: cat,
+        wins: stats[cat].wins,
+        losses: stats[cat].losses,
+        draws: stats[cat].draws,
+      }))
+    : null;
 
-      {stats && (
-        <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
-          <h2 className="mb-3 font-medium text-amber-400">Stats by category</h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((cat) => {
-              const s = stats[cat];
-              return (
-                <div key={cat} className="rounded bg-stone-900/60 px-3 py-2 text-sm capitalize">
-                  <div className="font-medium text-stone-300">{cat}</div>
-                  <div className="text-stone-400">
-                    {s.wins}W / {s.losses}L / {s.draws}D
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-sm text-stone-500">
-            Total: {stats.totalWins}W / {stats.totalLosses}L / {stats.totalDraws}D
-          </p>
-        </section>
-      )}
+  const brutalStats = stats
+    ? {
+        byCategory: {
+          bullet: stats.bullet,
+          blitz: stats.blitz,
+          rapid: stats.rapid,
+          classical: stats.classical,
+          correspondence: stats.correspondence,
+        },
+        totalWins: stats.totalWins,
+        totalLosses: stats.totalLosses,
+        totalDraws: stats.totalDraws,
+      }
+    : undefined;
 
-      <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
-        <h2 className="mb-3 font-medium text-amber-400">Game history</h2>
-        {finishedGames.length === 0 ? (
-          <p className="text-sm text-stone-500">No finished games yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-stone-400">
-                <tr>
-                  <th className="px-2 py-1 text-left">Opponent</th>
-                  <th className="px-2 py-1 text-left">Result</th>
-                  <th className="px-2 py-1 text-left">Category</th>
-                  <th className="px-2 py-1 text-left">Date</th>
-                  <th className="px-2 py-1 text-left" />
-                </tr>
-              </thead>
-              <tbody>
-                {finishedGames.map((game) => {
-                  const result = gameResult(game, user._id);
-                  return (
-                    <tr key={game._id} className="border-t border-stone-800">
-                      <td className="px-2 py-2">{opponentName(game, user._id)}</td>
-                      <td className={`px-2 py-2 ${result.className}`}>{result.label}</td>
-                      <td className="px-2 py-2 capitalize text-stone-400">
-                        {game.timeControlCategory ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-stone-500">
-                        {new Date(game.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-2 py-2">
-                        <Link
-                          to={`/game/${game._id}/review`}
-                          className="text-amber-400 hover:underline"
-                        >
-                          Review
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {status === "CanLoadMore" && (
-          <button
-            type="button"
-            onClick={() => loadMore(10)}
-            className="mt-3 rounded border border-stone-700 px-3 py-1 text-sm hover:border-amber-600"
-          >
-            Load more
-          </button>
-        )}
-      </section>
-    </div>
-  );
+  switch (theme) {
+    case "atelier":
+      return (
+        <AtelierProfile
+          loading={false}
+          rating={user.rating ?? 1200}
+          displayName={displayName}
+          onDisplayNameChange={setDisplayName}
+          bio={bio}
+          onBioChange={setBio}
+          saved={saved}
+          onSubmit={onSubmit}
+          stats={atelierStats}
+          totalWins={stats?.totalWins ?? 0}
+          totalLosses={stats?.totalLosses ?? 0}
+          totalDraws={stats?.totalDraws ?? 0}
+          gameRows={gameHistory.map((row) => ({
+            id: row.gameId,
+            opponent: row.opponent,
+            resultLabel: row.resultLabel,
+            resultTone: row.resultTone,
+            category: row.category,
+            date: row.date,
+            reviewHref: `/game/${row.gameId}/review`,
+          }))}
+          canLoadMore={status === "CanLoadMore"}
+          onLoadMore={() => loadMore(10)}
+        />
+      );
+    case "bento":
+      return (
+        <BentoProfile
+          user={user}
+          stats={stats ?? undefined}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          bio={bio}
+          setBio={setBio}
+          onSubmit={onSubmit}
+          saved={saved}
+          gameHistory={gameHistory}
+          canLoadMore={status === "CanLoadMore"}
+          onLoadMore={() => loadMore(10)}
+        />
+      );
+    case "brutal":
+      return (
+        <BrutalProfile
+          user={user}
+          stats={brutalStats}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          bio={bio}
+          setBio={setBio}
+          saved={saved}
+          onSubmit={onSubmit}
+          gameRows={brutalGameRows}
+          canLoadMore={status === "CanLoadMore"}
+          onLoadMore={() => loadMore(10)}
+        />
+      );
+    default:
+      return (
+        <DefaultProfile
+          user={user}
+          stats={stats ?? undefined}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          bio={bio}
+          setBio={setBio}
+          onSubmit={onSubmit}
+          saved={saved}
+          finishedGames={finishedGames}
+          canLoadMore={status === "CanLoadMore"}
+          onLoadMore={() => loadMore(10)}
+        />
+      );
+  }
 }

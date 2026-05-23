@@ -67,6 +67,14 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
           {game.mode.replace(/_/g, " ")}{" "}
           {ctrl.spectate ? "· SPECTATING" : ctrl.myColor ? `· YOU ARE ${ctrl.myColor.toUpperCase()}` : ""}
         </div>
+        {game.endReason?.startsWith("engine_error:") && (
+          <div
+            className="brutal-card brutal-card--magenta mt-4 brutal-display text-center"
+            style={{ padding: 10, fontSize: "0.85rem" }}
+          >
+            ⚠ ENGINE ERROR · {game.endReason.replace(/^engine_error:\s*/, "").toUpperCase()}
+          </div>
+        )}
         <div className="mt-4 flex justify-center">
           <Link to="/dashboard" className="brutal-btn brutal-btn--magenta">
             ← LOBBY

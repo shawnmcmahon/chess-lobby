@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Chessboard, type Arrow } from "react-chessboard";
+import { getBoardSquareColors } from "@/lib/boardTheme";
+import { useTheme } from "@/theme/themeContext";
 
 export type ChessBoardViewProps = {
   fen: string;
@@ -26,6 +28,8 @@ export function ChessBoardView({
   readOnly = false,
   allowDrawingArrows = true,
 }: ChessBoardViewProps) {
+  const { theme } = useTheme();
+  const squareColors = getBoardSquareColors(theme);
   const [internalArrows, setInternalArrows] = useState<Arrow[]>([]);
   const arrows = customArrows ?? internalArrows;
   const setArrows = onArrowsChange ?? setInternalArrows;
@@ -49,6 +53,8 @@ export function ChessBoardView({
           allowDragging: readOnly ? false : allowDragging,
           allowDrawingArrows,
           arrows,
+          darkSquareStyle: squareColors.darkSquareStyle,
+          lightSquareStyle: squareColors.lightSquareStyle,
           onArrowsChange: ({ arrows: next }) => setArrows(next),
           onPieceDrop: onPieceDrop
             ? ({ piece, sourceSquare, targetSquare }) =>

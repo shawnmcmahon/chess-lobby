@@ -1,4 +1,8 @@
+import { useQuery } from "convex/react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../../../../convex/_generated/api";
+import { ChessBoardView } from "@/components/ChessBoardView";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -73,7 +77,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                 {ctrl.pendingInvites.length === 1 ? "" : "s"} at the door.
               </h2>
               <ul className="mt-4 space-y-2">
-                {ctrl.pendingInvites.map(({ invite, fromUser }) => (
+                {ctrl.pendingInvites.map(({ invite, fromUser, game }) => (
                   <li
                     key={invite._id}
                     className="flex flex-wrap items-center justify-between gap-3 py-2"
@@ -107,12 +111,118 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                       >
                         Decline
                       </button>
+                      {game && (
+                        <Link
+                          to={`/game/${game._id}`}
+                          className="atelier-smallcaps hover:underline"
+                          style={{ color: "var(--atelier-brass)", alignSelf: "center" }}
+                        >
+                          View game
+                        </Link>
+                      )}
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
+        </section>
+      )}
+
+      {ctrl.correspondenceGames && ctrl.correspondenceGames.length > 0 && (
+        <section className="atelier-panel atelier-panel--parchment relative">
+          <Corners />
+          <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+            Correspondence
+          </div>
+          <h2
+            className="atelier-display"
+            style={{ fontSize: "1.8rem", fontStyle: "italic", marginTop: 4 }}
+          >
+            Letters awaiting reply
+          </h2>
+          <ul className="mt-4 space-y-2">
+            {ctrl.correspondenceGames.map((g) => {
+              const isMyTurn =
+                g.status === "active" &&
+                ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
+                  (g.currentTurn === "black" && g.blackUserId === u._id));
+              return (
+                <li key={g._id}>
+                  <Link
+                    to={`/game/${g._id}`}
+                    className="flex items-center justify-between gap-3 py-2 px-2 rounded-sm"
+                    style={{
+                      borderBottom: "1px solid rgba(11,20,36,0.12)",
+                      background: isMyTurn ? "rgba(123,31,43,0.08)" : undefined,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'Cormorant Garamond', serif",
+                        fontStyle: "italic",
+                        fontSize: "1.05rem",
+                      }}
+                    >
+                      <span className="capitalize">{g.status}</span>
+                      {g.daysPerTurn ? ` · ${g.daysPerTurn}d/turn` : ""} ·{" "}
+                      {ctrl.formatCorrespondenceDeadline(g)}
+                    </span>
+                    {isMyTurn && (
+                      <span
+                        className="atelier-smallcaps"
+                        style={{ color: "var(--atelier-oxblood)" }}
+                      >
+                        your turn
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {ctrl.liveActiveGames && ctrl.liveActiveGames.length > 0 && (
+        <section className="atelier-panel relative">
+          <Corners />
+          <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+            Live play
+          </div>
+          <h2
+            className="atelier-display"
+            style={{ fontSize: "1.8rem", fontStyle: "italic", marginTop: 4 }}
+          >
+            Games on the clock
+          </h2>
+          <ul className="mt-4 space-y-2">
+            {ctrl.liveActiveGames.map((g) => (
+              <li key={g._id}>
+                <Link
+                  to={`/game/${g._id}`}
+                  className="flex items-center justify-between py-2"
+                  style={{ borderBottom: "1px solid rgba(194,162,88,0.16)" }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: "italic",
+                      fontSize: "1.05rem",
+                    }}
+                  >
+                    {g.timeControlCategory ?? "live"} · {g.status}
+                  </span>
+                  <span
+                    className="atelier-smallcaps"
+                    style={{ color: "var(--atelier-brass)" }}
+                  >
+                    enter →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -479,9 +589,126 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
               </ul>
             </section>
           )}
+
+          <section className="atelier-panel relative">
+            <Corners />
+            <AtelierLiveSpectate />
+          </section>
         </aside>
       </div>
     </div>
+  );
+}
+
+function AtelierLiveSpectate() {
+  const liveGames = useQuery(api.games.listActiveForSpectate, { limit: 20 });
+  const [index, setIndex] = useState(0);
+
+  if (!liveGames || liveGames.length === 0) {
+    return (
+      <>
+        <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+          The gallery
+        </div>
+        <h3
+          className="atelier-display"
+          style={{ fontSize: "1.6rem", fontStyle: "italic", marginTop: 4 }}
+        >
+          Observe from the balcony
+        </h3>
+        <p
+          className="mt-3"
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: "italic",
+            color: "var(--atelier-parchment-soft)",
+          }}
+        >
+          No live games to spectate at the moment.
+        </p>
+      </>
+    );
+  }
+
+  const current = liveGames[index % liveGames.length];
+
+  return (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+            The gallery
+          </div>
+          <h3
+            className="atelier-display"
+            style={{ fontSize: "1.6rem", fontStyle: "italic", marginTop: 4 }}
+          >
+            Observe from the balcony
+          </h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setIndex((i) => (i - 1 + liveGames.length) % liveGames.length)
+            }
+            className="atelier-smallcaps"
+            style={{
+              padding: "4px 10px",
+              border: "1px solid var(--atelier-brass-dim)",
+              color: "var(--atelier-brass)",
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          >
+            ←
+          </button>
+          <span className="atelier-mono text-[0.72rem]" style={{ color: "var(--atelier-brass)" }}>
+            {(index % liveGames.length) + 1} / {liveGames.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => (i + 1) % liveGames.length)}
+            className="atelier-smallcaps"
+            style={{
+              padding: "4px 10px",
+              border: "1px solid var(--atelier-brass-dim)",
+              color: "var(--atelier-brass)",
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          >
+            →
+          </button>
+        </div>
+      </div>
+      <Link
+        to={`/game/${current.game._id}?spectate=1`}
+        className="mt-4 block rounded-sm p-3"
+        style={{
+          border: "1px solid rgba(194,162,88,0.2)",
+          background: "rgba(11,20,36,0.35)",
+        }}
+      >
+        <p
+          className="atelier-display"
+          style={{ fontSize: "1.15rem", fontStyle: "italic" }}
+        >
+          {current.whiteName}{" "}
+          <span style={{ color: "var(--atelier-brass)", fontSize: "0.95rem" }}>vs</span>{" "}
+          {current.blackName}
+        </p>
+        <div className="pointer-events-none origin-top-left scale-75">
+          <ChessBoardView fen={current.game.fen} readOnly allowDrawingArrows />
+        </div>
+        <p
+          className="atelier-smallcaps mt-1 capitalize"
+          style={{ color: "var(--atelier-brass-dim)" }}
+        >
+          {current.game.timeControlCategory ?? "live"} · click to spectate
+        </p>
+      </Link>
+    </>
   );
 }
 

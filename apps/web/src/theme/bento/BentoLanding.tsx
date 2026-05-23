@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { LandingHeroBoard } from "@/components/landing/LandingHeroBoard";
+import { LandingLiveStats } from "@/components/landing/LandingLiveStats";
 
 export function BentoLanding({
   isAuthenticated,
@@ -10,11 +12,17 @@ export function BentoLanding({
     <div className="bento-grid" style={{ marginTop: 16 }}>
       <section
         className="bento-tile bento-tile--ink col-span-12 lg:col-span-8"
-        style={{ padding: "44px 40px", minHeight: 360, animationDelay: "0ms" }}
+        style={{ padding: "44px 40px", minHeight: 360, animationDelay: "0ms", position: "relative" }}
       >
         <div className="flex items-start justify-between">
           <div className="bento-pill">No. 064 · Édition 2026</div>
-          <div className="bento-pill">live · 24/7</div>
+          <LandingLiveStats
+            render={({ inPlayCount, loading }) => (
+              <div className="bento-pill">
+                {loading ? "live · …" : `${inPlayCount ?? 0} in play`}
+              </div>
+            )}
+          />
         </div>
         <h1
           className="bento-tile__title"
@@ -56,28 +64,45 @@ export function BentoLanding({
       </section>
 
       <section
-        className="bento-tile bento-tile--bone col-span-12 lg:col-span-4"
-        style={{ padding: 28, minHeight: 360, animationDelay: "80ms" }}
+        className="bento-tile bento-tile--bone col-span-12 lg:col-span-4 bento-photo-tile"
+        style={{ padding: 0, minHeight: 360, animationDelay: "80ms", overflow: "hidden" }}
       >
-        <div className="bento-tile__eyebrow">Today</div>
-        <div className="mt-3 grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <Stat number="14k" label="players online" />
-          <Stat number="3.2m" label="moves / day" />
-          <Stat number="64" label="time controls" />
-          <Stat number="∞" label="rematches" />
+        <img
+          src="/landing/bento-editorial.jpg"
+          alt=""
+          className="bento-photo-tile__img"
+          loading="lazy"
+        />
+        <div className="bento-photo-tile__caption">
+          <div className="bento-tile__eyebrow">Editorial</div>
+          <p
+            style={{
+              fontFamily: "'Fraunces', serif",
+              fontStyle: "italic",
+              fontSize: "1.1rem",
+              lineHeight: 1.3,
+              marginTop: 8,
+            }}
+          >
+            “Every game is a small essay on attention.”
+          </p>
         </div>
-        <div className="bento-divider" />
-        <p
-          style={{
-            fontFamily: "'Fraunces', serif",
-            fontStyle: "italic",
-            fontSize: "1.1rem",
-            lineHeight: 1.3,
-          }}
-        >
-          “Every game is a small essay on attention.”
-        </p>
-        <div className="bento-mono mt-2 text-[0.7rem] opacity-60">— editor's note</div>
+      </section>
+
+      <section
+        id="features"
+        className="bento-tile bento-tile--paper col-span-12"
+        style={{ padding: 20, animationDelay: "120ms" }}
+      >
+        <div className="grid gap-4 lg:grid-cols-[1fr_280px] lg:items-center">
+          <div>
+            <div className="bento-tile__eyebrow">Live position</div>
+            <p className="bento-mono mt-2 text-[0.72rem] opacity-70">
+              Scholar&apos;s Mate sequence — cycles on the landing dome.
+            </p>
+          </div>
+          <LandingHeroBoard className="max-w-[240px] mx-auto" intervalMs={2600} />
+        </div>
       </section>
 
       <FeatureTile
@@ -110,8 +135,29 @@ export function BentoLanding({
         variant="ink"
         eyebrow="04"
         title={<>Stockfish<br />sparring</>}
-        text="Twenty levels. Honest evaluation. Annotated review."
+        text="Eleven cadences. Twenty engine levels. Post-game analysis."
       />
+
+      <section
+        className="bento-tile bento-tile--jade col-span-12 text-center"
+        style={{ padding: "36px 28px", animationDelay: "480ms" }}
+      >
+        <h2 className="bento-tile__title" style={{ fontSize: "2rem" }}>
+          The tiles are set. <em>Take a seat.</em>
+        </h2>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/login"}
+            className="bento-btn"
+            style={{ background: "var(--bento-paper)", color: "var(--bento-jade)" }}
+          >
+            {isAuthenticated ? "Enter dashboard" : "Sign in to play"}
+          </Link>
+          <Link to="/leaderboard" className="bento-btn bento-btn--ghost" style={{ color: "var(--bento-paper)", borderColor: "rgba(255,255,255,0.35)" }}>
+            Leaderboard
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
@@ -151,22 +197,6 @@ function BoardWatermark() {
   );
 }
 
-function Stat({ number, label }: { number: string; label: string }) {
-  return (
-    <div>
-      <div
-        className="bento-tile__num"
-        style={{ fontSize: "2.2rem", color: "var(--bento-ink)" }}
-      >
-        {number}
-      </div>
-      <div className="bento-mono text-[0.66rem] uppercase tracking-[0.16em] opacity-60">
-        {label}
-      </div>
-    </div>
-  );
-}
-
 function FeatureTile({
   delay,
   className,
@@ -192,7 +222,6 @@ function FeatureTile({
           : "";
   return (
     <section
-      id="features"
       className={`bento-tile ${variantClass} ${className}`}
       style={{ padding: 24, minHeight: 220, animationDelay: `${delay}ms` }}
     >

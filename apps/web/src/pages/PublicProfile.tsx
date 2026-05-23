@@ -1,7 +1,23 @@
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { Link, useParams } from "react-router-dom";
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
+import { useTheme } from "@/theme/themeContext";
+import { AtelierPublicProfile } from "@/theme/atelier/AtelierPublicProfile";
+import type { AtelierProfileStat } from "@/theme/atelier/AtelierProfile";
+import {
+  BentoPublicProfile,
+  BentoPublicProfileLoading,
+  BentoPublicProfileMissing,
+  BentoPublicProfileNotFound,
+} from "@/theme/bento/BentoPublicProfile";
+import type { BentoGameHistoryRow } from "@/theme/bento/BentoProfile";
+import {
+  BrutalPublicProfile,
+  type BrutalPublicProfileGameRow,
+} from "@/theme/brutal/BrutalPublicProfile";
+import { DefaultPublicProfile } from "@/theme/default/DefaultPublicProfile";
 
 const CATEGORIES = [
   "bullet",
@@ -14,20 +30,25 @@ const CATEGORIES = [
 function gameResult(
   game: Doc<"games">,
   userId: Id<"users">,
-): { label: string; className: string } {
+): { label: string; className: string; tone: BentoGameHistoryRow["resultTone"] } {
   const isWhite = game.whiteUserId === userId;
   const isBlack = game.blackUserId === userId;
-  if (!isWhite && !isBlack) return { label: "—", className: "text-stone-400" };
-  if (!game.winner) return { label: "Draw", className: "text-stone-300" };
+  if (!isWhite && !isBlack) {
+    return { label: "—", className: "text-stone-400", tone: "neutral" };
+  }
+  if (!game.winner) {
+    return { label: "Draw", className: "text-stone-300", tone: "draw" };
+  }
   const won =
     (game.winner === "white" && isWhite) || (game.winner === "black" && isBlack);
   return won
-    ? { label: "Win", className: "text-green-400" }
-    : { label: "Loss", className: "text-red-400" };
+    ? { label: "Win", className: "text-green-400", tone: "win" }
+    : { label: "Loss", className: "text-red-400", tone: "loss" };
 }
 
 export function PublicProfile() {
   const { userId } = useParams<{ userId: string }>();
+  const { theme } = useTheme();
   const profile = useQuery(
     api.users.getPublicProfile,
     userId ? { userId: userId as Id<"users"> } : "skip",
@@ -42,89 +63,125 @@ export function PublicProfile() {
     { initialNumItems: 10 },
   );
 
-  if (!userId) {
-    return <p className="text-red-400">Missing player id.</p>;
+  const gameHistory = useMemo((): BentoGameHistoryRow[] => {
+    if (!profile) return [];
+    return finishedGames.map((game) => {
+      const result = gameResult(game, profile._id);
+      return {
+        gameId: game._id,
+        opponent: "—",
+        resultLabel: result.label,
+        resultTone: result.tone,
+        category: game.timeControlCategory ?? "—",
+        date: new Date(game.updatedAt).toLocaleDateString(),
+      };
+    });
+  }, [finishedGames, profile]);
+
+  const brutalGameRows = useMemo((): BrutalPublicProfileGameRow[] => {
+    return gameHistory.map((row) => ({
+      gameId: row.gameId,
+      resultLabel: row.resultLabel,
+      resultTone: row.resultTone,
+      category: row.category,
+      date: row.date,
+    }));
+  }, [gameHistory]);
+
+  const atelierStatus = !userId
+    ? ("missing" as const)
+    : profile === undefined
+      ? ("loading" as const)
+      : !profile
+        ? ("not_found" as const)
+        : ("ready" as const);
+
+  const defaultView = !userId
+    ? ("missing" as const)
+    : profile === undefined
+      ? ("loading" as const)
+      : !profile
+        ? ("notFound" as const)
+        : ("ready" as const);
+
+  if (theme === "atelier") {
+    const atelierStats: AtelierProfileStat[] | undefined = stats
+      ? CATEGORIES.map((cat) => ({
+          category: cat,
+          wins: stats[cat].wins,
+          losses: stats[cat].losses,
+          draws: stats[cat].draws,
+        }))
+      : undefined;
+
+    return (
+      <AtelierPublicProfile
+        status={atelierStatus}
+        displayName={profile?.displayName}
+        rating={profile?.rating ?? 1200}
+        bio={profile?.bio}
+        stats={atelierStats}
+        gameRows={gameHistory.map((row) => ({
+          id: row.gameId,
+          resultLabel: row.resultLabel,
+          resultTone: row.resultTone,
+          category: row.category,
+          date: row.date,
+        }))}
+        canLoadMore={status === "CanLoadMore"}
+        onLoadMore={() => loadMore(10)}
+      />
+    );
   }
-  if (profile === undefined) {
-    return <p className="text-stone-400">Loading…</p>;
+
+  if (theme === "bento") {
+    if (!userId) return <BentoPublicProfileMissing />;
+    if (profile === undefined) return <BentoPublicProfileLoading />;
+    if (!profile) return <BentoPublicProfileNotFound />;
+    return (
+      <BentoPublicProfile
+        profile={profile as Doc<"users">}
+        stats={stats ?? undefined}
+        gameHistory={gameHistory}
+        canLoadMore={status === "CanLoadMore"}
+        onLoadMore={() => loadMore(10)}
+      />
+    );
   }
-  if (!profile) {
-    return <p className="text-red-400">Player not found.</p>;
+
+  if (theme === "brutal") {
+    const brutalStats = stats
+      ? {
+          byCategory: {
+            bullet: stats.bullet,
+            blitz: stats.blitz,
+            rapid: stats.rapid,
+            classical: stats.classical,
+            correspondence: stats.correspondence,
+          },
+        }
+      : undefined;
+
+    return (
+      <BrutalPublicProfile
+        view={defaultView}
+        profile={profile as Doc<"users"> | null | undefined}
+        stats={brutalStats}
+        gameRows={brutalGameRows}
+        canLoadMore={status === "CanLoadMore"}
+        onLoadMore={() => loadMore(10)}
+      />
+    );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="rounded-xl border border-stone-800 bg-[#121218] p-6">
-        <Link to="/dashboard" className="text-sm text-stone-400 hover:text-amber-300">
-          ← Dashboard
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-amber-400">
-          {profile.displayName}
-        </h1>
-        <p className="text-sm text-stone-500">Rating: {profile.rating ?? 1200}</p>
-        {profile.bio && <p className="mt-2 text-stone-300">{profile.bio}</p>}
-      </div>
-
-      {stats && (
-        <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
-          <h2 className="mb-3 font-medium text-amber-400">Stats</h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((cat) => {
-              const s = stats[cat];
-              return (
-                <div key={cat} className="rounded bg-stone-900/60 px-3 py-2 text-sm capitalize">
-                  <div className="font-medium text-stone-300">{cat}</div>
-                  <div className="text-stone-400">
-                    {s.wins}W / {s.losses}L / {s.draws}D
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
-        <h2 className="mb-3 font-medium text-amber-400">Recent games</h2>
-        {finishedGames.length === 0 ? (
-          <p className="text-sm text-stone-500">No finished games.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-stone-400">
-              <tr>
-                <th className="px-2 py-1 text-left">Result</th>
-                <th className="px-2 py-1 text-left">Category</th>
-                <th className="px-2 py-1 text-left">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finishedGames.map((game) => {
-                const result = gameResult(game, profile._id);
-                return (
-                  <tr key={game._id} className="border-t border-stone-800">
-                    <td className={`px-2 py-2 ${result.className}`}>{result.label}</td>
-                    <td className="px-2 py-2 capitalize text-stone-400">
-                      {game.timeControlCategory ?? "—"}
-                    </td>
-                    <td className="px-2 py-2 text-stone-500">
-                      {new Date(game.updatedAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-        {status === "CanLoadMore" && (
-          <button
-            type="button"
-            onClick={() => loadMore(10)}
-            className="mt-3 rounded border border-stone-700 px-3 py-1 text-sm"
-          >
-            Load more
-          </button>
-        )}
-      </section>
-    </div>
+    <DefaultPublicProfile
+      view={defaultView}
+      profile={profile}
+      stats={stats}
+      finishedGames={finishedGames}
+      canLoadMore={status === "CanLoadMore"}
+      onLoadMore={() => loadMore(10)}
+    />
   );
 }

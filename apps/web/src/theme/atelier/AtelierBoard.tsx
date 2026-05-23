@@ -5,6 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { formatDaysLeft } from "@/lib/correspondenceClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -113,8 +114,8 @@ export function AtelierBoard({ game, myColor, isAuthenticated, readOnly = false 
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-6">
-        <Dial label="Black" timeMs={displayBlack} active={game.currentTurn === "black" && game.status === "active"} playType={game.playType} />
-        <Dial label="White" timeMs={displayWhite} active={game.currentTurn === "white" && game.status === "active"} playType={game.playType} />
+        <Dial label="Black" timeMs={displayBlack} active={game.currentTurn === "black" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
+        <Dial label="White" timeMs={displayWhite} active={game.currentTurn === "white" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
       </div>
 
       {error && (
@@ -160,14 +161,28 @@ function Dial({
   timeMs,
   active,
   playType,
+  turnDeadlineAt,
+  daysPerTurn,
+  isTurnSide,
+  now,
 }: {
   label: string;
   timeMs: number | null;
   active: boolean;
   playType?: "live" | "correspondence";
+  turnDeadlineAt?: number;
+  daysPerTurn?: number;
+  isTurnSide?: boolean;
+  now: number;
 }) {
   const ticks = Array.from({ length: 60 }, (_, i) => i);
   const low = (timeMs ?? Infinity) < 30_000;
+  const corresValue =
+    isTurnSide && turnDeadlineAt && daysPerTurn
+      ? formatDaysLeft(turnDeadlineAt, now).replace(" left", "")
+      : daysPerTurn
+        ? `${daysPerTurn}d`
+        : "—";
 
   return (
     <div className="flex flex-col items-center">
@@ -186,10 +201,10 @@ function Dial({
         </div>
         <div className="atelier-dial__face">
           <div className="atelier-dial__label">
-            {playType === "correspondence" ? "corres." : active ? "to play" : "in reserve"}
+            {playType === "correspondence" ? (isTurnSide ? "to post" : "in reserve") : active ? "to play" : "in reserve"}
           </div>
-          <div className={`atelier-dial__value${low ? " atelier-dial__value--low" : ""}`}>
-            {playType === "correspondence" || timeMs === null ? "—" : formatMs(timeMs)}
+          <div className={`atelier-dial__value${low ? " atelier-dial__value--low" : ""}`} style={playType === "correspondence" ? { fontSize: "1.6rem" } : undefined}>
+            {playType === "correspondence" || timeMs === null ? corresValue : formatMs(timeMs)}
           </div>
         </div>
       </div>
