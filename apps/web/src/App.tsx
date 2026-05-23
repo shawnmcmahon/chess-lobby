@@ -8,6 +8,7 @@ import { Landing } from "@/pages/Landing";
 import { Login } from "@/pages/Login";
 import { Profile } from "@/pages/Profile";
 import { ProfileSetup } from "@/pages/ProfileSetup";
+import { GameReview } from "@/pages/GameReview";
 
 export default function App() {
   return (
@@ -18,6 +19,14 @@ export default function App() {
           <Route path="login" element={<Login />} />
           <Route path="game/join/:inviteToken" element={<JoinGame />} />
           <Route path="game/:gameId" element={<Game />} />
+          <Route
+            path="game/:gameId/review"
+            element={
+              <AuthGuard>
+                <GameReview />
+              </AuthGuard>
+            }
+          />
           <Route
             path="profile/setup"
             element={
