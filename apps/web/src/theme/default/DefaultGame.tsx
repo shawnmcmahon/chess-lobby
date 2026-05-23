@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { GameBoard } from "@/components/GameBoard";
 import { GameChat } from "@/components/GameChat";
 import type { GameController } from "@/hooks/useGameController";
+import { getGameChatProps } from "@/lib/gameChat";
 
 export function DefaultGame({ ctrl }: { ctrl: GameController }) {
   if (!ctrl.gameId) {
@@ -74,19 +75,7 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
             />
           </div>
         </div>
-        {!ctrl.spectate && (
-          <GameChat
-            gameId={game._id}
-            guestSessionId={ctrl.isAuthenticated ? undefined : ctrl.guestSessionId}
-            guestName={
-              ctrl.isAuthenticated
-                ? undefined
-                : ctrl.myColor === "white"
-                  ? game.whiteGuestName ?? "Guest"
-                  : game.blackGuestName ?? "Guest"
-            }
-          />
-        )}
+        <GameChat {...getGameChatProps(ctrl, game)} />
       </div>
     </div>
   );

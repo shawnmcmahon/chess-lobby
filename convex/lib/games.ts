@@ -43,3 +43,96 @@ export function playerColorForUser(
   }
   return null;
 }
+
+export type GameChatSenderRole = "player" | "observer";
+
+export function canChatInGame(
+  game: Doc<"games">,
+  userId: Id<"users"> | null,
+  guestSessionId: string | null,
+): GameChatSenderRole | null {
+  if (isParticipant(game, userId, guestSessionId)) {
+    return "player";
+  }
+  if (userId || guestSessionId) {
+    return "observer";
+  }
+  return null;
+}
+
+export function inferMessageSenderRole(
+  game: Doc<"games">,
+  msg: {
+    senderRole?: GameChatSenderRole;
+    senderUserId?: Id<"users">;
+    senderGuestSessionId?: string;
+  },
+): GameChatSenderRole {
+  if (msg.senderRole) {
+    return msg.senderRole;
+  }
+  if (
+    isParticipant(game, msg.senderUserId ?? null, msg.senderGuestSessionId ?? null)
+  ) {
+    return "player";
+  }
+  return "observer";
+}
+
+export function isLiveSessionGame(game: Doc<"games">): boolean {
+  return game.playType !== "correspondence";
+}
+
+export function participantSessionKey(
+  userId: Id<"users"> | null,
+  guestSessionId: string | null,
+): string | null {
+  if (userId) {
+    return `user:${userId}`;
+  }
+  if (guestSessionId) {
+    return `guest:${guestSessionId}`;
+  }
+  return null;
+}
+
+export function listTrackedParticipantKeys(game: Doc<"games">): string[] {
+  const keys: string[] = [];
+
+  if (game.whiteUserId) {
+    keys.push(`user:${game.whiteUserId}`);
+  } else if (game.whiteGuestSessionId) {
+    keys.push(`guest:${game.whiteGuestSessionId}`);
+  }
+
+  if (game.mode === "human_vs_engine") {
+    return keys;
+  }
+
+  if (game.blackUserId) {
+    keys.push(`user:${game.blackUserId}`);
+  } else if (game.blackGuestSessionId) {
+    keys.push(`guest:${game.blackGuestSessionId}`);
+  }
+
+  return keys;
+}
+
+export function colorForParticipantKey(
+  game: Doc<"games">,
+  participantKey: string,
+): "white" | "black" | null {
+  if (
+    participantKey === `user:${game.whiteUserId}` ||
+    participantKey === `guest:${game.whiteGuestSessionId}`
+  ) {
+    return "white";
+  }
+  if (
+    participantKey === `user:${game.blackUserId}` ||
+    participantKey === `guest:${game.blackGuestSessionId}`
+  ) {
+    return "black";
+  }
+  return null;
+}

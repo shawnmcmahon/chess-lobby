@@ -1,11 +1,31 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { isParticipant } from "./lib/games";
+import { canChatInGame, inferMessageSenderRole } from "./lib/games";
+
+const chatMessageValidator = v.object({
+  _id: v.id("gameMessages"),
+  _creationTime: v.number(),
+  gameId: v.id("games"),
+  senderUserId: v.optional(v.id("users")),
+  senderGuestName: v.optional(v.string()),
+  senderGuestSessionId: v.optional(v.string()),
+  senderRole: v.optional(v.union(v.literal("player"), v.literal("observer"))),
+  body: v.string(),
+  createdAt: v.number(),
+  senderName: v.string(),
+  senderRoleResolved: v.union(v.literal("player"), v.literal("observer")),
+});
 
 export const list = query({
   args: { gameId: v.id("games") },
+  returns: v.array(chatMessageValidator),
   handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) {
+      return [];
+    }
+
     const messages = await ctx.db
       .query("gameMessages")
       .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
@@ -19,7 +39,12 @@ export const list = query({
           const user = await ctx.db.get(msg.senderUserId);
           senderName = user?.displayName ?? user?.name ?? user?.email ?? "Player";
         }
-        return { ...msg, senderName };
+        const senderRoleResolved = inferMessageSenderRole(game, msg);
+        return {
+          ...msg,
+          senderName,
+          senderRoleResolved,
+        };
       }),
     );
   },
@@ -32,6 +57,7 @@ export const send = mutation({
     guestSessionId: v.optional(v.string()),
     guestName: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const game = await ctx.db.get(args.gameId);
     if (!game) {
@@ -44,8 +70,9 @@ export const send = mutation({
     }
 
     const userId = await getAuthUserId(ctx);
-    if (!isParticipant(game, userId, args.guestSessionId ?? null)) {
-      throw new Error("You are not a participant in this game");
+    const senderRole = canChatInGame(game, userId, args.guestSessionId ?? null);
+    if (!senderRole) {
+      throw new Error("You cannot send messages in this game");
     }
 
     await ctx.db.insert("gameMessages", {
@@ -53,8 +80,11 @@ export const send = mutation({
       senderUserId: userId ?? undefined,
       senderGuestName: userId ? undefined : args.guestName,
       senderGuestSessionId: userId ? undefined : args.guestSessionId,
+      senderRole,
       body,
       createdAt: Date.now(),
     });
+
+    return null;
   },
 });

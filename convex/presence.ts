@@ -1,6 +1,7 @@
 import { Presence } from "@convex-dev/presence";
 import { v } from "convex/values";
 import { components } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -50,5 +51,50 @@ export const disconnect = mutation({
   args: { sessionToken: v.string() },
   handler: async (ctx, { sessionToken }) => {
     return await presence.disconnect(ctx, sessionToken);
+  },
+});
+
+const gameObserverValidator = v.object({
+  userId: v.id("users"),
+  displayName: v.string(),
+  online: v.boolean(),
+});
+
+export const listGameObservers = query({
+  args: { gameId: v.id("games") },
+  returns: v.array(gameObserverValidator),
+  handler: async (ctx, { gameId }) => {
+    const game = await ctx.db.get(gameId);
+    if (!game) {
+      return [];
+    }
+
+    const participantIds = new Set<Id<"users">>(
+      [game.whiteUserId, game.blackUserId].filter(
+        (id): id is Id<"users"> => id !== undefined,
+      ),
+    );
+
+    const roomToken = `game:${gameId}:spectators`;
+    const present = await presence.list(ctx, roomToken);
+
+    const observers = present.filter(
+      (entry) =>
+        entry.online &&
+        entry.userId &&
+        !participantIds.has(entry.userId as Id<"users">),
+    );
+
+    return await Promise.all(
+      observers.map(async (entry) => {
+        const userId = entry.userId as Id<"users">;
+        const user = await ctx.db.get(userId);
+        return {
+          userId,
+          displayName: user?.displayName ?? user?.name ?? user?.email ?? "Observer",
+          online: entry.online,
+        };
+      }),
+    );
   },
 });

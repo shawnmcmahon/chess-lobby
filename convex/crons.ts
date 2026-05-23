@@ -17,4 +17,11 @@ crons.interval(
   {},
 );
 
+crons.interval(
+  "process inactive live game sessions",
+  { seconds: 30 },
+  internal.games.processInactiveGameSessions,
+  {},
+);
+
 export default crons;

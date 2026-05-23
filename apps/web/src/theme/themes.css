@@ -1346,6 +1346,41 @@
   border-bottom: 1px solid var(--default-glass-border);
   background: rgba(0, 0, 0, 0.2);
 }
+.default-chat__observers {
+  margin-top: 0.55rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  line-height: 1.45;
+  color: var(--default-mist);
+}
+.default-chat__observer-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--default-glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--default-ink);
+}
+.default-chat__bubble--observer {
+  opacity: 0.88;
+  border-left: 2px solid var(--default-ember-dim);
+}
+.default-chat__role-tag {
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--default-ember-dim);
+}
+.default-chat__readonly {
+  color: var(--default-mist);
+  border-top: 1px solid var(--default-glass-border);
+  background: rgba(0, 0, 0, 0.15);
+}
 .default-chat__body {
   background: rgba(7, 7, 12, 0.35);
   color: var(--default-ink);
@@ -1390,6 +1425,39 @@
   color: var(--bento-ash);
   border-bottom: 1px solid var(--bento-rule);
 }
+.bento-chat__observers {
+  margin-top: 0.55rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  line-height: 1.45;
+  color: var(--bento-ash);
+}
+.bento-chat__observer-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--bento-rule);
+  background: rgba(14, 14, 16, 0.04);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--bento-ink);
+}
+.bento-chat__bubble--observer {
+  border-left: 2px solid var(--bento-clay);
+}
+.bento-chat__role-tag {
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bento-clay);
+}
+.bento-chat__readonly {
+  color: var(--bento-ash);
+  border-top: 1px solid var(--bento-rule);
+}
 .bento-chat__body {
   background: var(--bento-paper);
   color: var(--bento-ink);
@@ -1432,6 +1500,41 @@
   letter-spacing: 0.08em;
   background: var(--brutal-ink);
   color: var(--brutal-yellow);
+}
+.brutal-chat__observers {
+  margin-top: 0.55rem;
+  font-family: "Caprasimo", cursive;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1.45;
+  color: var(--brutal-yellow);
+  opacity: 0.9;
+}
+.brutal-chat__observer-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border: 2px solid var(--brutal-yellow);
+  background: var(--brutal-ink);
+  font-family: "Caprasimo", cursive;
+  font-size: 0.62rem;
+  text-transform: none;
+  color: var(--brutal-yellow);
+}
+.brutal-chat__bubble--observer {
+  border-left: 3px solid var(--brutal-blue);
+}
+.brutal-chat__role-tag {
+  font-family: "Archivo Black", Impact, sans-serif;
+  font-size: 0.62rem;
+  color: var(--brutal-blue);
+}
+.brutal-chat__readonly {
+  font-family: "Caprasimo", cursive;
+  color: var(--brutal-ink);
+  border-top: var(--brutal-border) solid var(--brutal-ink);
+  background: var(--brutal-yellow);
 }
 .brutal-chat__body {
   background: var(--brutal-paper);
@@ -1478,6 +1581,41 @@
   color: var(--atelier-brass);
   border-bottom: 1px solid var(--atelier-brass-dim);
   background: rgba(0, 0, 0, 0.2);
+}
+.atelier-chat__observers {
+  margin-top: 0.55rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  line-height: 1.45;
+  color: var(--atelier-parchment-soft);
+}
+.atelier-chat__observer-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-brass-dim);
+  background: rgba(194, 162, 88, 0.08);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--atelier-parchment);
+}
+.atelier-chat__bubble--observer {
+  border-left: 2px solid var(--atelier-brass-dim);
+  opacity: 0.92;
+}
+.atelier-chat__role-tag {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--atelier-brass-dim);
+}
+.atelier-chat__readonly {
+  color: var(--atelier-parchment-soft);
+  border-top: 1px solid var(--atelier-brass-dim);
+  background: rgba(0, 0, 0, 0.12);
 }
 .atelier-chat__body {
   color: var(--atelier-parchment);

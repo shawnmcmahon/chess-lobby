@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
 import type { GameController } from "@/hooks/useGameController";
+import { getGameChatProps } from "@/lib/gameChat";
 import { AtelierBoard } from "./AtelierBoard";
 
 export function AtelierGame({ ctrl }: { ctrl: GameController }) {
@@ -162,34 +163,22 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
             readOnly={ctrl.spectate}
           />
         </section>
-        {!ctrl.spectate && (
-          <aside className="atelier-panel col-span-12 lg:col-span-4 relative" style={{ padding: 0 }}>
-            <Corners />
-            <div
-              className="atelier-smallcaps"
-              style={{
-                color: "var(--atelier-brass)",
-                padding: "16px 20px",
-                borderBottom: "1px solid var(--atelier-brass-dim)",
-              }}
-            >
-              Correspondence
-            </div>
-            <div style={{ height: 380 }}>
-              <GameChat
-                gameId={game._id}
-                guestSessionId={ctrl.isAuthenticated ? undefined : ctrl.guestSessionId}
-                guestName={
-                  ctrl.isAuthenticated
-                    ? undefined
-                    : ctrl.myColor === "white"
-                      ? game.whiteGuestName ?? "Guest"
-                      : game.blackGuestName ?? "Guest"
-                }
-              />
-            </div>
-          </aside>
-        )}
+        <aside className="atelier-panel col-span-12 lg:col-span-4 relative" style={{ padding: 0 }}>
+          <Corners />
+          <div
+            className="atelier-smallcaps"
+            style={{
+              color: "var(--atelier-brass)",
+              padding: "16px 20px",
+              borderBottom: "1px solid var(--atelier-brass-dim)",
+            }}
+          >
+            Salon
+          </div>
+          <div style={{ height: 380 }}>
+            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Salon chat" />
+          </div>
+        </aside>
       </div>
     </div>
   );

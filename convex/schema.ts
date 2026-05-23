@@ -109,11 +109,20 @@ export default defineSchema({
     .index("by_toUser_and_status", ["toUserId", "status"])
     .index("by_game", ["gameId"]),
 
+  gameParticipantSessions: defineTable({
+    gameId: v.id("games"),
+    participantKey: v.string(),
+    lastSeenAt: v.number(),
+  })
+    .index("by_game", ["gameId"])
+    .index("by_game_and_participant", ["gameId", "participantKey"]),
+
   gameMessages: defineTable({
     gameId: v.id("games"),
     senderUserId: v.optional(v.id("users")),
     senderGuestName: v.optional(v.string()),
     senderGuestSessionId: v.optional(v.string()),
+    senderRole: v.optional(v.union(v.literal("player"), v.literal("observer"))),
     body: v.string(),
     createdAt: v.number(),
   }).index("by_game", ["gameId"]),

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
 import type { GameController } from "@/hooks/useGameController";
+import { getGameChatProps } from "@/lib/gameChat";
 import { BrutalBoard } from "./BrutalBoard";
 
 export function BrutalGame({ ctrl }: { ctrl: GameController }) {
@@ -119,38 +120,26 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
             readOnly={ctrl.spectate}
           />
         </section>
-        {!ctrl.spectate && (
-          <section
-            className="brutal-card col-span-12 lg:col-span-4 relative"
-            style={{ padding: 0, overflow: "hidden", minHeight: 380 }}
+        <section
+          className="brutal-card col-span-12 lg:col-span-4 relative"
+          style={{ padding: 0, overflow: "hidden", minHeight: 380 }}
+        >
+          <div
+            className="brutal-display"
+            style={{
+              padding: "14px 16px",
+              background: "var(--brutal-ink)",
+              color: "var(--brutal-yellow)",
+              fontSize: "1.1rem",
+              borderBottom: "var(--brutal-border) solid var(--brutal-ink)",
+            }}
           >
-            <div
-              className="brutal-display"
-              style={{
-                padding: "14px 16px",
-                background: "var(--brutal-ink)",
-                color: "var(--brutal-yellow)",
-                fontSize: "1.1rem",
-                borderBottom: "var(--brutal-border) solid var(--brutal-ink)",
-              }}
-            >
-              ★ TRASH TALK
-            </div>
-            <div style={{ height: 400 }}>
-              <GameChat
-                gameId={game._id}
-                guestSessionId={ctrl.isAuthenticated ? undefined : ctrl.guestSessionId}
-                guestName={
-                  ctrl.isAuthenticated
-                    ? undefined
-                    : ctrl.myColor === "white"
-                      ? game.whiteGuestName ?? "Guest"
-                      : game.blackGuestName ?? "Guest"
-                }
-              />
-            </div>
-          </section>
-        )}
+            ★ TRASH TALK
+          </div>
+          <div style={{ height: 400 }}>
+            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Trash talk" />
+          </div>
+        </section>
       </div>
     </div>
   );
