@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
+import { ensureUserStats } from "./lib/stats";
 
 export const syncProfile = mutation({
   args: {},
@@ -30,6 +31,8 @@ export const syncProfile = mutation({
       rating: user.rating ?? 1200,
       lastSeenAt: now,
     });
+
+    await ensureUserStats(ctx, userId);
 
     return userId;
   },

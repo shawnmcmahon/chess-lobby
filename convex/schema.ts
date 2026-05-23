@@ -23,6 +23,22 @@ export const inviteStatus = v.union(
   v.literal("expired"),
 );
 
+export const timeControlCategory = v.union(
+  v.literal("bullet"),
+  v.literal("blitz"),
+  v.literal("rapid"),
+  v.literal("classical"),
+  v.literal("correspondence"),
+);
+
+export const playType = v.union(v.literal("live"), v.literal("correspondence"));
+
+const categoryStats = v.object({
+  wins: v.number(),
+  losses: v.number(),
+  draws: v.number(),
+});
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -62,11 +78,23 @@ export default defineSchema({
     createdByUserId: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
+    playType: v.optional(playType),
+    timeControlCategory: v.optional(timeControlCategory),
+    baseTimeMs: v.optional(v.number()),
+    incrementMs: v.optional(v.number()),
+    daysPerTurn: v.optional(v.number()),
+    whiteTimeMs: v.optional(v.number()),
+    blackTimeMs: v.optional(v.number()),
+    turnDeadlineAt: v.optional(v.number()),
+    lastMoveAt: v.optional(v.number()),
+    isPublic: v.optional(v.boolean()),
+    analysisJson: v.optional(v.string()),
   })
     .index("by_inviteToken", ["inviteToken"])
     .index("by_status", ["status"])
     .index("by_whiteUser", ["whiteUserId"])
-    .index("by_blackUser", ["blackUserId"]),
+    .index("by_blackUser", ["blackUserId"])
+    .index("by_status_and_public", ["status", "isPublic"]),
 
   gameInvites: defineTable({
     fromUserId: v.id("users"),
@@ -86,4 +114,30 @@ export default defineSchema({
     body: v.string(),
     createdAt: v.number(),
   }).index("by_game", ["gameId"]),
+
+  userStats: defineTable({
+    userId: v.id("users"),
+    bullet: categoryStats,
+    blitz: categoryStats,
+    rapid: categoryStats,
+    classical: categoryStats,
+    correspondence: categoryStats,
+    totalWins: v.number(),
+    totalLosses: v.number(),
+    totalDraws: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_totalWins", ["totalWins"])
+    .index("by_totalLosses", ["totalLosses"])
+    .index("by_totalDraws", ["totalDraws"]),
+
+  gameSeeks: defineTable({
+    userId: v.id("users"),
+    timeControlCategory: timeControlCategory,
+    baseTimeMs: v.number(),
+    incrementMs: v.number(),
+    minRating: v.number(),
+    maxRating: v.number(),
+    createdAt: v.number(),
+  }).index("by_category", ["timeControlCategory"]),
 });
