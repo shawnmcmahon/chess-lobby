@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FormEvent, RefObject } from "react";
+import { PasswordField } from "@/components/PasswordField";
 
 export type AtelierLoginProps = {
   flow: "signIn" | "signUp";
@@ -78,15 +79,7 @@ export function AtelierLogin({
               placeholder="Email address"
               className="atelier-input"
             />
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete={flow === "signUp" ? "new-password" : "current-password"}
-              placeholder="Password (min 8 characters)"
-              minLength={8}
-              className="atelier-input"
-            />
+            <PasswordField flow={flow} inputClassName="atelier-input" />
             <button
               type="submit"
               disabled={pending || isLoading}

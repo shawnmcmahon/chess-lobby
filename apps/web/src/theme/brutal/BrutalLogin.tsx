@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FormEvent, RefObject } from "react";
+import { PasswordField } from "@/components/PasswordField";
 
 export type BrutalLoginProps = {
   flow: "signIn" | "signUp";
@@ -64,14 +65,10 @@ export function BrutalLogin({
             placeholder="EMAIL"
             className="brutal-input"
           />
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete={flow === "signUp" ? "new-password" : "current-password"}
+          <PasswordField
+            flow={flow}
+            inputClassName="brutal-input"
             placeholder="PASSWORD (MIN 8)"
-            minLength={8}
-            className="brutal-input"
           />
           <button
             type="submit"

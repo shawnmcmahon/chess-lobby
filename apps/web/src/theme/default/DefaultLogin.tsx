@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FormEvent } from "react";
+import { PasswordField } from "@/components/PasswordField";
 
 export function DefaultLogin({
   flow,
@@ -53,15 +54,7 @@ export function DefaultLogin({
             placeholder="Email"
             className="default-input"
           />
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete={flow === "signUp" ? "new-password" : "current-password"}
-            placeholder="Password (min 8 characters)"
-            minLength={8}
-            className="default-input"
-          />
+          <PasswordField flow={flow} inputClassName="default-input" />
           <button
             type="submit"
             disabled={pending || isLoading}

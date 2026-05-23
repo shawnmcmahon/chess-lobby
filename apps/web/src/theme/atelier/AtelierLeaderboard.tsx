@@ -44,20 +44,20 @@ export function AtelierLeaderboard({
   rows,
 }: AtelierLeaderboardProps) {
   return (
-    <div className="mx-auto max-w-4xl space-y-8 relative">
-      <header className="text-center pb-2">
-        <div className="atelier-rule mb-6">
+    <div className="relative mx-auto w-full min-w-0 max-w-4xl space-y-6 sm:space-y-8">
+      <header className="pb-2 text-center">
+        <div className="atelier-rule mb-4 sm:mb-6">
           <span className="atelier-smallcaps">Maison Échecs · Registry</span>
         </div>
         <h1
           className="atelier-display"
-          style={{ fontSize: "clamp(2.4rem, 5vw, 3.8rem)", fontStyle: "italic" }}
+          style={{ fontSize: "clamp(2rem, 8vw, 3.8rem)", fontStyle: "italic" }}
         >
           The ledger of champions
         </h1>
       </header>
 
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="-mx-1 flex flex-wrap justify-center gap-2 px-1">
         {SORT_OPTIONS.map(({ id, label }) => (
           <button
             key={id}
@@ -65,7 +65,7 @@ export function AtelierLeaderboard({
             onClick={() => onSortByChange(id)}
             className="atelier-smallcaps"
             style={{
-              padding: "8px 16px",
+              padding: "8px 12px",
               border: "1px solid var(--atelier-brass-dim)",
               color: sortBy === id ? "var(--atelier-obsidian)" : "var(--atelier-brass)",
               background: sortBy === id ? "var(--atelier-brass)" : "transparent",
@@ -112,26 +112,29 @@ export function AtelierLeaderboard({
           No statistics inscribed yet.
         </p>
       ) : (
-        <div className="atelier-panel relative overflow-x-auto">
+        <div className="atelier-panel atelier-panel--table relative w-full min-w-0">
           <Corners />
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
-                <th className="px-3 py-2 text-left font-normal">#</th>
-                <th className="px-3 py-2 text-left font-normal">Patron</th>
+          <div className="atelier-panel__scroll">
+            <table
+              className={`w-full text-sm ${sortBy === "rating" ? "min-w-[640px]" : "min-w-[320px]"}`}
+            >
+              <thead>
+                <tr className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+                  <th className="px-2 py-2 text-left font-normal sm:px-3">#</th>
+                  <th className="px-2 py-2 text-left font-normal sm:px-3">Patron</th>
                 {sortBy === "rating" ? (
                   <>
-                    <th className="px-3 py-2 text-right font-normal">Rating</th>
-                    <th className="px-3 py-2 text-right font-normal">W</th>
-                    <th className="px-3 py-2 text-right font-normal">L</th>
-                    <th className="px-3 py-2 text-right font-normal">D</th>
-                    <th className="px-3 py-2 text-right font-normal">Win %</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">Rating</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">W</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">L</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">D</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">Win %</th>
                   </>
                 ) : (
                   <>
-                    <th className="px-3 py-2 text-right font-normal">W</th>
-                    <th className="px-3 py-2 text-right font-normal">L</th>
-                    <th className="px-3 py-2 text-right font-normal">D</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">W</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">L</th>
+                    <th className="px-2 py-2 text-right font-normal sm:px-3">D</th>
                   </>
                 )}
               </tr>
@@ -143,17 +146,17 @@ export function AtelierLeaderboard({
                   style={{ borderTop: "1px solid rgba(194, 162, 88, 0.16)" }}
                 >
                   <td
-                    className="px-3 py-2 atelier-mono"
+                    className="px-2 py-2 atelier-mono sm:px-3"
                     style={{ fontSize: "0.78rem", color: "var(--atelier-brass-dim)" }}
                   >
                     {row.rank}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="max-w-[9rem] px-2 py-2 sm:max-w-none sm:px-3">
                     <Link
                       to={`/player/${row.userId}`}
-                      className="atelier-display"
+                      className="atelier-display block truncate"
                       style={{
-                        fontSize: "1.15rem",
+                        fontSize: "1.05rem",
                         fontStyle: "italic",
                         color: "var(--atelier-parchment)",
                       }}
@@ -162,7 +165,7 @@ export function AtelierLeaderboard({
                     </Link>
                     {sortBy !== "rating" && (
                       <span
-                        className="atelier-mono ml-2"
+                        className="atelier-mono ml-1 block sm:ml-2 sm:inline"
                         style={{ fontSize: "0.72rem", color: "var(--atelier-brass-dim)" }}
                       >
                         ({row.rating})
@@ -172,16 +175,16 @@ export function AtelierLeaderboard({
                   {sortBy === "rating" ? (
                     <>
                       <td
-                        className="px-3 py-2 text-right atelier-display"
+                        className="px-2 py-2 text-right atelier-display sm:px-3"
                         style={{ fontSize: "1.1rem", color: "var(--atelier-brass)" }}
                       >
                         {row.rating}
                       </td>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.wins}</td>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.losses}</td>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.draws}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.wins}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.losses}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.draws}</td>
                       <td
-                        className="px-3 py-2 text-right"
+                        className="px-2 py-2 text-right sm:px-3"
                         style={{ color: "var(--atelier-parchment-soft)" }}
                       >
                         {row.winRatio ?? "—"}
@@ -189,15 +192,16 @@ export function AtelierLeaderboard({
                     </>
                   ) : (
                     <>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.wins}</td>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.losses}</td>
-                      <td className="px-3 py-2 text-right atelier-mono">{row.draws}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.wins}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.losses}</td>
+                      <td className="px-2 py-2 text-right atelier-mono sm:px-3">{row.draws}</td>
                     </>
                   )}
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

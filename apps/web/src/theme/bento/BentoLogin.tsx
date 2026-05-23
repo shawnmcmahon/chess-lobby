@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FormEvent } from "react";
+import { PasswordField } from "@/components/PasswordField";
 
 export function BentoLogin({
   flow,
@@ -93,15 +94,7 @@ export function BentoLogin({
             placeholder="Email"
             className="bento-input"
           />
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete={flow === "signUp" ? "new-password" : "current-password"}
-            placeholder="Password (min 8 characters)"
-            minLength={8}
-            className="bento-input"
-          />
+          <PasswordField flow={flow} inputClassName="bento-input" />
           <button
             type="submit"
             disabled={pending || isLoading}

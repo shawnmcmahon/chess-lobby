@@ -21,3 +21,43 @@ body {
   min-height: 100vh;
   overflow-x: clip;
 }
+
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field__input {
+  width: 100%;
+  padding-right: 2.75rem !important;
+}
+
+.password-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease, background 120ms ease;
+}
+
+.password-field__toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.password-field__toggle:focus-visible {
+  outline: 2px solid rgba(245, 176, 66, 0.55);
+  outline-offset: 1px;
+}

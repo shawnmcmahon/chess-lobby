@@ -9,7 +9,15 @@ import {
   query,
 } from "./_generated/server";
 import { applyMove, applyUciMove, STARTING_FEN } from "./lib/chess";
-import { generateInviteToken, playerColorForUser } from "./lib/games";
+import {
+  colorForParticipantKey,
+  generateInviteToken,
+  isLiveSessionGame,
+  isParticipant,
+  listTrackedParticipantKeys,
+  participantSessionKey,
+  playerColorForUser,
+} from "./lib/games";
 import { getCurrentUserOrNull } from "./lib/auth";
 import { recordGameStats } from "./lib/stats";
 import { playType } from "./schema";
@@ -23,6 +31,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { PaginationOptions } from "convex/server";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_GRACE_MS = 20_000;
 
 async function paginateFinishedGamesForUser(
   ctx: QueryCtx,
@@ -93,6 +102,135 @@ async function finishGame(
   if (finished) {
     await recordGameStats(ctx, finished);
   }
+
+  await clearParticipantSessions(ctx, gameId);
+}
+
+async function abandonGame(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  endReason = "abandoned",
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game || game.status === "finished" || game.status === "abandoned") {
+    return;
+  }
+
+  await ctx.db.patch(gameId, {
+    status: "abandoned",
+    endReason,
+    updatedAt: Date.now(),
+  });
+
+  await clearParticipantSessions(ctx, gameId);
+}
+
+async function clearParticipantSessions(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+): Promise<void> {
+  const sessions = await ctx.db
+    .query("gameParticipantSessions")
+    .withIndex("by_game", (q) => q.eq("gameId", gameId))
+    .collect();
+
+  for (const session of sessions) {
+    await ctx.db.delete(session._id);
+  }
+}
+
+async function upsertParticipantSession(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  participantKey: string,
+  lastSeenAt: number,
+): Promise<void> {
+  const existing = await ctx.db
+    .query("gameParticipantSessions")
+    .withIndex("by_game_and_participant", (q) =>
+      q.eq("gameId", gameId).eq("participantKey", participantKey),
+    )
+    .unique();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, { lastSeenAt });
+    return;
+  }
+
+  await ctx.db.insert("gameParticipantSessions", {
+    gameId,
+    participantKey,
+    lastSeenAt,
+  });
+}
+
+async function resolveSessionDisconnectForGame(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game || !isLiveSessionGame(game)) {
+    return;
+  }
+  if (game.status === "finished" || game.status === "abandoned") {
+    return;
+  }
+
+  const now = Date.now();
+  const sessions = await ctx.db
+    .query("gameParticipantSessions")
+    .withIndex("by_game", (q) => q.eq("gameId", gameId))
+    .collect();
+
+  const isOnline = (participantKey: string): boolean => {
+    const session = sessions.find((entry) => entry.participantKey === participantKey);
+    if (!session) {
+      return false;
+    }
+    return now - session.lastSeenAt <= SESSION_GRACE_MS;
+  };
+
+  const hasSession = (participantKey: string): boolean =>
+    sessions.some((entry) => entry.participantKey === participantKey);
+
+  const trackedKeys = listTrackedParticipantKeys(game);
+
+  if (game.status === "waiting") {
+    const waitingKeys = trackedKeys.filter((key) => hasSession(key));
+    if (waitingKeys.length === 0) {
+      return;
+    }
+    if (waitingKeys.every((key) => !isOnline(key))) {
+      await abandonGame(ctx, gameId, "left_waiting");
+    }
+    return;
+  }
+
+  if (game.status !== "active") {
+    return;
+  }
+
+  const disconnectedKeys = trackedKeys.filter(
+    (key) => hasSession(key) && !isOnline(key),
+  );
+  const onlineKeys = trackedKeys.filter((key) => isOnline(key));
+
+  if (disconnectedKeys.length === 0) {
+    return;
+  }
+
+  if (onlineKeys.length === 0) {
+    await abandonGame(ctx, gameId, "all_left");
+    return;
+  }
+
+  const disconnectedColor = colorForParticipantKey(game, disconnectedKeys[0]!);
+  if (!disconnectedColor) {
+    return;
+  }
+
+  const winner = disconnectedColor === "white" ? "black" : "white";
+  await finishGame(ctx, gameId, { winner, endReason: "disconnect" });
 }
 
 function clockStartTimestamp(game: Doc<"games">): number {
@@ -635,5 +773,117 @@ export const listFinishedForUser = query({
   },
   handler: async (ctx, args) => {
     return paginateFinishedGamesForUser(ctx, args.userId, args.paginationOpts);
+  },
+});
+
+export const pingParticipantSession = mutation({
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game || !isLiveSessionGame(game)) {
+      return null;
+    }
+    if (game.status !== "waiting" && game.status !== "active") {
+      return null;
+    }
+
+    const userId = await getAuthUserId(ctx);
+    if (!isParticipant(game, userId, args.guestSessionId ?? null)) {
+      throw new Error("You are not a participant in this game");
+    }
+
+    const participantKey = participantSessionKey(userId, args.guestSessionId ?? null);
+    if (!participantKey) {
+      throw new Error("Could not identify participant session");
+    }
+
+    await upsertParticipantSession(ctx, args.gameId, participantKey, Date.now());
+    return null;
+  },
+});
+
+export const leaveParticipantSession = mutation({
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game || !isLiveSessionGame(game)) {
+      return null;
+    }
+    if (game.status !== "waiting" && game.status !== "active") {
+      return null;
+    }
+
+    const userId = await getAuthUserId(ctx);
+    if (!isParticipant(game, userId, args.guestSessionId ?? null)) {
+      return null;
+    }
+
+    const participantKey = participantSessionKey(userId, args.guestSessionId ?? null);
+    if (!participantKey) {
+      return null;
+    }
+
+    const existing = await ctx.db
+      .query("gameParticipantSessions")
+      .withIndex("by_game_and_participant", (q) =>
+        q.eq("gameId", args.gameId).eq("participantKey", participantKey),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+
+    await ctx.scheduler.runAfter(SESSION_GRACE_MS, internal.games.applySessionDisconnect, {
+      gameId: args.gameId,
+    });
+
+    return null;
+  },
+});
+
+export const applySessionDisconnect = internalMutation({
+  args: { gameId: v.id("games") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await resolveSessionDisconnectForGame(ctx, args.gameId);
+    return null;
+  },
+});
+
+export const processInactiveGameSessions = internalMutation({
+  args: {},
+  returns: v.object({ processed: v.number() }),
+  handler: async (ctx) => {
+    const waitingGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "waiting"))
+      .take(100);
+    const activeGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(100);
+
+    const candidates = [...waitingGames, ...activeGames].filter(isLiveSessionGame);
+    let processed = 0;
+
+    for (const game of candidates) {
+      const before = game.status;
+      await resolveSessionDisconnectForGame(ctx, game._id);
+      const after = await ctx.db.get(game._id);
+      if (after && after.status !== before) {
+        processed += 1;
+      }
+    }
+
+    return { processed };
   },
 });

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
 import type { GameController } from "@/hooks/useGameController";
+import { getGameChatProps } from "@/lib/gameChat";
 import { BentoBoard } from "./BentoBoard";
 
 export function BentoGame({ ctrl }: { ctrl: GameController }) {
@@ -123,37 +124,23 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
         />
       </section>
 
-      {!ctrl.spectate && (
-        <section
-          className="bento-tile col-span-12 lg:col-span-4"
-          style={{ padding: 0, animationDelay: "320ms", background: "var(--bento-paper)" }}
-        >
-          <div className="px-5 pt-5">
-            <div className="bento-tile__eyebrow">Table talk</div>
-            <h3
-              className="bento-tile__title"
-              style={{ fontSize: "1.3rem", marginTop: 4 }}
-            >
-              <em>Chat</em>
-            </h3>
-          </div>
-          <div className="px-2 pb-2 pt-3 min-h-[320px]" style={{ height: 380 }}>
-            <GameChat
-              gameId={game._id}
-              guestSessionId={
-                ctrl.isAuthenticated ? undefined : ctrl.guestSessionId
-              }
-              guestName={
-                ctrl.isAuthenticated
-                  ? undefined
-                  : ctrl.myColor === "white"
-                    ? game.whiteGuestName ?? "Guest"
-                    : game.blackGuestName ?? "Guest"
-              }
-            />
-          </div>
-        </section>
-      )}
+      <section
+        className="bento-tile col-span-12 lg:col-span-4"
+        style={{ padding: 0, animationDelay: "320ms", background: "var(--bento-paper)" }}
+      >
+        <div className="px-5 pt-5">
+          <div className="bento-tile__eyebrow">Table talk</div>
+          <h3
+            className="bento-tile__title"
+            style={{ fontSize: "1.3rem", marginTop: 4 }}
+          >
+            <em>Chat</em>
+          </h3>
+        </div>
+        <div className="px-2 pb-2 pt-3 min-h-[320px]" style={{ height: 380 }}>
+          <GameChat {...getGameChatProps(ctrl, game)} />
+        </div>
+      </section>
     </div>
   );
 }
