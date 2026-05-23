@@ -198,6 +198,8 @@ DNS for a new domain can take minutes to 48 hours to propagate globally.
 | Engine | $0 (built-in) |
 | **Total** | **~$0–2/mo** |
 
+For real Stockfish opponents, add **~$7–10/mo** with [deploy-engine-lightsail.md](deploy-engine-lightsail.md).
+
 ---
 
 ## Troubleshooting
@@ -208,4 +210,4 @@ DNS for a new domain can take minutes to 48 hours to propagate globally.
 | 403 on S3 from browser | Use CloudFront URL, not S3 website URL |
 | SPA routes 404 on refresh | CloudFront custom errors 403/404 → `/index.html` with 200 |
 | Auth redirect errors | `SITE_URL` must match CloudFront URL exactly (https, no trailing slash) |
-| Engine weak / fast | Expected — built-in minimax; do not set `ENGINE_API_URL` |
+| Engine weak / fast | Expected with built-in minimax; set `ENGINE_API_URL` per [deploy-engine-lightsail.md](deploy-engine-lightsail.md) for Stockfish |

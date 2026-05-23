@@ -148,7 +148,9 @@ Open http://localhost:5173
 
 **Est. cost:** ~$0–2/mo (AWS static hosting) + Convex free tier.
 
-Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)**  
+Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)**
+
+Optional Stockfish engine on AWS (~$7–10/mo): **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**  
 Stack outputs: **[docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example)**  
 CI deploy: [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) (Actions → **Deploy AWS** → Run workflow)
 
