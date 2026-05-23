@@ -136,6 +136,24 @@ export function Dashboard() {
         (g.currentTurn === "black" && g.blackUserId === user._id)),
   );
 
+  const correspondenceGames = activeGames?.filter(
+    (g) =>
+      g.playType === "correspondence" &&
+      (g.status === "active" || g.status === "waiting"),
+  );
+
+  const liveActiveGames = activeGames?.filter(
+    (g) =>
+      g.playType !== "correspondence" &&
+      (g.status === "active" || g.status === "waiting"),
+  );
+
+  function formatCorrespondenceDeadline(game: NonNullable<typeof activeGames>[number]) {
+    if (!game.daysPerTurn || !game.turnDeadlineAt) return "No timer";
+    const days = Math.ceil(Math.max(0, game.turnDeadlineAt - Date.now()) / 86_400_000);
+    return days <= 0 ? "Deadline passed" : `${days} day${days === 1 ? "" : "s"} left`;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -153,6 +171,56 @@ export function Dashboard() {
           )}
         </p>
       </div>
+
+      {correspondenceGames && correspondenceGames.length > 0 && (
+        <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
+          <h2 className="mb-2 font-medium text-amber-400">Correspondence games</h2>
+          <ul className="space-y-2">
+            {correspondenceGames.map((g) => {
+              const isMyTurn =
+                (g.currentTurn === "white" && g.whiteUserId === user._id) ||
+                (g.currentTurn === "black" && g.blackUserId === user._id);
+              return (
+                <li key={g._id}>
+                  <Link
+                    to={`/game/${g._id}`}
+                    className={`block rounded px-3 py-2 text-sm hover:bg-stone-900 ${
+                      isMyTurn
+                        ? "border border-amber-800/50 bg-amber-950/20"
+                        : "bg-stone-900/60"
+                    }`}
+                  >
+                    <span className="capitalize">{g.status}</span>
+                    {g.daysPerTurn ? ` · ${g.daysPerTurn}d/turn` : ""} ·{" "}
+                    {formatCorrespondenceDeadline(g)}
+                    {isMyTurn && (
+                      <span className="ml-2 text-xs text-amber-400">Your turn</span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {liveActiveGames && liveActiveGames.length > 0 && (
+        <section className="rounded-xl border border-stone-800 bg-[#121218] p-4">
+          <h2 className="mb-2 font-medium text-stone-300">Live games</h2>
+          <ul className="space-y-2">
+            {liveActiveGames.map((g) => (
+              <li key={g._id}>
+                <Link
+                  to={`/game/${g._id}`}
+                  className="block rounded bg-stone-900/60 px-3 py-2 text-sm hover:bg-stone-900"
+                >
+                  {g.timeControlCategory ?? "live"} · {g.status}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {myTurnGames && myTurnGames.length > 0 && (
         <section className="rounded-xl border border-amber-800/40 bg-amber-950/20 p-4">
