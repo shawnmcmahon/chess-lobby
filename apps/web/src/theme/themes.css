@@ -842,6 +842,24 @@
 .atelier-panel__corner--bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
 .atelier-panel__corner--br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 
+.atelier-panel--table {
+  padding: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.atelier-panel__scroll {
+  overflow-x: auto;
+  padding: 16px 18px;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .atelier-panel__scroll {
+    padding: 20px 24px;
+  }
+}
+
 .atelier-btn {
   font-family: "Inter Tight", sans-serif;
   text-transform: uppercase;
