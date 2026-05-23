@@ -52,6 +52,16 @@ export const getById = query({
   },
 });
 
+export const getStats = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userStats")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     displayName: v.string(),

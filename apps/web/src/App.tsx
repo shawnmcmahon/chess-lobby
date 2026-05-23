@@ -9,6 +9,7 @@ import { Login } from "@/pages/Login";
 import { Profile } from "@/pages/Profile";
 import { ProfileSetup } from "@/pages/ProfileSetup";
 import { GameReview } from "@/pages/GameReview";
+import { PublicProfile } from "@/pages/PublicProfile";
 
 export default function App() {
   return (
@@ -50,6 +51,10 @@ export default function App() {
                 <Dashboard />
               </AuthGuard>
             }
+          />
+          <Route
+            path="player/:userId"
+            element={<PublicProfile />}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

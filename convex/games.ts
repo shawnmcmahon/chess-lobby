@@ -607,3 +607,38 @@ export const getLobbyCounts = query({
     };
   },
 });
+
+export const listFinishedForUser = query({
+  args: {
+    userId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const asWhite = await ctx.db
+      .query("games")
+      .withIndex("by_whiteUser_and_status", (q) =>
+        q.eq("whiteUserId", args.userId).eq("status", "finished"),
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    const blackFinished = await ctx.db
+      .query("games")
+      .withIndex("by_blackUser_and_status", (q) =>
+        q.eq("blackUserId", args.userId).eq("status", "finished"),
+      )
+      .order("desc")
+      .take(20);
+
+    const seen = new Set(asWhite.page.map((g) => g._id));
+    const merged = [
+      ...asWhite.page,
+      ...blackFinished.filter((g) => !seen.has(g._id)),
+    ].sort((a, b) => b._creationTime - a._creationTime);
+
+    return {
+      ...asWhite,
+      page: merged.slice(0, args.paginationOpts.numItems),
+    };
+  },
+});
