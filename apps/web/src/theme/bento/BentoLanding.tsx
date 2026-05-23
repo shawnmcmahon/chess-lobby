@@ -11,10 +11,10 @@ export function BentoLanding({
   return (
     <div className="bento-grid" style={{ marginTop: 16 }}>
       <section
-        className="bento-tile bento-tile--ink col-span-12 lg:col-span-8"
-        style={{ padding: "44px 40px", minHeight: 360, animationDelay: "0ms", position: "relative" }}
+        className="bento-tile bento-tile--ink bento-tile--hero col-span-12 lg:col-span-8"
+        style={{ animationDelay: "0ms", position: "relative" }}
       >
-        <div className="flex items-start justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="bento-pill">No. 064 · Édition 2026</div>
           <LandingLiveStats
             render={({ inPlayCount, loading }) => (
@@ -26,7 +26,7 @@ export function BentoLanding({
         </div>
         <h1
           className="bento-tile__title"
-          style={{ fontSize: "3.6rem", marginTop: 36, maxWidth: "16ch" }}
+          style={{ fontSize: "clamp(2rem, 8vw, 3.6rem)", marginTop: 24, maxWidth: "16ch" }}
         >
           A quiet place <em>to think</em>
           <br />
@@ -107,7 +107,7 @@ export function BentoLanding({
 
       <FeatureTile
         delay={160}
-        className="col-span-6 lg:col-span-3"
+        className="col-span-12 sm:col-span-6 lg:col-span-3"
         variant="paper"
         eyebrow="01"
         title={<>Quick<br />pairing</>}
@@ -115,7 +115,7 @@ export function BentoLanding({
       />
       <FeatureTile
         delay={240}
-        className="col-span-6 lg:col-span-3"
+        className="col-span-12 sm:col-span-6 lg:col-span-3"
         variant="jade"
         eyebrow="02"
         title={<>Invite a<br /><em>friend</em></>}
@@ -123,7 +123,7 @@ export function BentoLanding({
       />
       <FeatureTile
         delay={320}
-        className="col-span-6 lg:col-span-3"
+        className="col-span-12 sm:col-span-6 lg:col-span-3"
         variant="clay"
         eyebrow="03"
         title={<>Correspondence</>}
@@ -131,7 +131,7 @@ export function BentoLanding({
       />
       <FeatureTile
         delay={400}
-        className="col-span-6 lg:col-span-3"
+        className="col-span-12 sm:col-span-6 lg:col-span-3"
         variant="ink"
         eyebrow="04"
         title={<>Stockfish<br />sparring</>}

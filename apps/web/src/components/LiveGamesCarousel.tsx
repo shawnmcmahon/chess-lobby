@@ -50,7 +50,7 @@ export function LiveGamesCarousel() {
           <span className="text-stone-500"> vs </span>
           <span className="font-medium">{current.blackName}</span>
         </p>
-        <div className="pointer-events-none scale-75 origin-top-left">
+        <div className="mx-auto w-full max-w-[360px] overflow-hidden">
           <ChessBoardView fen={current.game.fen} readOnly allowDrawingArrows />
         </div>
         <p className="mt-1 text-xs capitalize text-stone-500">

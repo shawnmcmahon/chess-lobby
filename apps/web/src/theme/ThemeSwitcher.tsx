@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTheme } from "./themeContext";
 import { THEMES, type ThemeId } from "./themes";
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,13 +32,18 @@ export function ThemeSwitcher() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="theme-switcher__trigger"
+        aria-label={`Theme: ${active.label}`}
+        className={`theme-switcher__trigger${compact ? " theme-switcher__trigger--compact" : ""}`}
       >
         <span className="theme-switcher__swatch" data-swatch={active.id} />
-        <span className="theme-switcher__label">{active.label}</span>
-        <span aria-hidden className="theme-switcher__chev">
-          ▾
-        </span>
+        {!compact && (
+          <>
+            <span className="theme-switcher__label">{active.label}</span>
+            <span aria-hidden className="theme-switcher__chev">
+              ▾
+            </span>
+          </>
+        )}
       </button>
       {open && (
         <ul role="listbox" className="theme-switcher__menu">

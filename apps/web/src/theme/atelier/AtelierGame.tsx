@@ -43,19 +43,19 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
         <div className="atelier-rule mb-4">
           <span className="atelier-smallcaps">Match № {game._id.slice(-6).toUpperCase()}</span>
         </div>
-        <div className="grid grid-cols-3 items-center max-w-3xl mx-auto">
-          <div className="text-right">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center max-w-3xl mx-auto">
+          <div className="text-center sm:text-right min-w-0">
             <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
               White
             </div>
             <div
-              className="atelier-display"
-              style={{ fontSize: "1.8rem", fontStyle: "italic" }}
+              className="atelier-display truncate"
+              style={{ fontSize: "clamp(1.25rem, 5vw, 1.8rem)", fontStyle: "italic" }}
             >
               {ctrl.whiteName}
             </div>
           </div>
-          <div className="text-center">
+          <div className="text-center order-first sm:order-none">
             <span
               className="atelier-display"
               style={{
@@ -67,13 +67,13 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
               vs
             </span>
           </div>
-          <div className="text-left">
+          <div className="text-center sm:text-left min-w-0">
             <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
               Black
             </div>
             <div
-              className="atelier-display"
-              style={{ fontSize: "1.8rem", fontStyle: "italic" }}
+              className="atelier-display truncate"
+              style={{ fontSize: "clamp(1.25rem, 5vw, 1.8rem)", fontStyle: "italic" }}
             >
               {ctrl.blackName}
             </div>

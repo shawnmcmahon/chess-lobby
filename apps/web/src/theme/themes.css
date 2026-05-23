@@ -1558,6 +1558,186 @@
   box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.8);
 }
 
+/* -------------------------------------------------------------------------
+   Responsive shell + mobile navigation
+   ------------------------------------------------------------------------- */
+
+.bento-stage-shell,
+.brutal-stage-shell,
+.atelier-stage-shell {
+  overflow-x: clip;
+}
+
+.theme-switcher__trigger--compact {
+  padding: 0.35rem;
+  border-radius: 9999px;
+}
+
+.app-header {
+  position: relative;
+  z-index: 40;
+}
+
+.mobile-nav__toggle {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  cursor: pointer;
+}
+
+.mobile-nav__toggle-bar {
+  display: block;
+  height: 2px;
+  width: 100%;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.app-header[data-theme-variant="bento"] .mobile-nav__toggle {
+  border-color: rgba(14, 14, 16, 0.12);
+  background: rgba(245, 241, 234, 0.5);
+  color: var(--bento-ink);
+}
+
+.app-header[data-theme-variant="brutal"] .mobile-nav__toggle {
+  border: var(--brutal-border) solid var(--brutal-yellow);
+  background: var(--brutal-ink);
+  color: var(--brutal-yellow);
+  border-radius: 0;
+}
+
+.app-header[data-theme-variant="atelier"] .mobile-nav__toggle {
+  border-color: var(--atelier-brass-dim);
+  background: rgba(11, 20, 36, 0.6);
+  color: var(--atelier-brass);
+}
+
+.mobile-nav__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.mobile-nav__panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: min(18rem, 88vw);
+  height: 100dvh;
+  padding: 5rem 1.25rem 1.5rem;
+  background: #15151c;
+  color: #f3efe9;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -12px 0 36px -12px rgba(0, 0, 0, 0.55);
+  overflow-y: auto;
+}
+
+.app-header[data-theme-variant="default"] .mobile-nav__panel {
+  background: rgba(14, 14, 22, 0.98);
+  color: var(--default-ink);
+  border-left-color: var(--default-glass-border);
+}
+
+.app-header[data-theme-variant="bento"] .mobile-nav__panel {
+  background: var(--bento-paper);
+  color: var(--bento-ink);
+  border-left-color: rgba(14, 14, 16, 0.1);
+}
+
+.app-header[data-theme-variant="brutal"] .mobile-nav__panel {
+  background: var(--brutal-yellow);
+  color: var(--brutal-ink);
+  border-left: var(--brutal-border) solid var(--brutal-ink);
+  box-shadow: -8px 0 0 var(--brutal-ink);
+}
+
+.app-header[data-theme-variant="atelier"] .mobile-nav__panel {
+  background: linear-gradient(180deg, var(--atelier-smoke), var(--atelier-obsidian));
+  color: var(--atelier-parchment);
+  border-left-color: var(--atelier-brass-dim);
+}
+
+.mobile-nav__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-nav__link {
+  display: block;
+  padding: 0.65rem 0.25rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.app-header[data-theme-variant="default"] .mobile-nav__link {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--default-mist);
+}
+
+.app-header[data-theme-variant="default"] .mobile-nav__link:hover {
+  color: var(--default-ember);
+}
+
+.app-header[data-theme-variant="bento"] .mobile-nav__link {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bento-ink);
+}
+
+.app-header[data-theme-variant="brutal"] .mobile-nav__link {
+  font-family: "Archivo Black", sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: var(--brutal-ink);
+}
+
+.app-header[data-theme-variant="atelier"] .mobile-nav__link {
+  color: var(--atelier-parchment);
+}
+
+.mobile-nav__actions {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .bento-tile--hero {
+    padding: 36px 28px !important;
+    min-height: 320px !important;
+  }
+}
+
+.bento-tile--hero {
+  padding: 28px 20px;
+  min-height: 280px;
+}
+
+@media (min-width: 768px) {
+  .bento-tile--hero {
+    padding: 44px 40px !important;
+    min-height: 360px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bento-stage > *,
   .brutal-stage > *,
