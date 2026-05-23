@@ -10,6 +10,7 @@ import { Profile } from "@/pages/Profile";
 import { ProfileSetup } from "@/pages/ProfileSetup";
 import { GameReview } from "@/pages/GameReview";
 import { PublicProfile } from "@/pages/PublicProfile";
+import { Leaderboard } from "@/pages/Leaderboard";
 
 export default function App() {
   return (
@@ -49,6 +50,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <Dashboard />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="leaderboard"
+            element={
+              <AuthGuard>
+                <Leaderboard />
               </AuthGuard>
             }
           />

@@ -15,6 +15,7 @@ import type * as engine from "../engine.js";
 import type * as games from "../games.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
+import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_chess from "../lib/chess.js";
 import type * as lib_computerEngine from "../lib/computerEngine.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   games: typeof games;
   http: typeof http;
   invites: typeof invites;
+  leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
   "lib/chess": typeof lib_chess;
   "lib/computerEngine": typeof lib_computerEngine;
