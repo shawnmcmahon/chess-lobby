@@ -1,13 +1,31 @@
 import { Link, Navigate } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
+import { useTheme } from "@/theme/themeContext";
+import { BentoLanding } from "@/theme/bento/BentoLanding";
+import { BrutalLanding } from "@/theme/brutal/BrutalLanding";
+import { AtelierLanding } from "@/theme/atelier/AtelierLanding";
 
 export function Landing() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const { theme } = useTheme();
 
   if (!isLoading && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  switch (theme) {
+    case "bento":
+      return <BentoLanding isAuthenticated={isAuthenticated} />;
+    case "brutal":
+      return <BrutalLanding isAuthenticated={isAuthenticated} />;
+    case "atelier":
+      return <AtelierLanding isAuthenticated={isAuthenticated} />;
+    default:
+      return <DefaultLanding isAuthenticated={isAuthenticated} />;
+  }
+}
+
+function DefaultLanding({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-12 text-center">
       <h1 className="text-4xl font-bold text-amber-400">Play chess with friends</h1>

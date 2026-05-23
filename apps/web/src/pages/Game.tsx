@@ -1,65 +1,38 @@
-import { useConvexAuth } from "convex/react";
-import { useQuery } from "convex/react";
-import { useMemo } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { api } from "../../../../convex/_generated/api";
-import type { Doc, Id } from "../../../../convex/_generated/dataModel";
+import { Link } from "react-router-dom";
 import { GameBoard } from "@/components/GameBoard";
 import { GameChat } from "@/components/GameChat";
-import { getGuestSessionId } from "@/lib/guestSession";
-
-function playerColorForGame(
-  game: Doc<"games"> | null | undefined,
-  userId: string | undefined,
-  guestSessionId: string,
-): "white" | "black" | null {
-  if (!game) return null;
-  if (userId) {
-    if (game.whiteUserId === userId) return "white";
-    if (game.blackUserId === userId) return "black";
-  }
-  if (game.whiteGuestSessionId === guestSessionId) return "white";
-  if (game.blackGuestSessionId === guestSessionId) return "black";
-  return null;
-}
+import { useGameController, type GameController } from "@/hooks/useGameController";
+import { useTheme } from "@/theme/themeContext";
+import { BentoGame } from "@/theme/bento/BentoGame";
+import { BrutalGame } from "@/theme/brutal/BrutalGame";
+import { AtelierGame } from "@/theme/atelier/AtelierGame";
 
 export function Game() {
-  const { gameId } = useParams<{ gameId: string }>();
-  const [searchParams] = useSearchParams();
-  const spectate = searchParams.get("spectate") === "1";
-  const { isAuthenticated } = useConvexAuth();
-  const user = useQuery(api.users.current, isAuthenticated ? {} : "skip");
-  const guestSessionId = getGuestSessionId();
+  const ctrl = useGameController();
+  const { theme } = useTheme();
+  switch (theme) {
+    case "bento":
+      return <BentoGame ctrl={ctrl} />;
+    case "brutal":
+      return <BrutalGame ctrl={ctrl} />;
+    case "atelier":
+      return <AtelierGame ctrl={ctrl} />;
+    default:
+      return <DefaultGame ctrl={ctrl} />;
+  }
+}
 
-  const game = useQuery(
-    api.games.get,
-    gameId ? { gameId: gameId as Id<"games"> } : "skip",
-  );
-
-  const myColor = useMemo(
-    () => playerColorForGame(game ?? undefined, user?._id, guestSessionId),
-    [game, user?._id, guestSessionId],
-  );
-
-  const whiteName =
-    game?.whiteGuestName ??
-    (game?.whiteUserId ? "White" : game?.mode === "human_vs_engine" ? "You" : "White");
-  const blackName =
-    game?.blackGuestName ??
-    (game?.blackUserId ? "Black" : game?.mode === "human_vs_engine" ? "Computer" : "Black");
-
-  if (!gameId) {
+function DefaultGame({ ctrl }: { ctrl: GameController }) {
+  if (!ctrl.gameId) {
     return <p className="text-red-400">Missing game id.</p>;
   }
-
-  if (game === undefined) {
+  if (ctrl.game === undefined) {
     return <p className="text-stone-400">Loading game…</p>;
   }
-
-  if (!game) {
+  if (!ctrl.game) {
     return <p className="text-red-400">Game not found.</p>;
   }
-
+  const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
 
   return (
@@ -67,12 +40,12 @@ export function Game() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold text-amber-400">
-            {whiteName} vs {blackName}
+            {ctrl.whiteName} vs {ctrl.blackName}
           </h1>
           <p className="text-sm text-stone-500 capitalize">
             {game.status} · {game.mode.replace(/_/g, " ")}
-            {spectate && " · Spectating"}
-            {!spectate && myColor && ` · You are ${myColor}`}
+            {ctrl.spectate && " · Spectating"}
+            {!ctrl.spectate && ctrl.myColor && ` · You are ${ctrl.myColor}`}
           </p>
           {game.endReason?.startsWith("engine_error:") && (
             <p className="text-sm text-red-400">
@@ -102,18 +75,18 @@ export function Game() {
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <GameBoard
           game={game}
-          myColor={spectate ? null : myColor}
-          isAuthenticated={isAuthenticated}
-          readOnly={spectate}
+          myColor={ctrl.spectate ? null : ctrl.myColor}
+          isAuthenticated={ctrl.isAuthenticated}
+          readOnly={ctrl.spectate}
         />
-        {!spectate && (
+        {!ctrl.spectate && (
           <GameChat
             gameId={game._id}
-            guestSessionId={isAuthenticated ? undefined : guestSessionId}
+            guestSessionId={ctrl.isAuthenticated ? undefined : ctrl.guestSessionId}
             guestName={
-              isAuthenticated
+              ctrl.isAuthenticated
                 ? undefined
-                : myColor === "white"
+                : ctrl.myColor === "white"
                   ? game.whiteGuestName ?? "Guest"
                   : game.blackGuestName ?? "Guest"
             }
