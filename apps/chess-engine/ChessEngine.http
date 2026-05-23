@@ -1,0 +1,6 @@
+@ChessEngine_HostAddress = http://localhost:5197
+
+GET {{ChessEngine_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

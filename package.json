@@ -1,0 +1,26 @@
+{
+  "name": "chess-lobby",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web",
+    "convex:dev": "npx convex dev",
+    "convex:deploy": "npx convex deploy"
+  },
+  "dependencies": {
+    "@auth/core": "^0.37.4",
+    "@convex-dev/auth": "^0.0.92",
+    "@convex-dev/presence": "^0.3.0",
+    "chess.js": "^1.4.0",
+    "convex": "^1.39.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.3",
+    "jose": "^6.0.11"
+  }
+}
