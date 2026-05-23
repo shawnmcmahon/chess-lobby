@@ -1,7 +1,8 @@
-# Deploy template: React → S3+CloudFront, Engine → App Runner
-# Configure repository secrets before enabling:
+# Minimal demo deploy: React → S3+CloudFront, Convex (built-in engine — no Stockfish on AWS)
+# Configure repository secrets before running:
 #   AWS_ROLE_ARN, AWS_S3_BUCKET, AWS_CLOUDFRONT_DISTRIBUTION_ID
-#   CONVEX_DEPLOY_KEY (for npx convex deploy)
+#   VITE_CONVEX_URL, CONVEX_DEPLOY_KEY
+# See docs/deploy-demo.md for one-time AWS + Convex setup.
 
 name: Deploy AWS
 
@@ -30,27 +31,6 @@ jobs:
           aws-region: us-east-1
       - run: aws s3 sync apps/web/dist s3://${{ secrets.AWS_S3_BUCKET }} --delete
       - run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/index.html"
-
-  deploy-engine:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-      - uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and push engine image
-        env:
-          ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
-          ECR_REPOSITORY: chess-engine
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -f apps/chess-engine/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
   deploy-convex:
     runs-on: ubuntu-latest

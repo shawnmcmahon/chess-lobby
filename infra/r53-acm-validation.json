@@ -1,0 +1,30 @@
+{
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "_22803ddd274cb798ddd44a5299f0a541.thechesslobby.com.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "_81543a6f8e718b907fbcf1a0de574439.jkddzztszm.acm-validations.aws."
+          }
+        ]
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "_d20318eefb29b9983dcab2996753c27e.www.thechesslobby.com.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "_28736ef356955b9f6534afaa5d246835.jkddzztszm.acm-validations.aws."
+          }
+        ]
+      }
+    }
+  ]
+}

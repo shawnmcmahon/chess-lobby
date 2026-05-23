@@ -1,6 +1,7 @@
 /**
  * One-time setup for Convex Auth (JWT keys + SITE_URL).
  * Run: node scripts/setup-auth.mjs
+ * Production: SITE_URL=https://xxx.cloudfront.net node scripts/setup-auth.mjs --prod
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync, unlinkSync } from "node:fs";
@@ -8,7 +9,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exportJWK, exportPKCS8, generateKeyPair } from "jose";
 
+const prod = process.argv.includes("--prod");
 const siteUrl = process.env.SITE_URL ?? "http://localhost:5173";
+const convexArgs = ["convex", "env", "set", "--from-file"];
+if (prod) {
+  convexArgs.push("--prod");
+}
 
 const keys = await generateKeyPair("RS256", { extractable: true });
 const privateKey = await exportPKCS8(keys.privateKey);
@@ -28,7 +34,7 @@ writeFileSync(envFile, contents, "utf8");
 
 try {
   console.log("Setting SITE_URL, JWT_PRIVATE_KEY, and JWKS on Convex...");
-  execFileSync("npx", ["convex", "env", "set", "--from-file", envFile, "--force"], {
+  execFileSync("npx", [...convexArgs, envFile, "--force"], {
     stdio: "inherit",
     shell: true,
   });
@@ -41,5 +47,10 @@ console.log("Clear browser localStorage for this site if sign-in still fails, th
 console.log("\nFor Google sign-in:");
 console.log("  npx convex env set AUTH_GOOGLE_ID <client-id>");
 console.log("  npx convex env set AUTH_GOOGLE_SECRET <client-secret>");
-console.log("\nGoogle redirect URI:");
-console.log("  https://pastel-grouse-840.convex.site/api/auth/callback/google");
+if (prod) {
+  console.log("\nGoogle redirect URI (production):");
+  console.log("  https://pastel-buffalo-515.convex.site/api/auth/callback/google");
+} else {
+  console.log("\nGoogle redirect URI (dev):");
+  console.log("  https://pastel-grouse-840.convex.site/api/auth/callback/google");
+}
