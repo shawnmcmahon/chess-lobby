@@ -1,7 +1,7 @@
 import { useConvexAuth } from "convex/react";
 import { useQuery } from "convex/react";
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { GameBoard } from "@/components/GameBoard";
@@ -25,6 +25,8 @@ function playerColorForGame(
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
+  const [searchParams] = useSearchParams();
+  const spectate = searchParams.get("spectate") === "1";
   const { isAuthenticated } = useConvexAuth();
   const user = useQuery(api.users.current, isAuthenticated ? {} : "skip");
   const guestSessionId = getGuestSessionId();
@@ -69,7 +71,8 @@ export function Game() {
           </h1>
           <p className="text-sm text-stone-500 capitalize">
             {game.status} · {game.mode.replace(/_/g, " ")}
-            {myColor && ` · You are ${myColor}`}
+            {spectate && " · Spectating"}
+            {!spectate && myColor && ` · You are ${myColor}`}
           </p>
           {game.mode === "human_vs_engine" &&
             game.status === "active" &&
@@ -102,18 +105,25 @@ export function Game() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <GameBoard game={game} myColor={myColor} isAuthenticated={isAuthenticated} />
-        <GameChat
-          gameId={game._id}
-          guestSessionId={isAuthenticated ? undefined : guestSessionId}
-          guestName={
-            isAuthenticated
-              ? undefined
-              : myColor === "white"
-                ? game.whiteGuestName ?? "Guest"
-                : game.blackGuestName ?? "Guest"
-          }
+        <GameBoard
+          game={game}
+          myColor={spectate ? null : myColor}
+          isAuthenticated={isAuthenticated}
+          readOnly={spectate}
         />
+        {!spectate && (
+          <GameChat
+            gameId={game._id}
+            guestSessionId={isAuthenticated ? undefined : guestSessionId}
+            guestName={
+              isAuthenticated
+                ? undefined
+                : myColor === "white"
+                  ? game.whiteGuestName ?? "Guest"
+                  : game.blackGuestName ?? "Guest"
+            }
+          />
+        )}
       </div>
     </div>
   );
