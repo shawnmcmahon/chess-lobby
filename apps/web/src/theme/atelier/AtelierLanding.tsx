@@ -1,80 +1,87 @@
 import { Link } from "react-router-dom";
+import { LandingHeroBoard } from "@/components/landing/LandingHeroBoard";
+import { LandingLiveStats } from "@/components/landing/LandingLiveStats";
 
 export function AtelierLanding({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <div className="relative" style={{ minHeight: "calc(100vh - 200px)" }}>
-      <span
-        aria-hidden
-        className="atelier-knight"
-        style={{ top: "30vh", left: "-4rem", fontSize: "26rem" }}
-      >
-        ♞
-      </span>
-
-      <section className="text-center max-w-3xl mx-auto pt-8 pb-12 relative">
-        <div className="atelier-rule mb-8">
-          <span className="atelier-smallcaps">Maison Échecs · Anno MMXXVI</span>
-        </div>
-        <p
-          className="atelier-display"
-          style={{
-            fontSize: "1.4rem",
-            fontStyle: "italic",
-            color: "var(--atelier-brass)",
-            marginBottom: 12,
-          }}
-        >
-          — a couture house for the sixty-four squares —
-        </p>
-        <h1
-          className="atelier-display"
-          style={{
-            fontSize: "clamp(3.5rem, 8vw, 6.2rem)",
-            lineHeight: 0.96,
-            letterSpacing: "-0.02em",
-            fontWeight: 400,
-            fontStyle: "normal",
-          }}
-        >
-          The slow art of{" "}
-          <span style={{ fontStyle: "italic", color: "var(--atelier-brass)" }}>
-            checkmate.
-          </span>
-        </h1>
-        <p
-          className="mt-8"
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "1.2rem",
-            lineHeight: 1.55,
-            maxWidth: "44ch",
-            margin: "32px auto 0",
-            color: "var(--atelier-parchment-soft)",
-          }}
-        >
-          A chess lobby crafted like an heirloom — for players who prefer brass
-          dials to flashing lights and parchment to plastic. Sit. Think. Play.
-        </p>
-
-        <div className="mt-10 flex items-center justify-center gap-4 flex-wrap">
-          <Link
-            to={isAuthenticated ? "/dashboard" : "/login"}
-            className="atelier-btn"
-            style={{ padding: "16px 32px", fontSize: "0.78rem" }}
+    <div className="relative space-y-12" style={{ minHeight: "calc(100vh - 200px)" }}>
+      <section className="grid items-center gap-10 lg:grid-cols-2">
+        <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0 pt-4 relative">
+          <div className="atelier-rule mb-8">
+            <span className="atelier-smallcaps">Maison Échecs · Anno MMXXVI</span>
+          </div>
+          <p
+            className="atelier-display"
+            style={{
+              fontSize: "1.4rem",
+              fontStyle: "italic",
+              color: "var(--atelier-brass)",
+              marginBottom: 12,
+            }}
           >
-            {isAuthenticated ? "Enter the salon" : "Procure access"}
-          </Link>
-          <a href="#collection" className="atelier-btn atelier-btn--ghost" style={{ padding: "16px 32px", fontSize: "0.78rem" }}>
-            View the collection
-          </a>
+            — a couture house for the sixty-four squares —
+          </p>
+          <h1
+            className="atelier-display"
+            style={{
+              fontSize: "clamp(3rem, 7vw, 5.5rem)",
+              lineHeight: 0.96,
+              letterSpacing: "-0.02em",
+              fontWeight: 400,
+              fontStyle: "normal",
+            }}
+          >
+            The slow art of{" "}
+            <span style={{ fontStyle: "italic", color: "var(--atelier-brass)" }}>
+              checkmate.
+            </span>
+          </h1>
+          <p
+            className="mt-8"
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "1.2rem",
+              lineHeight: 1.55,
+              color: "var(--atelier-parchment-soft)",
+            }}
+          >
+            A chess lobby crafted like an heirloom — brass dials, parchment panels,
+            and eleven cadences from bullet to correspondence.
+          </p>
+          <LandingLiveStats
+            render={({ inPlayCount, loading }) => (
+              <p className="atelier-smallcaps mt-6" style={{ color: "var(--atelier-brass)" }}>
+                {loading ? "Salon activity — …" : `${inPlayCount ?? 0} games in progress`}
+              </p>
+            )}
+          />
+          <div className="mt-10 flex items-center justify-center lg:justify-start gap-4 flex-wrap">
+            <Link
+              to={isAuthenticated ? "/dashboard" : "/login"}
+              className="atelier-btn"
+              style={{ padding: "16px 32px", fontSize: "0.78rem" }}
+            >
+              {isAuthenticated ? "Enter the salon" : "Procure access"}
+            </Link>
+            <a href="#collection" className="atelier-btn atelier-btn--ghost" style={{ padding: "16px 32px", fontSize: "0.78rem" }}>
+              View the collection
+            </a>
+          </div>
+          <div className="mt-10 flex items-center justify-center lg:justify-start">
+            <span className="atelier-seal">★</span>
+          </div>
         </div>
-
-        <div className="mt-12 flex items-center justify-center">
-          <span className="atelier-seal">★</span>
+        <div className="atelier-hero-frame relative">
+          <div className="atelier-hero-frame__photo">
+            <img src="/landing/atelier-salon.jpg" alt="" loading="lazy" className="atelier-hero-frame__img" />
+          </div>
+          <div className="atelier-hero-frame__board">
+            <LandingHeroBoard className="max-w-[260px] mx-auto" intervalMs={2800} />
+          </div>
         </div>
       </section>
 
-      <section id="collection" className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+      <section id="collection" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card
           number="I."
           title="Pairing"
@@ -96,7 +103,7 @@ export function AtelierLanding({ isAuthenticated }: { isAuthenticated: boolean }
         />
       </section>
 
-      <section className="mt-12 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-stretch">
+      <section className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-stretch">
         <div className="atelier-panel">
           <Corners />
           <div className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
@@ -119,7 +126,7 @@ export function AtelierLanding({ isAuthenticated }: { isAuthenticated: boolean }
           >
             Every match begins with a brass dial and ends with a wax seal.
             Resignations are noted in the ledger. Draws are accepted with a
-            small bow. The squares are ours, but the artistry is yours.
+            small bow. Post-game review awaits in the archive.
           </p>
           <div className="atelier-rule mt-6">
             <span className="atelier-smallcaps">— signed —</span>
@@ -163,6 +170,27 @@ export function AtelierLanding({ isAuthenticated }: { isAuthenticated: boolean }
               Maison hallmark
             </span>
           </div>
+        </div>
+      </section>
+
+      <section className="atelier-panel text-center" style={{ padding: "40px 28px" }}>
+        <div className="atelier-rule mb-6">
+          <span className="atelier-smallcaps">Finale</span>
+        </div>
+        <h2 className="atelier-display" style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>
+          The salon awaits <span style={{ fontStyle: "italic", color: "var(--atelier-brass)" }}>your debut.</span>
+        </h2>
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/login"}
+            className="atelier-btn atelier-btn--oxblood"
+            style={{ padding: "14px 28px" }}
+          >
+            {isAuthenticated ? "Return to the floor" : "Request admission"}
+          </Link>
+          <Link to="/leaderboard" className="atelier-btn atelier-btn--ghost" style={{ padding: "14px 28px" }}>
+            Registre des maîtres
+          </Link>
         </div>
       </section>
     </div>

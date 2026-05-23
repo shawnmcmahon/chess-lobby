@@ -1,16 +1,24 @@
 import { useQuery } from "convex/react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { api } from "../../../../convex/_generated/api";
+import { useTheme } from "@/theme/themeContext";
+import {
+  AtelierLeaderboard,
+  type AtelierLeaderboardCategory,
+  type AtelierLeaderboardRow,
+  type AtelierLeaderboardSort,
+} from "@/theme/atelier/AtelierLeaderboard";
+import {
+  BentoLeaderboard,
+  type BentoLeaderboardCategory,
+  type BentoLeaderboardRow,
+  type BentoLeaderboardSortBy,
+} from "@/theme/bento/BentoLeaderboard";
+import { BrutalLeaderboard } from "@/theme/brutal/BrutalLeaderboard";
+import { DefaultLeaderboard } from "@/theme/default/DefaultLeaderboard";
 
-type SortBy = "wins" | "losses" | "draws" | "rating";
-type Category =
-  | "all"
-  | "bullet"
-  | "blitz"
-  | "rapid"
-  | "classical"
-  | "correspondence";
+type SortBy = BentoLeaderboardSortBy;
+type Category = BentoLeaderboardCategory;
 
 function winRatio(wins: number, losses: number, draws: number): string {
   const total = wins + losses + draws;
@@ -21,126 +29,73 @@ function winRatio(wins: number, losses: number, draws: number): string {
 export function Leaderboard() {
   const [sortBy, setSortBy] = useState<SortBy>("wins");
   const [category, setCategory] = useState<Category>("all");
+  const { theme } = useTheme();
 
-  const rows = useQuery(api.leaderboard.listTop, {
+  const rawRows = useQuery(api.leaderboard.listTop, {
     sortBy,
     category: category === "all" ? undefined : category,
     limit: 50,
   });
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-2xl font-semibold text-amber-400">Leaderboard</h1>
+  const rows = useMemo((): BentoLeaderboardRow[] | undefined => {
+    if (!rawRows) return undefined;
+    return rawRows.map((row) => ({
+      ...row,
+      winRatio: winRatio(row.wins, row.losses, row.draws),
+    }));
+  }, [rawRows]);
 
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ["wins", "Most Wins"],
-            ["losses", "Most Losses"],
-            ["draws", "Most Draws"],
-            ["rating", "Highest Rating"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setSortBy(id)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              sortBy === id
-                ? "bg-amber-600 text-stone-950"
-                : "border border-stone-700 hover:border-amber-700"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+  const atelierRows: AtelierLeaderboardRow[] | undefined = rows?.map((row) => ({
+    userId: row.userId,
+    rank: row.rank,
+    displayName: row.displayName,
+    rating: row.rating,
+    wins: row.wins,
+    losses: row.losses,
+    draws: row.draws,
+    winRatio: row.winRatio,
+  }));
 
-      {sortBy !== "rating" && (
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value as Category)}
-          className="rounded border border-stone-700 bg-stone-900 px-3 py-2 text-sm"
-        >
-          <option value="all">All categories</option>
-          <option value="bullet">Bullet</option>
-          <option value="blitz">Blitz</option>
-          <option value="rapid">Rapid</option>
-          <option value="classical">Classical</option>
-          <option value="correspondence">Correspondence</option>
-        </select>
-      )}
-
-      {!rows ? (
-        <p className="text-stone-400">Loading…</p>
-      ) : rows.length === 0 ? (
-        <p className="text-stone-500">No stats yet.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-stone-800">
-          <table className="w-full text-sm">
-            <thead className="bg-stone-900 text-stone-400">
-              <tr>
-                <th className="px-3 py-2 text-left">#</th>
-                <th className="px-3 py-2 text-left">Player</th>
-                {sortBy === "rating" ? (
-                  <>
-                    <th className="px-3 py-2 text-right">Rating</th>
-                    <th className="px-3 py-2 text-right">W</th>
-                    <th className="px-3 py-2 text-right">L</th>
-                    <th className="px-3 py-2 text-right">D</th>
-                    <th className="px-3 py-2 text-right">Win %</th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-3 py-2 text-right">W</th>
-                    <th className="px-3 py-2 text-right">L</th>
-                    <th className="px-3 py-2 text-right">D</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.userId} className="border-t border-stone-800">
-                  <td className="px-3 py-2 text-stone-500">{row.rank}</td>
-                  <td className="px-3 py-2">
-                    <Link
-                      to={`/player/${row.userId}`}
-                      className="font-medium hover:text-amber-300"
-                    >
-                      {row.displayName}
-                    </Link>
-                    {sortBy !== "rating" && (
-                      <span className="ml-2 text-xs text-stone-500">
-                        ({row.rating})
-                      </span>
-                    )}
-                  </td>
-                  {sortBy === "rating" ? (
-                    <>
-                      <td className="px-3 py-2 text-right font-medium text-amber-400">
-                        {row.rating}
-                      </td>
-                      <td className="px-3 py-2 text-right">{row.wins}</td>
-                      <td className="px-3 py-2 text-right">{row.losses}</td>
-                      <td className="px-3 py-2 text-right">{row.draws}</td>
-                      <td className="px-3 py-2 text-right text-stone-300">
-                        {winRatio(row.wins, row.losses, row.draws)}
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-3 py-2 text-right">{row.wins}</td>
-                      <td className="px-3 py-2 text-right">{row.losses}</td>
-                      <td className="px-3 py-2 text-right">{row.draws}</td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+  switch (theme) {
+    case "atelier":
+      return (
+        <AtelierLeaderboard
+          sortBy={sortBy as AtelierLeaderboardSort}
+          onSortByChange={setSortBy}
+          category={category as AtelierLeaderboardCategory}
+          onCategoryChange={setCategory}
+          rows={atelierRows}
+        />
+      );
+    case "bento":
+      return (
+        <BentoLeaderboard
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          category={category}
+          setCategory={setCategory}
+          rows={rows}
+        />
+      );
+    case "brutal":
+      return (
+        <BrutalLeaderboard
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          category={category}
+          setCategory={setCategory}
+          rows={rows}
+        />
+      );
+    default:
+      return (
+        <DefaultLeaderboard
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          category={category}
+          setCategory={setCategory}
+          rows={rawRows}
+        />
+      );
+  }
 }

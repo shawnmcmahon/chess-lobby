@@ -5,6 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { formatDaysLeft } from "@/lib/correspondenceClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -86,8 +87,8 @@ export function BrutalBoard({ game, myColor, isAuthenticated, readOnly = false }
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <ClockBlock label="Black" time={displayBlack} active={game.currentTurn === "black"} status={game.status} playType={game.playType} />
-        <ClockBlock label="White" time={displayWhite} active={game.currentTurn === "white"} status={game.status} playType={game.playType} />
+        <ClockBlock label="Black" time={displayBlack} active={game.currentTurn === "black"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
+        <ClockBlock label="White" time={displayWhite} active={game.currentTurn === "white"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
       </div>
       <div className="brutal-board-frame">
         <span className="brutal-sticker" style={{ top: -16, left: -16 }} data-tilt="left">
@@ -158,19 +159,33 @@ function ClockBlock({
   active,
   status,
   playType,
+  turnDeadlineAt,
+  daysPerTurn,
+  isTurnSide,
+  now,
 }: {
   label: string;
   time: number | null;
   active: boolean;
   status: string;
   playType?: "live" | "correspondence";
+  turnDeadlineAt?: number;
+  daysPerTurn?: number;
+  isTurnSide?: boolean;
+  now: number;
 }) {
   if (playType === "correspondence" || time === null) {
+    const corresLabel =
+      isTurnSide && turnDeadlineAt && daysPerTurn
+        ? formatDaysLeft(turnDeadlineAt, now).toUpperCase()
+        : daysPerTurn
+          ? `${daysPerTurn}D / TURN`
+          : "CORRES.";
     return (
-      <div className={`brutal-card ${active ? "brutal-card--yellow" : ""}`} style={{ padding: 14 }}>
+      <div className={`brutal-card ${isTurnSide && active ? "brutal-card--yellow" : ""}`} style={{ padding: 14 }}>
         <div className="brutal-display text-[0.8rem]">{label.toUpperCase()}</div>
         <div className="brutal-chunk" style={{ fontSize: "1.1rem", marginTop: 4 }}>
-          CORRES.
+          {corresLabel}
         </div>
       </div>
     );

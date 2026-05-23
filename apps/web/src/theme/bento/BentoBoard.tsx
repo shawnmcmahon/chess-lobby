@@ -5,6 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { formatDaysLeft } from "@/lib/correspondenceClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -95,12 +96,20 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
           time={displayBlack}
           active={game.currentTurn === "black" && game.status === "active"}
           playType={game.playType}
+          turnDeadlineAt={game.turnDeadlineAt}
+          daysPerTurn={game.daysPerTurn}
+          currentTurn={game.currentTurn}
+          now={now}
         />
         <ClockTile
           label="White"
           time={displayWhite}
           active={game.currentTurn === "white" && game.status === "active"}
           playType={game.playType}
+          turnDeadlineAt={game.turnDeadlineAt}
+          daysPerTurn={game.daysPerTurn}
+          currentTurn={game.currentTurn}
+          now={now}
         />
       </div>
       <div className="bento-board-frame">
@@ -167,25 +176,52 @@ function ClockTile({
   time,
   active,
   playType,
+  turnDeadlineAt,
+  daysPerTurn,
+  currentTurn,
+  now,
 }: {
   label: string;
   time: number | null;
   active: boolean;
   playType?: "live" | "correspondence";
+  turnDeadlineAt?: number;
+  daysPerTurn?: number;
+  currentTurn: "white" | "black";
+  now: number;
 }) {
-  if (playType === "correspondence" || time === null) {
+  if (playType === "correspondence") {
+    const isTurnSide =
+      (label === "White" && currentTurn === "white") ||
+      (label === "Black" && currentTurn === "black");
+    const corresLabel =
+      isTurnSide && turnDeadlineAt && daysPerTurn
+        ? formatDaysLeft(turnDeadlineAt, now)
+        : daysPerTurn
+          ? `${daysPerTurn}d / turn`
+          : "correspondence";
     return (
       <div
         className="bento-tile"
         style={{
           padding: 16,
-          background: active ? "var(--bento-jade)" : "var(--bento-paper)",
-          color: active ? "#fff" : "var(--bento-ink)",
+          background: isTurnSide && active ? "var(--bento-jade)" : "var(--bento-paper)",
+          color: isTurnSide && active ? "#fff" : "var(--bento-ink)",
         }}
       >
         <div className="bento-tile__eyebrow">{label}</div>
         <div className="bento-mono text-sm" style={{ marginTop: 6 }}>
-          correspondence
+          {corresLabel}
+        </div>
+      </div>
+    );
+  }
+  if (time === null) {
+    return (
+      <div className="bento-tile" style={{ padding: 16, background: "var(--bento-paper)" }}>
+        <div className="bento-tile__eyebrow">{label}</div>
+        <div className="bento-mono text-sm" style={{ marginTop: 6 }}>
+          —
         </div>
       </div>
     );
