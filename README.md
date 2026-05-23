@@ -11,6 +11,35 @@ Multiplayer chess with a React frontend, Convex real-time backend, and an ASP.NE
 - **In-game chat** scoped to each match
 - Server-validated moves via `chess.js` on Convex
 
+## Architecture
+
+React handles the UI; Convex owns real-time state (auth, games, chat, lobby presence); the ASP.NET Core engine service runs Stockfish for computer opponents.
+
+```mermaid
+flowchart TB
+  subgraph aws [AWS - cheap static hosting]
+    CF[CloudFront CDN]
+    S3[S3 bucket - React build]
+  end
+
+  subgraph convexCloud [Convex Cloud]
+    Auth[Convex Auth - Google + Email]
+    DB[(games users chat invites)]
+    Presence["@convex-dev/presence"]
+    Actions[Node actions - call engine]
+  end
+
+  subgraph engineSvc [AWS App Runner]
+    DotNet[ASP.NET Core API]
+    SF[Stockfish binary UCI]
+  end
+
+  Browser[React SPA] --> CF --> S3
+  Browser <-->|WebSocket queries/mutations| convexCloud
+  Actions -->|POST /api/best-move| DotNet
+  DotNet --> SF
+```
+
 ## Monorepo layout
 
 ```
