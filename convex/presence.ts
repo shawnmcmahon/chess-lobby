@@ -6,6 +6,14 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const presence = new Presence(components.presence);
 
+export const getUserId = query({
+  args: {},
+  returns: v.union(v.id("users"), v.null()),
+  handler: async (ctx) => {
+    return await getAuthUserId(ctx);
+  },
+});
+
 export const heartbeat = mutation({
   args: {
     roomId: v.string(),
