@@ -8,7 +8,7 @@ type QuickPairGridProps = {
 
 export function QuickPairGrid({ onSelect, disabled }: QuickPairGridProps) {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
       {TIME_CONTROL_PRESETS.map((preset) => (
         <button
           key={preset.label}
