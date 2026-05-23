@@ -1,12 +1,92 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import { applyMove, applyUciMove, STARTING_FEN } from "./lib/chess";
 import { generateInviteToken, playerColorForUser } from "./lib/games";
 import { getCurrentUserOrNull } from "./lib/auth";
+import { recordGameStats } from "./lib/stats";
+import { playType } from "./schema";
+import {
+  categorizeTimeControl,
+  computeTurnDeadline,
+  type TimeControlCategory,
+} from "./lib/timeControl";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function finishGame(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  updates: {
+    winner?: "white" | "black";
+    endReason: string;
+  },
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game || game.status === "finished" || game.status === "abandoned") {
+    return;
+  }
+
+  const now = Date.now();
+  await ctx.db.patch(gameId, {
+    status: "finished",
+    winner: updates.winner,
+    endReason: updates.endReason,
+    updatedAt: now,
+  });
+
+  const finished = await ctx.db.get(gameId);
+  if (finished) {
+    await recordGameStats(ctx, finished);
+  }
+}
+
+function clockStartTimestamp(game: Doc<"games">): number {
+  return game.lastMoveAt ?? game.createdAt;
+}
+
+function applyClockForMove(
+  game: Doc<"games">,
+  movingColor: "white" | "black",
+  now: number,
+): {
+  whiteTimeMs?: number;
+  blackTimeMs?: number;
+  forfeit?: "white" | "black";
+} {
+  if (game.playType === "correspondence" || game.baseTimeMs === undefined) {
+    return {};
+  }
+
+  const elapsed = now - clockStartTimestamp(game);
+  const whiteTime = game.whiteTimeMs ?? game.baseTimeMs;
+  const blackTime = game.blackTimeMs ?? game.baseTimeMs;
+
+  if (movingColor === "white") {
+    const remaining = whiteTime - elapsed;
+    if (remaining <= 0) {
+      return { forfeit: "white" };
+    }
+    const afterIncrement = remaining + (game.incrementMs ?? 0);
+    return { whiteTimeMs: afterIncrement, blackTimeMs: blackTime };
+  }
+
+  const remaining = blackTime - elapsed;
+  if (remaining <= 0) {
+    return { forfeit: "black" };
+  }
+  const afterIncrement = remaining + (game.incrementMs ?? 0);
+  return { whiteTimeMs: whiteTime, blackTimeMs: afterIncrement };
+}
 
 export const get = query({
   args: { gameId: v.id("games") },
@@ -36,6 +116,10 @@ export const create = mutation({
   args: {
     mode: v.union(v.literal("human_vs_human"), v.literal("human_vs_engine")),
     engineDifficulty: v.optional(v.number()),
+    playType: v.optional(playType),
+    baseTimeMs: v.optional(v.number()),
+    incrementMs: v.optional(v.number()),
+    daysPerTurn: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -46,6 +130,15 @@ export const create = mutation({
     const now = Date.now();
     const inviteToken = generateInviteToken();
     const difficulty = args.engineDifficulty ?? 10;
+    const play = args.playType ?? "live";
+    const incrementMs = args.incrementMs ?? 0;
+
+    let category: TimeControlCategory | undefined;
+    if (play === "correspondence") {
+      category = "correspondence";
+    } else if (args.baseTimeMs !== undefined) {
+      category = categorizeTimeControl(args.baseTimeMs, incrementMs);
+    }
 
     const gameId = await ctx.db.insert("games", {
       status: args.mode === "human_vs_engine" ? "active" : "waiting",
@@ -60,6 +153,19 @@ export const create = mutation({
       createdByUserId: userId,
       createdAt: now,
       updatedAt: now,
+      playType: play,
+      timeControlCategory: category,
+      baseTimeMs: args.baseTimeMs,
+      incrementMs: args.baseTimeMs !== undefined ? incrementMs : undefined,
+      daysPerTurn: args.daysPerTurn,
+      whiteTimeMs: args.baseTimeMs,
+      blackTimeMs: args.baseTimeMs,
+      turnDeadlineAt:
+        play === "correspondence" && args.daysPerTurn
+          ? computeTurnDeadline(now, args.daysPerTurn)
+          : undefined,
+      lastMoveAt: now,
+      isPublic: true,
     });
 
     return { gameId, inviteToken };
@@ -102,6 +208,7 @@ export const joinByInvite = mutation({
         blackUserId: userId,
         status: "active",
         updatedAt: now,
+        lastMoveAt: now,
       });
       return game._id;
     }
@@ -121,6 +228,7 @@ export const joinByInvite = mutation({
       blackGuestSessionId: guestSessionId,
       status: "active",
       updatedAt: now,
+      lastMoveAt: now,
     });
 
     return game._id;
@@ -153,23 +261,45 @@ export const makeMove = mutation({
       throw new Error("Not your turn");
     }
 
-    const result = applyMove(game.fen, args.from, args.to, args.promotion);
     const now = Date.now();
+    const clock = applyClockForMove(game, color, now);
+    if (clock.forfeit) {
+      const winner = clock.forfeit === "white" ? "black" : "white";
+      await finishGame(ctx, args.gameId, {
+        winner,
+        endReason: "timeout",
+      });
+      return args.gameId;
+    }
+
+    const result = applyMove(game.fen, args.from, args.to, args.promotion);
 
     const updates: Record<string, unknown> = {
       fen: result.fen,
       pgn: result.pgn,
       currentTurn: result.currentTurn,
       updatedAt: now,
+      lastMoveAt: now,
+      whiteTimeMs: clock.whiteTimeMs ?? game.whiteTimeMs,
+      blackTimeMs: clock.blackTimeMs ?? game.blackTimeMs,
     };
 
-    if (result.isGameOver) {
-      updates.status = "finished";
-      updates.winner = result.winner;
-      updates.endReason = result.endReason;
+    if (
+      game.playType === "correspondence" &&
+      game.daysPerTurn !== undefined
+    ) {
+      updates.turnDeadlineAt = computeTurnDeadline(now, game.daysPerTurn);
     }
 
-    await ctx.db.patch(args.gameId, updates);
+    if (result.isGameOver) {
+      await ctx.db.patch(args.gameId, updates);
+      await finishGame(ctx, args.gameId, {
+        winner: result.winner,
+        endReason: result.endReason ?? "game_over",
+      });
+    } else {
+      await ctx.db.patch(args.gameId, updates);
+    }
 
     if (
       game.mode === "human_vs_engine" &&
@@ -203,10 +333,36 @@ export const resign = mutation({
     }
 
     const winner = color === "white" ? "black" : "white";
+    await finishGame(ctx, args.gameId, { winner, endReason: "resign" });
+  },
+});
+
+export const saveAnalysis = mutation({
+  args: {
+    gameId: v.id("games"),
+    analysisJson: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const game = await ctx.db.get(args.gameId);
+    if (!game) {
+      throw new Error("Game not found");
+    }
+    if (game.status !== "finished") {
+      throw new Error("Game is not finished");
+    }
+
+    const color = playerColorForUser(game, userId, null);
+    if (!color) {
+      throw new Error("You are not a participant in this game");
+    }
+
     await ctx.db.patch(args.gameId, {
-      status: "finished",
-      winner,
-      endReason: "resign",
+      analysisJson: args.analysisJson,
       updatedAt: Date.now(),
     });
   },
@@ -223,21 +379,36 @@ export const applyEngineMoveInternal = internalMutation({
       return;
     }
 
+    const now = Date.now();
+    const clock = applyClockForMove(game, "black", now);
+    if (clock.forfeit) {
+      await finishGame(ctx, args.gameId, {
+        winner: "white",
+        endReason: "timeout",
+      });
+      return;
+    }
+
     const result = applyUciMove(game.fen, args.uci);
     const updates: Record<string, unknown> = {
       fen: result.fen,
       pgn: result.pgn,
       currentTurn: result.currentTurn,
-      updatedAt: Date.now(),
+      updatedAt: now,
+      lastMoveAt: now,
+      whiteTimeMs: clock.whiteTimeMs ?? game.whiteTimeMs,
+      blackTimeMs: clock.blackTimeMs ?? game.blackTimeMs,
     };
 
     if (result.isGameOver) {
-      updates.status = "finished";
-      updates.winner = result.winner;
-      updates.endReason = result.endReason;
+      await ctx.db.patch(args.gameId, updates);
+      await finishGame(ctx, args.gameId, {
+        winner: result.winner,
+        endReason: result.endReason ?? "game_over",
+      });
+    } else {
+      await ctx.db.patch(args.gameId, updates);
     }
-
-    await ctx.db.patch(args.gameId, updates);
   },
 });
 
@@ -255,6 +426,70 @@ export const setEngineError = internalMutation({
       endReason: `engine_error: ${args.message}`,
       updatedAt: Date.now(),
     });
+  },
+});
+
+export const processLiveTimeouts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const activeGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(100);
+
+    const now = Date.now();
+    let processed = 0;
+
+    for (const game of activeGames) {
+      if (game.playType === "correspondence" || game.baseTimeMs === undefined) {
+        continue;
+      }
+
+      const movingColor = game.currentTurn;
+      const elapsed = now - clockStartTimestamp(game);
+      const timeMs =
+        movingColor === "white"
+          ? (game.whiteTimeMs ?? game.baseTimeMs)
+          : (game.blackTimeMs ?? game.baseTimeMs);
+
+      if (elapsed >= timeMs) {
+        const winner = movingColor === "white" ? "black" : "white";
+        await finishGame(ctx, game._id, { winner, endReason: "timeout" });
+        processed += 1;
+      }
+    }
+
+    return { processed };
+  },
+});
+
+export const processCorrespondenceTimeouts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const activeGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(100);
+
+    const now = Date.now();
+    let processed = 0;
+
+    for (const game of activeGames) {
+      if (
+        game.playType !== "correspondence" ||
+        game.turnDeadlineAt === undefined
+      ) {
+        continue;
+      }
+
+      if (now > game.turnDeadlineAt) {
+        const winner = game.currentTurn === "white" ? "black" : "white";
+        await finishGame(ctx, game._id, { winner, endReason: "timeout" });
+        processed += 1;
+      }
+    }
+
+    return { processed };
   },
 });
 
@@ -280,5 +515,95 @@ export const listMyActive = query({
     return Array.from(unique.values()).filter(
       (g) => g.status === "active" || g.status === "waiting",
     );
+  },
+});
+
+export const listMyFinished = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrNull(ctx);
+    if (!user) {
+      return { page: [], isDone: true, continueCursor: "" };
+    }
+
+    const asWhite = await ctx.db
+      .query("games")
+      .withIndex("by_whiteUser_and_status", (q) =>
+        q.eq("whiteUserId", user._id).eq("status", "finished"),
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    const blackFinished = await ctx.db
+      .query("games")
+      .withIndex("by_blackUser_and_status", (q) =>
+        q.eq("blackUserId", user._id).eq("status", "finished"),
+      )
+      .order("desc")
+      .take(20);
+
+    const seen = new Set(asWhite.page.map((g) => g._id));
+    const merged = [
+      ...asWhite.page,
+      ...blackFinished.filter((g) => !seen.has(g._id)),
+    ].sort((a, b) => b._creationTime - a._creationTime);
+
+    return {
+      ...asWhite,
+      page: merged.slice(0, args.paginationOpts.numItems),
+    };
+  },
+});
+
+export const listActiveForSpectate = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const take = args.limit ?? 20;
+    const games = await ctx.db
+      .query("games")
+      .withIndex("by_status_and_public", (q) =>
+        q.eq("status", "active").eq("isPublic", true),
+      )
+      .order("desc")
+      .take(take);
+
+    return await Promise.all(
+      games.map(async (game) => {
+        const whiteUser = game.whiteUserId
+          ? await ctx.db.get(game.whiteUserId)
+          : null;
+        const blackUser = game.blackUserId
+          ? await ctx.db.get(game.blackUserId)
+          : null;
+        return {
+          game,
+          whiteName:
+            game.whiteGuestName ??
+            whiteUser?.displayName ??
+            whiteUser?.name ??
+            "White",
+          blackName:
+            game.blackGuestName ??
+            blackUser?.displayName ??
+            blackUser?.name ??
+            (game.mode === "human_vs_engine" ? "Computer" : "Black"),
+        };
+      }),
+    );
+  },
+});
+
+export const getLobbyCounts = query({
+  args: { onlineCount: v.number() },
+  handler: async (ctx, args) => {
+    const activeGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(500);
+
+    return {
+      onlineCount: args.onlineCount,
+      inPlayCount: activeGames.length,
+    };
   },
 });

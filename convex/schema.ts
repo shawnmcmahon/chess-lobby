@@ -94,6 +94,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_whiteUser", ["whiteUserId"])
     .index("by_blackUser", ["blackUserId"])
+    .index("by_whiteUser_and_status", ["whiteUserId", "status"])
+    .index("by_blackUser_and_status", ["blackUserId", "status"])
     .index("by_status_and_public", ["status", "isPublic"]),
 
   gameInvites: defineTable({
