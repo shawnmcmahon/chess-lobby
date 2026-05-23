@@ -1,6 +1,8 @@
 # Chess Lobby
 
-Multiplayer chess with a React frontend, Convex real-time backend, and an ASP.NET Core Stockfish engine service.
+Multiplayer chess with a React frontend and Convex real-time backend. An optional ASP.NET + Stockfish service exists for local development only.
+
+**Live demo:** https://thechesslobby.com (also https://www.thechesslobby.com and the CloudFront URL)
 
 ## Features
 
@@ -13,32 +15,58 @@ Multiplayer chess with a React frontend, Convex real-time backend, and an ASP.NE
 
 ## Architecture
 
-React handles the UI; Convex owns real-time state (auth, games, chat, lobby presence); the ASP.NET Core engine service runs Stockfish for computer opponents.
+### What runs where (production demo)
+
+| Layer | Platform | What it does |
+|-------|----------|----------------|
+| **Frontend** | **AWS** (S3 + CloudFront) | Serves the built React app (HTML, JS, CSS, assets) |
+| **Backend** | **Convex Cloud** | Auth, database, real-time games, chat, lobby presence, vs-computer moves |
+| **CI deploy** | **GitHub Actions** | Builds the SPA, syncs to S3, invalidates CloudFront; deploys Convex |
+| **Chess engine** | **Convex** (built-in) | Minimax via `chess.js` — no separate engine server in prod |
+| **Stockfish API** | *Not deployed* | `apps/chess-engine` is local/optional only |
+
+**On AWS (account `058264467102`, stack `chess-lobby-demo`):**
+
+- **S3** — private bucket for `apps/web/dist` static files
+- **CloudFront** — HTTPS CDN in front of S3 (SPA routing: 403/404 → `index.html`)
+- **IAM** — OIDC role so GitHub Actions can upload to S3 and invalidate CloudFront
+
+**Not on AWS:** Convex, auth sessions, game state, chat, or the computer opponent logic.
+
+### Production diagram
 
 ```mermaid
 flowchart TB
-  subgraph aws [AWS - cheap static hosting]
-    CF[CloudFront CDN]
-    S3[S3 bucket - React build]
+  subgraph github ["GitHub Actions"]
+    Workflow["Deploy AWS workflow"]
   end
 
-  subgraph convexCloud [Convex Cloud]
-    Auth[Convex Auth - Google + Email]
-    DB[(games users chat invites)]
-    Presence["@convex-dev/presence"]
-    Actions[Node actions - call engine]
+  subgraph aws ["AWS us-east-1"]
+    S3["S3 static build"]
+    CF["CloudFront CDN"]
+    IAM["OIDC deploy role"]
   end
 
-  subgraph engineSvc [AWS App Runner]
-    DotNet[ASP.NET Core API]
-    SF[Stockfish binary UCI]
+  subgraph convex ["Convex Cloud"]
+    Auth["Convex Auth"]
+    DB[("games users chat invites")]
+    Presence["lobby presence"]
+    Engine["built-in minimax"]
   end
 
-  Browser[React SPA] --> CF --> S3
-  Browser <-->|WebSocket queries/mutations| convexCloud
-  Actions -->|POST /api/best-move| DotNet
-  DotNet --> SF
+  Browser["Browser"]
+  Workflow -->|"s3 sync"| S3
+  Workflow -->|"convex deploy"| Auth
+  Workflow -.->|"assume role"| IAM
+  Browser -->|"HTTPS"| CF
+  CF --> S3
+  Browser <-->|"WebSocket"| Auth
+  Engine -->|"vs computer"| DB
 ```
+
+### Local development
+
+Locally, the Vite dev server replaces CloudFront/S3, and Convex **dev** (`pastel-grouse-840`) replaces production. You can optionally run the .NET Stockfish service on your machine and set `ENGINE_API_URL` on the dev deployment.
 
 ## Monorepo layout
 
@@ -110,15 +138,21 @@ npm run dev:web
 
 Open http://localhost:5173
 
-## Production hosting (cheap AWS path)
+## Production hosting (minimal demo)
 
-| Component | Suggested host | Est. cost |
-|-----------|----------------|-----------|
-| React SPA | **S3 + CloudFront** | ~$0.50–5/mo |
-| Convex | **Convex Cloud** | Free tier / usage |
-| Stockfish API | **App Runner** (Docker) | ~$5–15/mo |
+| Component | Host | URL / resource |
+|-----------|------|----------------|
+| React SPA | **AWS S3 + CloudFront + Route 53** | https://thechesslobby.com |
+| Convex prod | **Convex Cloud** | https://pastel-buffalo-515.convex.cloud |
+| Vs computer | **Convex built-in engine** | (no extra URL) |
 
-See [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) for a deploy template.
+**Est. cost:** ~$0–2/mo (AWS static hosting) + Convex free tier.
+
+Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)**  
+Stack outputs: **[docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example)**  
+CI deploy: [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) (Actions → **Deploy AWS** → Run workflow)
+
+Optional Stockfish (.NET engine) is for local dev only; production does not set `ENGINE_API_URL`.
 
 ## Scripts
 
