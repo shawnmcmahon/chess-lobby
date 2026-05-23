@@ -12,7 +12,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      void syncProfile();
+      void syncProfile().catch(() => undefined);
     }
   }, [isAuthenticated, syncProfile]);
 

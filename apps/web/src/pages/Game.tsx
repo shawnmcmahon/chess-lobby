@@ -44,7 +44,7 @@ export function Game() {
     (game?.whiteUserId ? "White" : game?.mode === "human_vs_engine" ? "You" : "White");
   const blackName =
     game?.blackGuestName ??
-    (game?.blackUserId ? "Black" : game?.mode === "human_vs_engine" ? "Stockfish" : "Black");
+    (game?.blackUserId ? "Black" : game?.mode === "human_vs_engine" ? "Computer" : "Black");
 
   if (!gameId) {
     return <p className="text-red-400">Missing game id.</p>;
@@ -71,6 +71,16 @@ export function Game() {
             {game.status} · {game.mode.replace(/_/g, " ")}
             {myColor && ` · You are ${myColor}`}
           </p>
+          {game.mode === "human_vs_engine" &&
+            game.status === "active" &&
+            game.currentTurn === "black" && (
+              <p className="text-sm text-amber-400/90">Computer is thinking…</p>
+            )}
+          {game.endReason?.startsWith("engine_error:") && (
+            <p className="text-sm text-red-400">
+              Engine error: {game.endReason.replace(/^engine_error:\s*/, "")}
+            </p>
+          )}
         </div>
         <Link to="/dashboard" className="text-sm text-stone-400 hover:text-amber-300">
           Dashboard

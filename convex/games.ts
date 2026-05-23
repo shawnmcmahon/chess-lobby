@@ -241,6 +241,23 @@ export const applyEngineMoveInternal = internalMutation({
   },
 });
 
+export const setEngineError = internalMutation({
+  args: {
+    gameId: v.id("games"),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game || game.mode !== "human_vs_engine") {
+      return;
+    }
+    await ctx.db.patch(args.gameId, {
+      endReason: `engine_error: ${args.message}`,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const listMyActive = query({
   args: {},
   handler: async (ctx) => {

@@ -1,8 +1,7 @@
-"use node";
-
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
+import { getBestMove } from "./lib/computerEngine";
 
 export const makeEngineMove = internalAction({
   args: { gameId: v.id("games") },
@@ -15,39 +14,27 @@ export const makeEngineMove = internalAction({
       return;
     }
 
-    const engineUrl = process.env.ENGINE_API_URL;
-    const engineKey = process.env.ENGINE_API_KEY;
-    if (!engineUrl) {
-      console.error("ENGINE_API_URL not configured");
+    if (game.currentTurn !== "black") {
       return;
     }
 
-    const response = await fetch(`${engineUrl}/api/best-move`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(engineKey ? { "X-Api-Key": engineKey } : {}),
-      },
-      body: JSON.stringify({
-        fen: game.fen,
-        skill: game.engineDifficulty ?? 10,
-        movetimeMs: 800,
-      }),
-    });
+    try {
+      const bestMove = await getBestMove(
+        game.fen,
+        game.engineDifficulty ?? 10,
+        800,
+      );
 
-    if (!response.ok) {
-      console.error("Engine request failed", await response.text());
-      return;
+      await ctx.runMutation(internal.games.applyEngineMoveInternal, {
+        gameId: args.gameId,
+        uci: bestMove,
+      });
+    } catch (err) {
+      console.error("Engine move failed", err);
+      await ctx.runMutation(internal.games.setEngineError, {
+        gameId: args.gameId,
+        message: err instanceof Error ? err.message : "Engine failed",
+      });
     }
-
-    const data = (await response.json()) as { bestMove: string };
-    if (!data.bestMove) {
-      return;
-    }
-
-    await ctx.runMutation(internal.games.applyEngineMoveInternal, {
-      gameId: args.gameId,
-      uci: data.bestMove,
-    });
   },
 });
