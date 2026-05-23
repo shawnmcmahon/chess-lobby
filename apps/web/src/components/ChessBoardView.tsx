@@ -13,6 +13,7 @@ export type ChessBoardViewProps = {
   customArrows?: Arrow[];
   onArrowsChange?: (arrows: Arrow[]) => void;
   readOnly?: boolean;
+  allowDrawingArrows?: boolean;
 };
 
 export function ChessBoardView({
@@ -23,6 +24,7 @@ export function ChessBoardView({
   customArrows,
   onArrowsChange,
   readOnly = false,
+  allowDrawingArrows = true,
 }: ChessBoardViewProps) {
   const [internalArrows, setInternalArrows] = useState<Arrow[]>([]);
   const arrows = customArrows ?? internalArrows;
@@ -45,7 +47,7 @@ export function ChessBoardView({
           position: fen,
           boardOrientation: orientation,
           allowDragging: readOnly ? false : allowDragging,
-          allowDrawingArrows: !readOnly,
+          allowDrawingArrows,
           arrows,
           onArrowsChange: ({ arrows: next }) => setArrows(next),
           onPieceDrop: onPieceDrop

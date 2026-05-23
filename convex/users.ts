@@ -52,6 +52,24 @@ export const getById = query({
   },
 });
 
+export const getPublicProfile = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      _id: user._id,
+      displayName: user.displayName ?? user.name ?? "Player",
+      bio: user.bio,
+      rating: user.rating ?? 1200,
+      image: user.image,
+    };
+  },
+});
+
 export const getStats = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

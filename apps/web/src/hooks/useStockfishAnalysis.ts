@@ -20,26 +20,29 @@ function parseEvalLine(line: string): MoveEval | null {
 
 function analyzePosition(worker: Worker, fen: string, depth = 12): Promise<MoveEval> {
   return new Promise((resolve) => {
+    let latestEval: MoveEval = { cp: 0 };
     let resolved = false;
+
+    function finish(evalResult: MoveEval) {
+      if (resolved) return;
+      resolved = true;
+      worker.removeEventListener("message", onMessage);
+      resolve(evalResult);
+    }
 
     function onMessage(event: MessageEvent<string>) {
       const line = event.data;
       if (typeof line !== "string") return;
-      if (line.startsWith("bestmove")) {
-        if (!resolved) {
-          resolved = true;
-          worker.removeEventListener("message", onMessage);
-          resolve({ cp: 0 });
-        }
-        return;
-      }
+
       if (line.includes("score")) {
         const parsed = parseEvalLine(line);
         if (parsed) {
-          resolved = true;
-          worker.removeEventListener("message", onMessage);
-          resolve(parsed);
+          latestEval = parsed;
         }
+      }
+
+      if (line.startsWith("bestmove")) {
+        finish(latestEval);
       }
     }
 
@@ -49,11 +52,7 @@ function analyzePosition(worker: Worker, fen: string, depth = 12): Promise<MoveE
     worker.postMessage(`go depth ${depth}`);
 
     window.setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        worker.removeEventListener("message", onMessage);
-        resolve({ cp: 0 });
-      }
+      finish(latestEval);
     }, 8000);
   });
 }
@@ -74,11 +73,15 @@ export function useStockfishAnalysis(
       } catch {
         setEvals([]);
       }
+      setLoading(false);
+      setProgress(100);
       return;
     }
 
     if (fens.length === 0) {
       setEvals([]);
+      setLoading(false);
+      setProgress(0);
       return;
     }
 

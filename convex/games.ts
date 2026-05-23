@@ -19,9 +19,54 @@ import {
   type TimeControlCategory,
 } from "./lib/timeControl";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { PaginationOptions } from "convex/server";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function paginateFinishedGamesForUser(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  paginationOpts: PaginationOptions,
+) {
+  const whiteFinished = await ctx.db
+    .query("games")
+    .withIndex("by_whiteUser_and_status", (q) =>
+      q.eq("whiteUserId", userId).eq("status", "finished"),
+    )
+    .order("desc")
+    .collect();
+
+  const blackFinished = await ctx.db
+    .query("games")
+    .withIndex("by_blackUser_and_status", (q) =>
+      q.eq("blackUserId", userId).eq("status", "finished"),
+    )
+    .order("desc")
+    .collect();
+
+  const seen = new Set<string>();
+  const merged = [...whiteFinished, ...blackFinished]
+    .filter((game) => {
+      if (seen.has(game._id)) return false;
+      seen.add(game._id);
+      return true;
+    })
+    .sort((a, b) => b._creationTime - a._creationTime);
+
+  const start = paginationOpts.cursor
+    ? Number.parseInt(paginationOpts.cursor, 10)
+    : 0;
+  const numItems = paginationOpts.numItems;
+  const page = merged.slice(start, start + numItems);
+  const next = start + numItems;
+
+  return {
+    page,
+    isDone: next >= merged.length,
+    continueCursor: next >= merged.length ? "" : String(next),
+  };
+}
 
 async function finishGame(
   ctx: MutationCtx,
@@ -526,32 +571,7 @@ export const listMyFinished = query({
       return { page: [], isDone: true, continueCursor: "" };
     }
 
-    const asWhite = await ctx.db
-      .query("games")
-      .withIndex("by_whiteUser_and_status", (q) =>
-        q.eq("whiteUserId", user._id).eq("status", "finished"),
-      )
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const blackFinished = await ctx.db
-      .query("games")
-      .withIndex("by_blackUser_and_status", (q) =>
-        q.eq("blackUserId", user._id).eq("status", "finished"),
-      )
-      .order("desc")
-      .take(20);
-
-    const seen = new Set(asWhite.page.map((g) => g._id));
-    const merged = [
-      ...asWhite.page,
-      ...blackFinished.filter((g) => !seen.has(g._id)),
-    ].sort((a, b) => b._creationTime - a._creationTime);
-
-    return {
-      ...asWhite,
-      page: merged.slice(0, args.paginationOpts.numItems),
-    };
+    return paginateFinishedGamesForUser(ctx, user._id, args.paginationOpts);
   },
 });
 
@@ -614,31 +634,6 @@ export const listFinishedForUser = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const asWhite = await ctx.db
-      .query("games")
-      .withIndex("by_whiteUser_and_status", (q) =>
-        q.eq("whiteUserId", args.userId).eq("status", "finished"),
-      )
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const blackFinished = await ctx.db
-      .query("games")
-      .withIndex("by_blackUser_and_status", (q) =>
-        q.eq("blackUserId", args.userId).eq("status", "finished"),
-      )
-      .order("desc")
-      .take(20);
-
-    const seen = new Set(asWhite.page.map((g) => g._id));
-    const merged = [
-      ...asWhite.page,
-      ...blackFinished.filter((g) => !seen.has(g._id)),
-    ].sort((a, b) => b._creationTime - a._creationTime);
-
-    return {
-      ...asWhite,
-      page: merged.slice(0, args.paginationOpts.numItems),
-    };
+    return paginateFinishedGamesForUser(ctx, args.userId, args.paginationOpts);
   },
 });

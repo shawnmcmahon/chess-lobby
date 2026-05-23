@@ -30,6 +30,7 @@ export function Dashboard() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState(10);
   const [seeking, setSeeking] = useState(false);
+  const [seekStartedAt, setSeekStartedAt] = useState<number | null>(null);
   const [daysPerTurn, setDaysPerTurn] = useState(3);
   const [selectedPreset, setSelectedPreset] = useState<TimeControlPreset | null>(null);
 
@@ -64,14 +65,37 @@ export function Dashboard() {
     }
   }, [mySeek]);
 
+  useEffect(() => {
+    if (!seeking || seekStartedAt === null || mySeek !== null || !user) {
+      return;
+    }
+
+    const matchedGame = activeGames?.find(
+      (game) =>
+        game.status === "active" &&
+        game.mode === "human_vs_human" &&
+        game.playType === "live" &&
+        game.createdAt >= seekStartedAt - 5000 &&
+        (game.whiteUserId === user._id || game.blackUserId === user._id),
+    );
+
+    if (matchedGame) {
+      setSeeking(false);
+      setSeekStartedAt(null);
+      navigate(`/game/${matchedGame._id}`);
+    }
+  }, [seeking, seekStartedAt, mySeek, activeGames, user, navigate]);
+
   async function onQuickPair(preset: TimeControlPreset) {
     setSeeking(true);
+    setSeekStartedAt(Date.now());
     const result = await createSeek({
       baseTimeMs: preset.baseTimeMs,
       incrementMs: preset.incrementMs,
     });
     if (result.matched && result.gameId) {
       setSeeking(false);
+      setSeekStartedAt(null);
       navigate(`/game/${result.gameId}`);
     }
   }
@@ -177,8 +201,9 @@ export function Dashboard() {
           <ul className="space-y-2">
             {correspondenceGames.map((g) => {
               const isMyTurn =
-                (g.currentTurn === "white" && g.whiteUserId === user._id) ||
-                (g.currentTurn === "black" && g.blackUserId === user._id);
+                g.status === "active" &&
+                ((g.currentTurn === "white" && g.whiteUserId === user._id) ||
+                  (g.currentTurn === "black" && g.blackUserId === user._id));
               return (
                 <li key={g._id}>
                   <Link
@@ -301,6 +326,7 @@ export function Dashboard() {
                   setTab(id);
                   void cancelSeek({});
                   setSeeking(false);
+                  setSeekStartedAt(null);
                 }}
                 className={`rounded-lg px-3 py-1.5 text-sm ${
                   tab === id
@@ -323,6 +349,7 @@ export function Dashboard() {
                     onClick={() => {
                       void cancelSeek({});
                       setSeeking(false);
+                      setSeekStartedAt(null);
                     }}
                     className="underline"
                   >
