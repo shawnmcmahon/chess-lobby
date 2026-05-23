@@ -72,6 +72,11 @@ export function GameBoard({
     return true;
   }
 
+  const engineThinking =
+    game.mode === "human_vs_engine" &&
+    game.status === "active" &&
+    game.currentTurn === "black";
+
   return (
     <div className="space-y-3">
       <GameClock
@@ -84,6 +89,14 @@ export function GameBoard({
         turnDeadlineAt={game.turnDeadlineAt}
         daysPerTurn={game.daysPerTurn}
       />
+      <div
+        className="mx-auto flex min-h-6 max-w-[480px] items-center justify-center text-sm"
+        aria-live="polite"
+      >
+        {engineThinking && (
+          <span className="text-amber-400/90">Computer is thinking…</span>
+        )}
+      </div>
       <ChessBoardView
         fen={game.fen}
         orientation={boardOrientation}

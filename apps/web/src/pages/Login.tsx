@@ -2,6 +2,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { getAuthErrorMessage } from "@/lib/authErrors";
 
 export function Login() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -36,21 +37,15 @@ export function Login() {
         return;
       }
       if (!result.signingIn) {
-        setError(
-          flow === "signUp"
-            ? "Could not create account. If you already signed up, use Sign in instead."
-            : "Sign in failed. Check your email and password.",
-        );
+        setError(getAuthErrorMessage(new Error("InvalidAccountId"), flow));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Sign in failed";
-      if (message.includes("already exists")) {
-        setError("An account with this email already exists. Use Sign in instead.");
+      setError(getAuthErrorMessage(err, flow));
+      if (
+        err instanceof Error &&
+        err.message.includes("already exists")
+      ) {
         setFlow("signIn");
-      } else if (message.includes("Invalid password")) {
-        setError("Incorrect password. Try again or create a new account with a different email.");
-      } else {
-        setError(message);
       }
     } finally {
       setPending(false);
@@ -70,11 +65,7 @@ export function Login() {
           try {
             await signIn("google");
           } catch (err) {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Google sign-in failed. Set AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET on Convex.",
-            );
+            setError(getAuthErrorMessage(err, flow));
           } finally {
             setPending(false);
           }
@@ -130,13 +121,20 @@ export function Login() {
           : "Already have an account? Sign in"}
       </button>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
-
       <p className="text-center text-sm text-stone-500">
         <Link to="/" className="hover:text-amber-300">
           Back to home
         </Link>
       </p>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-900/60 bg-red-950/30 px-3 py-2 text-sm text-red-300"
+        >
+          {error}
+        </div>
+      )}
     </div>
   );
 }

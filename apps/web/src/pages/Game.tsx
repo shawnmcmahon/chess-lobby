@@ -74,11 +74,6 @@ export function Game() {
             {spectate && " · Spectating"}
             {!spectate && myColor && ` · You are ${myColor}`}
           </p>
-          {game.mode === "human_vs_engine" &&
-            game.status === "active" &&
-            game.currentTurn === "black" && (
-              <p className="text-sm text-amber-400/90">Computer is thinking…</p>
-            )}
           {game.endReason?.startsWith("engine_error:") && (
             <p className="text-sm text-red-400">
               Engine error: {game.endReason.replace(/^engine_error:\s*/, "")}

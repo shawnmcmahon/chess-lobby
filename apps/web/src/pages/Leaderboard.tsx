@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 
-type SortBy = "wins" | "losses" | "draws";
+type SortBy = "wins" | "losses" | "draws" | "rating";
 type Category =
   | "all"
   | "bullet"
@@ -11,6 +11,12 @@ type Category =
   | "rapid"
   | "classical"
   | "correspondence";
+
+function winRatio(wins: number, losses: number, draws: number): string {
+  const total = wins + losses + draws;
+  if (total === 0) return "—";
+  return `${Math.round((wins / total) * 1000) / 10}%`;
+}
 
 export function Leaderboard() {
   const [sortBy, setSortBy] = useState<SortBy>("wins");
@@ -23,7 +29,7 @@ export function Leaderboard() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <h1 className="text-2xl font-semibold text-amber-400">Leaderboard</h1>
 
       <div className="flex flex-wrap gap-2">
@@ -32,6 +38,7 @@ export function Leaderboard() {
             ["wins", "Most Wins"],
             ["losses", "Most Losses"],
             ["draws", "Most Draws"],
+            ["rating", "Highest Rating"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -49,18 +56,20 @@ export function Leaderboard() {
         ))}
       </div>
 
-      <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value as Category)}
-        className="rounded border border-stone-700 bg-stone-900 px-3 py-2 text-sm"
-      >
-        <option value="all">All categories</option>
-        <option value="bullet">Bullet</option>
-        <option value="blitz">Blitz</option>
-        <option value="rapid">Rapid</option>
-        <option value="classical">Classical</option>
-        <option value="correspondence">Correspondence</option>
-      </select>
+      {sortBy !== "rating" && (
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as Category)}
+          className="rounded border border-stone-700 bg-stone-900 px-3 py-2 text-sm"
+        >
+          <option value="all">All categories</option>
+          <option value="bullet">Bullet</option>
+          <option value="blitz">Blitz</option>
+          <option value="rapid">Rapid</option>
+          <option value="classical">Classical</option>
+          <option value="correspondence">Correspondence</option>
+        </select>
+      )}
 
       {!rows ? (
         <p className="text-stone-400">Loading…</p>
@@ -73,9 +82,21 @@ export function Leaderboard() {
               <tr>
                 <th className="px-3 py-2 text-left">#</th>
                 <th className="px-3 py-2 text-left">Player</th>
-                <th className="px-3 py-2 text-right">W</th>
-                <th className="px-3 py-2 text-right">L</th>
-                <th className="px-3 py-2 text-right">D</th>
+                {sortBy === "rating" ? (
+                  <>
+                    <th className="px-3 py-2 text-right">Rating</th>
+                    <th className="px-3 py-2 text-right">W</th>
+                    <th className="px-3 py-2 text-right">L</th>
+                    <th className="px-3 py-2 text-right">D</th>
+                    <th className="px-3 py-2 text-right">Win %</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-3 py-2 text-right">W</th>
+                    <th className="px-3 py-2 text-right">L</th>
+                    <th className="px-3 py-2 text-right">D</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -89,13 +110,31 @@ export function Leaderboard() {
                     >
                       {row.displayName}
                     </Link>
-                    <span className="ml-2 text-xs text-stone-500">
-                      ({row.rating})
-                    </span>
+                    {sortBy !== "rating" && (
+                      <span className="ml-2 text-xs text-stone-500">
+                        ({row.rating})
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-right">{row.wins}</td>
-                  <td className="px-3 py-2 text-right">{row.losses}</td>
-                  <td className="px-3 py-2 text-right">{row.draws}</td>
+                  {sortBy === "rating" ? (
+                    <>
+                      <td className="px-3 py-2 text-right font-medium text-amber-400">
+                        {row.rating}
+                      </td>
+                      <td className="px-3 py-2 text-right">{row.wins}</td>
+                      <td className="px-3 py-2 text-right">{row.losses}</td>
+                      <td className="px-3 py-2 text-right">{row.draws}</td>
+                      <td className="px-3 py-2 text-right text-stone-300">
+                        {winRatio(row.wins, row.losses, row.draws)}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2 text-right">{row.wins}</td>
+                      <td className="px-3 py-2 text-right">{row.losses}</td>
+                      <td className="px-3 py-2 text-right">{row.draws}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
