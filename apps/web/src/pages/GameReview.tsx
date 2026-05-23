@@ -122,7 +122,7 @@ export function GameReview() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-3">
           <EvalBar eval={currentEval} />
-          <ChessBoardView fen={currentFen} readOnly />
+          <ChessBoardView fen={currentFen} readOnly allowDrawingArrows />
           <div className="flex flex-wrap justify-center gap-2">
             <button type="button" onClick={replay.goFirst} className="rounded border border-stone-700 px-2 py-1 text-sm">⏮</button>
             <button type="button" onClick={replay.goPrev} className="rounded border border-stone-700 px-2 py-1 text-sm">◀</button>

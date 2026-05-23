@@ -29,7 +29,7 @@ function gameResult(
 export function PublicProfile() {
   const { userId } = useParams<{ userId: string }>();
   const profile = useQuery(
-    api.users.getById,
+    api.users.getPublicProfile,
     userId ? { userId: userId as Id<"users"> } : "skip",
   );
   const stats = useQuery(
@@ -59,7 +59,7 @@ export function PublicProfile() {
           ← Dashboard
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-amber-400">
-          {profile.displayName ?? profile.name ?? "Player"}
+          {profile.displayName}
         </h1>
         <p className="text-sm text-stone-500">Rating: {profile.rating ?? 1200}</p>
         {profile.bio && <p className="mt-2 text-stone-300">{profile.bio}</p>}

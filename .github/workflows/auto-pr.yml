@@ -21,6 +21,7 @@ jobs:
             const branch = context.ref.replace("refs/heads/", "");
             const { owner, repo } = context.repo;
 
+            try {
             const { data: openPrs } = await github.rest.pulls.list({
               owner,
               repo,
@@ -29,7 +30,7 @@ jobs:
             });
 
             if (openPrs.length > 0) {
-              core.info(`Open PR already exists: #${openPrs[0].number}`);
+              console.log(`Open PR already exists: #${openPrs[0].number}`);
               return;
             }
 
@@ -56,4 +57,17 @@ jobs:
               ].join("\n"),
             });
 
-            core.info(`Created pull request #${pr.number}: ${pr.html_url}`);
+            console.log(`Created pull request #${pr.number}: ${pr.html_url}`);
+            } catch (error) {
+              if (error.status === 403) {
+                console.log(
+                  "Skipping auto PR creation: GitHub Actions is not permitted to create pull requests in this repository.",
+                );
+                return;
+              }
+              if (error.status === 422) {
+                console.log("Skipping auto PR creation: pull request already exists or branch has no commits.");
+                return;
+              }
+              throw error;
+            }

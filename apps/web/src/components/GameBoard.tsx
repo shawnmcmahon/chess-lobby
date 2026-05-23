@@ -102,7 +102,8 @@ export function GameBoard({
         orientation={boardOrientation}
         allowDragging={canMove}
         onPieceDrop={onDrop}
-        readOnly={readOnly || !canMove}
+        readOnly={readOnly}
+        allowDrawingArrows
       />
       {error && <p className="text-center text-sm text-red-400">{error}</p>}
       {game.status === "active" && myColor && !readOnly && (

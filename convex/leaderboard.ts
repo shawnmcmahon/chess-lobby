@@ -1,6 +1,34 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { timeControlCategory } from "./schema";
+import type { TimeControlCategory } from "./lib/timeControl";
+import type { Doc } from "./_generated/dataModel";
+
+function sortStatsRows(
+  rows: Doc<"userStats">[],
+  sortBy: "wins" | "losses" | "draws",
+  category?: TimeControlCategory,
+) {
+  return [...rows].sort((a, b) => {
+    const aStats = category ? a[category] : null;
+    const bStats = category ? b[category] : null;
+    const aValue = category
+      ? aStats?.[sortBy] ?? 0
+      : sortBy === "wins"
+        ? a.totalWins
+        : sortBy === "losses"
+          ? a.totalLosses
+          : a.totalDraws;
+    const bValue = category
+      ? bStats?.[sortBy] ?? 0
+      : sortBy === "wins"
+        ? b.totalWins
+        : sortBy === "losses"
+          ? b.totalLosses
+          : b.totalDraws;
+    return bValue - aValue;
+  });
+}
 
 export const listTop = query({
   args: {
@@ -42,18 +70,23 @@ export const listTop = query({
       );
     }
 
-    const indexName =
-      args.sortBy === "wins"
-        ? "by_totalWins"
-        : args.sortBy === "losses"
-          ? "by_totalLosses"
-          : "by_totalDraws";
-
-    const stats = await ctx.db
-      .query("userStats")
-      .withIndex(indexName)
-      .order("desc")
-      .take(take);
+    const stats = args.category
+      ? sortStatsRows(
+          await ctx.db.query("userStats").collect(),
+          args.sortBy,
+          args.category,
+        ).slice(0, take)
+      : await ctx.db
+          .query("userStats")
+          .withIndex(
+            args.sortBy === "wins"
+              ? "by_totalWins"
+              : args.sortBy === "losses"
+                ? "by_totalLosses"
+                : "by_totalDraws",
+          )
+          .order("desc")
+          .take(take);
 
     const category = args.category;
     const rows = await Promise.all(

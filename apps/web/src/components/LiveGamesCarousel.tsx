@@ -51,7 +51,7 @@ export function LiveGamesCarousel() {
           <span className="font-medium">{current.blackName}</span>
         </p>
         <div className="pointer-events-none scale-75 origin-top-left">
-          <ChessBoardView fen={current.game.fen} readOnly />
+          <ChessBoardView fen={current.game.fen} readOnly allowDrawingArrows />
         </div>
         <p className="mt-1 text-xs capitalize text-stone-500">
           {current.game.timeControlCategory ?? "live"} · click to spectate
