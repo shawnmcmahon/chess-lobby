@@ -23,6 +23,7 @@ import type * as lib_stats from "../lib/stats.js";
 import type * as lib_timeControl from "../lib/timeControl.js";
 import type * as migrations from "../migrations.js";
 import type * as presence from "../presence.js";
+import type * as seeks from "../seeks.js";
 import type * as users from "../users.js";
 
 import type {
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "lib/timeControl": typeof lib_timeControl;
   migrations: typeof migrations;
   presence: typeof presence;
+  seeks: typeof seeks;
   users: typeof users;
 }>;
 

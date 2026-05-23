@@ -4,11 +4,23 @@ import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./lib/auth";
 import { generateInviteToken } from "./lib/games";
 import { STARTING_FEN } from "./lib/chess";
+import {
+  categorizeTimeControl,
+  computeTurnDeadline,
+} from "./lib/timeControl";
+import { playType } from "./schema";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+const RATING_WINDOW = 200;
 
 export const send = mutation({
-  args: { toUserId: v.id("users") },
+  args: {
+    toUserId: v.id("users"),
+    playType: v.optional(playType),
+    baseTimeMs: v.optional(v.number()),
+    incrementMs: v.optional(v.number()),
+    daysPerTurn: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const fromUser = await getCurrentUser(ctx);
     if (fromUser._id === args.toUserId) {
@@ -22,6 +34,15 @@ export const send = mutation({
 
     const now = Date.now();
     const inviteToken = generateInviteToken();
+    const play = args.playType ?? "live";
+    const incrementMs = args.incrementMs ?? 0;
+
+    let category: "bullet" | "blitz" | "rapid" | "classical" | "correspondence" | undefined;
+    if (play === "correspondence") {
+      category = "correspondence";
+    } else if (args.baseTimeMs !== undefined) {
+      category = categorizeTimeControl(args.baseTimeMs, incrementMs);
+    }
 
     const gameId = await ctx.db.insert("games", {
       status: "waiting",
@@ -34,6 +55,19 @@ export const send = mutation({
       createdByUserId: fromUser._id,
       createdAt: now,
       updatedAt: now,
+      playType: play,
+      timeControlCategory: category,
+      baseTimeMs: args.baseTimeMs,
+      incrementMs: args.baseTimeMs !== undefined ? incrementMs : undefined,
+      daysPerTurn: args.daysPerTurn,
+      whiteTimeMs: args.baseTimeMs,
+      blackTimeMs: args.baseTimeMs,
+      turnDeadlineAt:
+        play === "correspondence" && args.daysPerTurn
+          ? computeTurnDeadline(now, args.daysPerTurn)
+          : undefined,
+      lastMoveAt: now,
+      isPublic: true,
     });
 
     await ctx.db.insert("gameInvites", {
@@ -95,6 +129,7 @@ export const accept = mutation({
       blackUserId: userId,
       status: "active",
       updatedAt: now,
+      lastMoveAt: now,
     });
     await ctx.db.patch(args.inviteId, { status: "accepted" });
 
