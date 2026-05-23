@@ -11,7 +11,6 @@ import {
 import { playType } from "./schema";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
-const RATING_WINDOW = 200;
 
 export const send = mutation({
   args: {

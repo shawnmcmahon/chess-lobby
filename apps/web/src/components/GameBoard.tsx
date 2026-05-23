@@ -1,18 +1,25 @@
 import { Chess } from "chess.js";
 import { useMutation } from "convex/react";
 import { useMemo, useState } from "react";
-import { Chessboard } from "react-chessboard";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
+import { ChessBoardView } from "./ChessBoardView";
+import { GameClock } from "./GameClock";
 
 type GameBoardProps = {
   game: Doc<"games">;
   myColor: "white" | "black" | null;
   isAuthenticated: boolean;
+  readOnly?: boolean;
 };
 
-export function GameBoard({ game, myColor, isAuthenticated }: GameBoardProps) {
+export function GameBoard({
+  game,
+  myColor,
+  isAuthenticated,
+  readOnly = false,
+}: GameBoardProps) {
   const makeMove = useMutation(api.games.makeMove);
   const resign = useMutation(api.games.resign);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +27,7 @@ export function GameBoard({ game, myColor, isAuthenticated }: GameBoardProps) {
 
   const boardOrientation = myColor === "black" ? "black" : "white";
   const canMove =
+    !readOnly &&
     game.status === "active" &&
     myColor !== null &&
     game.currentTurn === myColor;
@@ -66,18 +74,25 @@ export function GameBoard({ game, myColor, isAuthenticated }: GameBoardProps) {
 
   return (
     <div className="space-y-3">
-      <div className="mx-auto max-w-[480px]">
-        <Chessboard
-          options={{
-            position: game.fen,
-            boardOrientation,
-            allowDragging: canMove,
-            onPieceDrop: onDrop,
-          }}
-        />
-      </div>
+      <GameClock
+        whiteTimeMs={game.whiteTimeMs}
+        blackTimeMs={game.blackTimeMs}
+        currentTurn={game.currentTurn}
+        lastMoveAt={game.lastMoveAt}
+        status={game.status}
+        playType={game.playType}
+        turnDeadlineAt={game.turnDeadlineAt}
+        daysPerTurn={game.daysPerTurn}
+      />
+      <ChessBoardView
+        fen={game.fen}
+        orientation={boardOrientation}
+        allowDragging={canMove}
+        onPieceDrop={onDrop}
+        readOnly={readOnly || !canMove}
+      />
       {error && <p className="text-center text-sm text-red-400">{error}</p>}
-      {game.status === "active" && myColor && (
+      {game.status === "active" && myColor && !readOnly && (
         <div className="flex justify-center gap-2">
           <button
             type="button"
