@@ -91,7 +91,32 @@ export const updateProfile = mutation({
 export const listForLobby = query({
   args: { userIds: v.array(v.id("users")) },
   handler: async (ctx, args) => {
+    if (args.userIds.length === 0) {
+      return [];
+    }
+
+    const userIdSet = new Set(args.userIds);
+    const activeGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    const playingUserIds = new Set<(typeof args.userIds)[number]>();
+    for (const game of activeGames) {
+      if (game.whiteUserId && userIdSet.has(game.whiteUserId)) {
+        playingUserIds.add(game.whiteUserId);
+      }
+      if (game.blackUserId && userIdSet.has(game.blackUserId)) {
+        playingUserIds.add(game.blackUserId);
+      }
+    }
+
     const users = await Promise.all(args.userIds.map((id) => ctx.db.get(id)));
-    return users.filter((u): u is NonNullable<typeof u> => u !== null);
+    return users
+      .filter((u): u is NonNullable<typeof u> => u !== null)
+      .map((u) => ({
+        ...u,
+        inActiveGame: playingUserIds.has(u._id),
+      }));
   },
 });

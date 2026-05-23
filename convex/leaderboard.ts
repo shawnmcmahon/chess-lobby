@@ -4,12 +4,44 @@ import { timeControlCategory } from "./schema";
 
 export const listTop = query({
   args: {
-    sortBy: v.union(v.literal("wins"), v.literal("losses"), v.literal("draws")),
+    sortBy: v.union(
+      v.literal("wins"),
+      v.literal("losses"),
+      v.literal("draws"),
+      v.literal("rating"),
+    ),
     category: v.optional(timeControlCategory),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const take = Math.min(args.limit ?? 50, 50);
+
+    if (args.sortBy === "rating") {
+      const users = await ctx.db
+        .query("users")
+        .withIndex("by_rating")
+        .order("desc")
+        .take(take);
+
+      return Promise.all(
+        users.map(async (user, idx) => {
+          const stats = await ctx.db
+            .query("userStats")
+            .withIndex("by_userId", (q) => q.eq("userId", user._id))
+            .unique();
+          return {
+            rank: idx + 1,
+            userId: user._id,
+            displayName: user.displayName ?? user.name ?? "Player",
+            rating: user.rating ?? 1200,
+            wins: stats?.totalWins ?? 0,
+            losses: stats?.totalLosses ?? 0,
+            draws: stats?.totalDraws ?? 0,
+          };
+        }),
+      );
+    }
+
     const indexName =
       args.sortBy === "wins"
         ? "by_totalWins"

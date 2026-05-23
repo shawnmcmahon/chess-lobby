@@ -1,16 +1,21 @@
 import { Link, Outlet } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { PresenceProvider } from "@/components/PresenceProvider";
 
 export function Layout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
 
   return (
+    <PresenceProvider>
     <div className="min-h-screen bg-[#1a1a1f] text-stone-100">
       <header className="border-b border-stone-800 bg-[#121218]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-lg font-semibold tracking-tight text-amber-400">
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/"}
+            className="text-lg font-semibold tracking-tight text-amber-400"
+          >
             Chess Lobby
           </Link>
           <nav className="flex items-center gap-4 text-sm">
@@ -50,5 +55,6 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
+    </PresenceProvider>
   );
 }

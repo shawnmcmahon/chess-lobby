@@ -1,9 +1,9 @@
-import usePresence from "@convex-dev/presence/react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useLobbyPresence } from "@/components/PresenceProvider";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
 import { QuickPairGrid } from "@/components/QuickPairGrid";
 import {
@@ -33,8 +33,7 @@ export function Dashboard() {
   const [daysPerTurn, setDaysPerTurn] = useState(3);
   const [selectedPreset, setSelectedPreset] = useState<TimeControlPreset | null>(null);
 
-  const userId = user?._id ?? "";
-  const presenceState = usePresence(api.presence, "lobby", userId, 10000);
+  const presenceState = useLobbyPresence();
 
   const onlineUserIds = useMemo(() => {
     if (!presenceState || !user) return [];
@@ -425,13 +424,23 @@ export function Dashboard() {
                     </Link>
                     <span className="ml-2 text-xs text-stone-500">({u.rating ?? 1200})</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void challengePlayer(u._id)}
-                    className="rounded bg-amber-600 px-3 py-1 text-sm font-medium text-stone-950 hover:bg-amber-500"
-                  >
-                    Challenge
-                  </button>
+                  {u.inActiveGame ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="cursor-not-allowed rounded border border-stone-700 px-3 py-1 text-sm text-stone-500"
+                    >
+                      Playing
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void challengePlayer(u._id)}
+                      className="rounded bg-amber-600 px-3 py-1 text-sm font-medium text-stone-950 hover:bg-amber-500"
+                    >
+                      Challenge
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

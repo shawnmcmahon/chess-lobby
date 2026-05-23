@@ -56,7 +56,8 @@ export default defineSchema({
     profileComplete: v.optional(v.boolean()),
   })
     .index("email", ["email"])
-    .index("phone", ["phone"]),
+    .index("phone", ["phone"])
+    .index("by_rating", ["rating"]),
 
   games: defineTable({
     status: gameStatus,
