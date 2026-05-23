@@ -22,6 +22,9 @@ export function Layout() {
                 <Link to="/profile" className="hover:text-amber-300">
                   Profile
                 </Link>
+                <Link to="/leaderboard" className="hover:text-amber-300">
+                  Leaderboard
+                </Link>
               </>
             )}
             {!isLoading && isAuthenticated ? (
