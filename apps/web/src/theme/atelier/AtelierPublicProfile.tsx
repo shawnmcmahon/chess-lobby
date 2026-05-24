@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { categoryWinRatePercent } from "@/lib/stats";
 import type { AtelierProfileStat, AtelierResultTone } from "./AtelierProfile";
 
 export type AtelierPublicProfileGameRow = {
@@ -128,7 +129,8 @@ export function AtelierPublicProfile({
                   className="atelier-mono mt-1"
                   style={{ fontSize: "0.78rem", color: "var(--atelier-parchment-soft)" }}
                 >
-                  {s.wins}W / {s.losses}L / {s.draws}D
+                  {s.wins}W / {s.losses}L / {s.draws}D ·{" "}
+                  {categoryWinRatePercent(s.wins, s.losses, s.draws)} win rate
                 </div>
               </div>
             ))}

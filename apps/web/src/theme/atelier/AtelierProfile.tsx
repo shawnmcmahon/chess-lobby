@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FormEvent } from "react";
+import { categoryWinRatePercent } from "@/lib/stats";
 
 export type AtelierResultTone = "win" | "loss" | "draw" | "neutral";
 
@@ -160,7 +161,8 @@ export function AtelierProfile({
                   className="atelier-mono mt-1"
                   style={{ fontSize: "0.78rem", color: "var(--atelier-parchment-soft)" }}
                 >
-                  {s.wins}W / {s.losses}L / {s.draws}D
+                  {s.wins}W / {s.losses}L / {s.draws}D ·{" "}
+                  {categoryWinRatePercent(s.wins, s.losses, s.draws)} win rate
                 </div>
               </div>
             ))}

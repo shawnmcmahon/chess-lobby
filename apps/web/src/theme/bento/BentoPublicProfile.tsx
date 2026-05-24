@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
+import { categoryWinRatePercent } from "@/lib/stats";
 import type { BentoGameHistoryRow } from "./BentoProfile";
 
 const CATEGORIES = [
@@ -100,7 +101,8 @@ export function BentoPublicProfile({
                     {cat}
                   </div>
                   <div className="bento-mono mt-1 text-sm">
-                    {s.wins}W / {s.losses}L / {s.draws}D
+                    {s.wins}W / {s.losses}L / {s.draws}D ·{" "}
+                    {categoryWinRatePercent(s.wins, s.losses, s.draws)} win rate
                   </div>
                 </div>
               );

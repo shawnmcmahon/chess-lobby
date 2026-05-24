@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { categoryWinRatePercent } from "@/lib/stats";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 
 const CATEGORIES = [
@@ -123,7 +124,8 @@ export function BrutalPublicProfile({
                     {cat}
                   </div>
                   <div className="brutal-chunk mt-1 text-[0.95rem]">
-                    {s.wins}W / {s.losses}L / {s.draws}D
+                    {s.wins}W / {s.losses}L / {s.draws}D ·{" "}
+                    {categoryWinRatePercent(s.wins, s.losses, s.draws)} WIN RATE
                   </div>
                 </div>
               );
