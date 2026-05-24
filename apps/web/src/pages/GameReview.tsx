@@ -120,7 +120,7 @@ export function GameReview() {
     void saveAnalysis({ gameId: game._id, analysisJson: serialize() });
   }, [game, loading, evals, fens.length, serialize, saveAnalysis]);
 
-  const currentEval = Array.isArray(evals) ? evals[replay.plyIndex] : undefined;
+  const currentEval = Array.isArray(evals) ? evals[replay.plyIndex] ?? null : null;
 
   if (pgnError && game) {
     if (theme === "bento") {
