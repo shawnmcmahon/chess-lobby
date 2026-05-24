@@ -146,7 +146,7 @@ function AtelierLayout() {
             </Link>
           }
         />
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 atelier-stage relative">
+        <main className="app-main--with-dock mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 atelier-stage relative">
           <Outlet />
         </main>
       </div>
