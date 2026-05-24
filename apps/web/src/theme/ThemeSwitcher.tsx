@@ -7,6 +7,27 @@ type MenuPlacement = "above" | "below";
 
 const VIEWPORT_PADDING = 8;
 const MENU_GAP = 8;
+/** Matches `.theme-switcher__menu { min-width: 16rem }` for first layout pass. */
+const MENU_MIN_WIDTH = 256;
+
+function resolveHorizontalPosition(
+  triggerRect: DOMRect,
+  menuWidth: number,
+  viewportWidth: number,
+): Pick<React.CSSProperties, "left" | "maxWidth" | "width" | "minWidth"> {
+  const maxWidth = viewportWidth - VIEWPORT_PADDING * 2;
+  const width = Math.min(Math.max(menuWidth, MENU_MIN_WIDTH), maxWidth);
+  let left = triggerRect.right - width;
+  left = Math.max(
+    VIEWPORT_PADDING,
+    Math.min(left, viewportWidth - width - VIEWPORT_PADDING),
+  );
+  return {
+    left,
+    maxWidth,
+    ...(width < MENU_MIN_WIDTH ? { width, minWidth: 0 } : {}),
+  };
+}
 
 function resolvePlacement(
   preferred: MenuPlacement,
@@ -43,23 +64,37 @@ function useMenuPosition(
       const trigger = triggerRef.current;
       if (!trigger) return;
       const rect = trigger.getBoundingClientRect();
-      const right = Math.max(VIEWPORT_PADDING, window.innerWidth - rect.right);
+      const menuWidth = menuRef.current?.offsetWidth ?? MENU_MIN_WIDTH;
+      const menuHeight = menuRef.current?.offsetHeight ?? 0;
+      const horizontal = resolveHorizontalPosition(
+        rect,
+        menuWidth,
+        window.innerWidth,
+      );
       const spaceAbove = Math.max(0, rect.top - VIEWPORT_PADDING - MENU_GAP);
       const spaceBelow = Math.max(
         0,
         window.innerHeight - rect.bottom - VIEWPORT_PADDING - MENU_GAP,
       );
-      const menuHeight = menuRef.current?.offsetHeight ?? 0;
       const placement = resolvePlacement(
         preferredPlacement,
         spaceAbove,
         spaceBelow,
         menuHeight,
       );
+      const shared: React.CSSProperties = {
+        left: horizontal.left,
+        right: "auto",
+        maxWidth: horizontal.maxWidth,
+        ...(horizontal.width !== undefined ? { width: horizontal.width } : {}),
+        ...(horizontal.minWidth !== undefined
+          ? { minWidth: horizontal.minWidth }
+          : {}),
+      };
 
       if (placement === "above") {
         setStyle({
-          right,
+          ...shared,
           bottom: window.innerHeight - rect.top + MENU_GAP,
           top: "auto",
           maxHeight: spaceAbove,
@@ -67,7 +102,7 @@ function useMenuPosition(
         });
       } else {
         setStyle({
-          right,
+          ...shared,
           top: rect.bottom + MENU_GAP,
           bottom: "auto",
           maxHeight: spaceBelow,

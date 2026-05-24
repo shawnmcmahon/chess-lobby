@@ -73,6 +73,7 @@
 .theme-switcher__menu--portal {
   position: fixed;
   z-index: var(--z-dropdown);
+  min-width: min(16rem, calc(100vw - 16px));
 }
 .theme-switcher__option {
   display: flex;
