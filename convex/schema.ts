@@ -54,6 +54,7 @@ export default defineSchema({
     rating: v.optional(v.number()),
     lastSeenAt: v.optional(v.number()),
     profileComplete: v.optional(v.boolean()),
+    emailVerificationSkipped: v.optional(v.boolean()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])

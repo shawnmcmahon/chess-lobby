@@ -17,8 +17,10 @@
     "@auth/core": "^0.37.4",
     "@convex-dev/auth": "^0.0.92",
     "@convex-dev/presence": "^0.3.0",
+    "@oslojs/crypto": "^1.0.1",
     "chess.js": "^1.4.0",
-    "convex": "^1.39.1"
+    "convex": "^1.39.1",
+    "resend": "^6.12.3"
   },
   "devDependencies": {
     "@types/node": "^24.12.3",

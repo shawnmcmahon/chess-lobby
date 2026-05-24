@@ -140,10 +140,14 @@ export function BentoGameReviewLoading() {
   );
 }
 
-export function BentoGameReviewNotFound() {
+export function BentoGameReviewNotFound({
+  message = "Finished game not found.",
+}: {
+  message?: string;
+}) {
   return (
     <p className="bento-mono" style={{ marginTop: 32, color: "var(--bento-clay)" }}>
-      Finished game not found.
+      {message}
     </p>
   );
 }

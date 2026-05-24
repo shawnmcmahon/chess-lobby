@@ -364,6 +364,29 @@ export const get = query({
   },
 });
 
+export const getForReview = query({
+  args: {
+    gameId: v.id("games"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    const game = await ctx.db.get(args.gameId);
+    if (!game || game.status !== "finished") {
+      return null;
+    }
+
+    if (game.whiteUserId !== userId && game.blackUserId !== userId) {
+      return null;
+    }
+
+    return game;
+  },
+});
+
 export const getInternal = internalQuery({
   args: { gameId: v.id("games") },
   handler: async (ctx, args) => {
@@ -722,10 +745,7 @@ export const setEngineError = internalMutation({
     if (!game || game.mode !== "human_vs_engine") {
       return;
     }
-    await ctx.db.patch(args.gameId, {
-      endReason: `engine_error: ${args.message}`,
-      updatedAt: Date.now(),
-    });
+    await abandonGame(ctx, args.gameId, `engine_error: ${args.message}`);
   },
 });
 

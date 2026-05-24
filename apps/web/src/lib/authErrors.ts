@@ -20,7 +20,18 @@ export function getAuthErrorMessage(
     raw.includes("Invalid password") ||
     raw.includes("incorrect password")
   ) {
-    return "Incorrect password. Try again or use Sign up if you have not created an account yet.";
+    return "Incorrect password. Try again or use Forgot password? to reset it.";
+  }
+
+  if (
+    raw.includes("Could not send password reset") ||
+    raw.includes("Could not send")
+  ) {
+    return "Could not send reset email. Try again in a moment.";
+  }
+
+  if (raw.includes("Invalid code") || raw.includes("Invalid verification")) {
+    return "Invalid reset code. Check the code in your email and try again.";
   }
 
   if (raw.includes("already exists")) {

@@ -1,28 +1,23 @@
 import { Link } from "react-router-dom";
-import type { FormEvent, RefObject } from "react";
-import { PasswordField } from "@/components/PasswordField";
+import { loginStepSubtitle, loginStepTitle, LoginAuthStep } from "@/components/auth/LoginAuthStep";
+import type { LoginControllerProps } from "@/lib/loginTypes";
 
-export type AtelierLoginProps = {
-  flow: "signIn" | "signUp";
-  error: string | null;
-  pending: boolean;
-  isLoading: boolean;
-  formRef: RefObject<HTMLFormElement>;
-  onEmailSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  onGoogleSignIn: () => void;
-  onToggleFlow: () => void;
-};
+export function AtelierLogin(props: LoginControllerProps) {
+  const title = loginStepTitle(props, {
+    signIn: "Sign in",
+    signUp: "Create account",
+    verify: "Confirm your email",
+    resetRequest: "Reset password",
+    resetVerify: "New password",
+  });
 
-export function AtelierLogin({
-  flow,
-  error,
-  pending,
-  isLoading,
-  formRef,
-  onEmailSubmit,
-  onGoogleSignIn,
-  onToggleFlow,
-}: AtelierLoginProps) {
+  const subtitle = loginStepSubtitle(props, {
+    default: "Sign in with Google or email to play.",
+    verify: "Enter the verification code we sent to your inbox.",
+    resetRequest: "Enter your email and we will send a reset code.",
+    resetVerify: "Enter the code from your email and choose a new password.",
+  });
+
   return (
     <div className="mx-auto max-w-md relative">
       <span
@@ -36,13 +31,13 @@ export function AtelierLogin({
       <div className="atelier-panel relative">
         <Corners />
         <div className="atelier-rule mb-6">
-          <span className="atelier-smallcaps">Maison Échecs · Access</span>
+          <span className="atelier-smallcaps">Chess Lobby · Access</span>
         </div>
         <h1
           className="atelier-display text-center"
           style={{ fontSize: "2.4rem", fontStyle: "italic", lineHeight: 1.05 }}
         >
-          {flow === "signIn" ? "Procure access" : "Establish membership"}
+          {title}
         </h1>
         <p
           className="mt-3 text-center"
@@ -52,90 +47,21 @@ export function AtelierLogin({
             color: "var(--atelier-parchment-soft)",
           }}
         >
-          The salon awaits your credentials.
+          {subtitle}
         </p>
 
-        <div className="mt-8 space-y-4">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={onGoogleSignIn}
-            className="atelier-btn w-full"
-            style={{ padding: "14px 24px" }}
-          >
-            Continue with Google
-          </button>
+        <div className="mt-8">
+          <LoginAuthStep variant="atelier" {...props} />
 
-          <div className="atelier-rule">
-            <span className="atelier-smallcaps">or by post</span>
-          </div>
-
-          <form ref={formRef} onSubmit={(e) => void onEmailSubmit(e)} className="space-y-3">
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="Email address"
-              className="atelier-input"
-            />
-            <PasswordField flow={flow} inputClassName="atelier-input" />
-            <button
-              type="submit"
-              disabled={pending || isLoading}
-              className="atelier-btn w-full"
-              style={{ padding: "14px 24px" }}
-            >
-              {pending || isLoading
-                ? "Verifying…"
-                : flow === "signIn"
-                  ? "Enter the salon"
-                  : "Create membership"}
-            </button>
-          </form>
-
-          <button
-            type="button"
-            className="atelier-smallcaps w-full text-center"
-            style={{
-              color: "var(--atelier-brass)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              textDecoration: "underline",
-              textDecorationStyle: "dotted",
-            }}
-            onClick={onToggleFlow}
-          >
-            {flow === "signIn"
-              ? "Need an account? Sign up"
-              : "Already a member? Sign in"}
-          </button>
-
-          <p className="text-center">
+          <p className="mt-6 text-center">
             <Link
               to="/"
               className="atelier-smallcaps"
               style={{ color: "var(--atelier-brass-dim)" }}
             >
-              ← Return to the atelier
+              ← Back to home
             </Link>
           </p>
-
-          {error && (
-            <div
-              role="alert"
-              className="atelier-panel atelier-panel--parchment"
-              style={{ padding: "12px 16px", borderColor: "var(--atelier-oxblood)" }}
-            >
-              <p
-                className="atelier-smallcaps"
-                style={{ color: "var(--atelier-oxblood)" }}
-              >
-                {error}
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

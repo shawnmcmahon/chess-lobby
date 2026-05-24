@@ -1,36 +1,57 @@
 import { Link } from "react-router-dom";
-import type { FormEvent } from "react";
-import { PasswordField } from "@/components/PasswordField";
+import { loginStepSubtitle, loginStepTitle, LoginAuthStep } from "@/components/auth/LoginAuthStep";
+import type { LoginControllerProps } from "@/lib/loginTypes";
 
-export function BentoLogin({
-  flow,
-  setFlow,
-  error,
-  pending,
-  isLoading,
-  onEmailSubmit,
-  onGoogleSignIn,
-}: {
-  flow: "signIn" | "signUp";
-  setFlow: (flow: "signIn" | "signUp") => void;
-  error: string | null;
-  pending: boolean;
-  isLoading: boolean;
-  onEmailSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  onGoogleSignIn: () => Promise<void>;
-}) {
+export function BentoLogin(props: LoginControllerProps) {
+  const heroTitle = loginStepTitle(props, {
+    signIn: "Welcome back",
+    signUp: "Join the lobby",
+    verify: "Verify your email",
+    resetRequest: "Reset password",
+    resetVerify: "New password",
+  });
+
+  const heroSubtitle = loginStepSubtitle(props, {
+    default: "Sign in with Google or email. Your games, rating, and correspondence queue sync across devices.",
+    verify: "Check your inbox for an 8-digit code to secure your account.",
+    resetRequest: "Enter your email and we will send a password reset code.",
+    resetVerify: "Enter the code from your email and choose a new password.",
+  });
+
+  const formEyebrow = props.resetStep
+    ? props.resetStep === "request"
+      ? "Password reset"
+      : "Confirm reset"
+    : props.verifyStep
+      ? "Verification"
+      : props.flow === "signIn"
+        ? "Sign in"
+        : "Sign up";
+
+  const formTitle = props.resetStep
+    ? props.resetStep === "request"
+      ? "Request a reset code"
+      : "Set a new password"
+    : props.verifyStep
+      ? "Enter your code"
+      : props.flow === "signIn"
+        ? "Enter your account"
+        : "Create an account";
+
   return (
     <div className="bento-grid" style={{ marginTop: 16 }}>
       <section
         className="bento-tile bento-tile--ink col-span-12 lg:col-span-5"
         style={{ padding: 36, animationDelay: "0ms", minHeight: 320 }}
       >
-        <div className="bento-pill">Access · No. 001</div>
+        <div className="bento-pill">Chess Lobby</div>
         <h1
           className="bento-tile__title"
           style={{ fontSize: "2.6rem", marginTop: 24, maxWidth: "14ch" }}
         >
-          {flow === "signIn" ? (
+          {props.resetStep || props.verifyStep ? (
+            heroTitle
+          ) : props.flow === "signIn" ? (
             <>
               Welcome <em>back</em>
             </>
@@ -50,8 +71,7 @@ export function BentoLogin({
             maxWidth: "38ch",
           }}
         >
-          Sign in with Google or email. Your games, rating, and correspondence
-          queue sync across devices.
+          {heroSubtitle}
         </p>
         <div className="bento-divider" />
         <p className="bento-mono text-[0.68rem] uppercase tracking-widest opacity-50">
@@ -63,63 +83,14 @@ export function BentoLogin({
         className="bento-tile col-span-12 lg:col-span-7"
         style={{ padding: 32, animationDelay: "80ms" }}
       >
-        <div className="bento-tile__eyebrow">Sign in</div>
-        <h2
-          className="bento-tile__title"
-          style={{ fontSize: "1.6rem", marginTop: 6 }}
-        >
-          {flow === "signIn" ? "Enter your account" : "Create an account"}
+        <div className="bento-tile__eyebrow">{formEyebrow}</div>
+        <h2 className="bento-tile__title" style={{ fontSize: "1.6rem", marginTop: 6 }}>
+          {formTitle}
         </h2>
 
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => void onGoogleSignIn()}
-          className="bento-btn bento-btn--ghost mt-6 w-full justify-center"
-          style={{ display: "flex" }}
-        >
-          Continue with Google
-        </button>
-
-        <div className="bento-mono my-4 text-center text-[0.68rem] uppercase tracking-widest opacity-50">
-          or
+        <div className="mt-6">
+          <LoginAuthStep variant="bento" {...props} />
         </div>
-
-        <form onSubmit={(e) => void onEmailSubmit(e)} className="space-y-3">
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="Email"
-            className="bento-input"
-          />
-          <PasswordField flow={flow} inputClassName="bento-input" />
-          <button
-            type="submit"
-            disabled={pending || isLoading}
-            className="bento-btn bento-btn--jade w-full justify-center"
-            style={{ display: "flex" }}
-          >
-            {pending || isLoading
-              ? "Signing in…"
-              : flow === "signIn"
-                ? "Sign in"
-                : "Create account"}
-          </button>
-        </form>
-
-        <button
-          type="button"
-          className="bento-mono mt-4 text-[0.78rem] opacity-70 hover:opacity-100"
-          onClick={() => {
-            setFlow(flow === "signIn" ? "signUp" : "signIn");
-          }}
-        >
-          {flow === "signIn"
-            ? "Need an account? Sign up"
-            : "Already have an account? Sign in"}
-        </button>
 
         <div className="bento-divider" />
 
@@ -128,20 +99,6 @@ export function BentoLogin({
             ← Back to home
           </Link>
         </p>
-
-        {error && (
-          <div
-            role="alert"
-            className="bento-mono mt-4 rounded-xl px-3 py-2 text-sm"
-            style={{
-              background: "rgba(200, 74, 33, 0.12)",
-              color: "var(--bento-clay)",
-              border: "1px solid rgba(200, 74, 33, 0.25)",
-            }}
-          >
-            {error}
-          </div>
-        )}
       </section>
     </div>
   );

@@ -48,7 +48,6 @@ export default function App() {
             <Route index element={<Landing />} />
             <Route path="login" element={<Login />} />
             <Route path="game/join/:inviteToken" element={<JoinGame />} />
-            <Route path="game/:gameId" element={<Game />} />
             <Route
               path="game/:gameId/review"
               element={
@@ -57,6 +56,7 @@ export default function App() {
                 </AuthGuard>
               }
             />
+            <Route path="game/:gameId" element={<Game />} />
             <Route
               path="profile/setup"
               element={

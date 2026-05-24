@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as ResendOTP from "../ResendOTP.js";
+import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
 import type * as auth from "../auth.js";
+import type * as authPassword from "../authPassword.js";
 import type * as chat from "../chat.js";
 import type * as crons from "../crons.js";
 import type * as engine from "../engine.js";
@@ -35,7 +38,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  ResendOTP: typeof ResendOTP;
+  ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
   auth: typeof auth;
+  authPassword: typeof authPassword;
   chat: typeof chat;
   crons: typeof crons;
   engine: typeof engine;

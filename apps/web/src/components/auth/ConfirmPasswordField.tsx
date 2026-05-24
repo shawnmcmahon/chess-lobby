@@ -1,12 +1,11 @@
 import { useState } from "react";
+import type { AuthFlow } from "@/components/auth/authStyles";
 
-type PasswordFieldProps = {
-  flow: "signIn" | "signUp";
+type ConfirmPasswordFieldProps = {
+  flow: AuthFlow;
   inputClassName: string;
   toggleClassName?: string;
   placeholder?: string;
-  name?: string;
-  autoComplete?: string;
 };
 
 function EyeIcon({ hidden }: { hidden?: boolean }) {
@@ -38,25 +37,25 @@ function EyeIcon({ hidden }: { hidden?: boolean }) {
   );
 }
 
-export function PasswordField({
+export function ConfirmPasswordField({
   flow,
   inputClassName,
   toggleClassName,
-  placeholder = "Password (min 8 characters)",
-  name = "password",
-  autoComplete,
-}: PasswordFieldProps) {
+  placeholder = "Confirm password",
+}: ConfirmPasswordFieldProps) {
   const [visible, setVisible] = useState(false);
-  const resolvedAutoComplete =
-    autoComplete ?? (flow === "signUp" ? "new-password" : "current-password");
+
+  if (flow !== "signUp") {
+    return null;
+  }
 
   return (
     <div className="password-field">
       <input
-        name={name}
+        name="confirmPassword"
         type={visible ? "text" : "password"}
         required
-        autoComplete={resolvedAutoComplete}
+        autoComplete="new-password"
         placeholder={placeholder}
         minLength={8}
         className={`password-field__input ${inputClassName}`}
@@ -65,7 +64,7 @@ export function PasswordField({
         type="button"
         className={`password-field__toggle ${toggleClassName ?? ""}`.trim()}
         onClick={() => setVisible((show) => !show)}
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? "Hide confirm password" : "Show confirm password"}
         aria-pressed={visible}
       >
         <EyeIcon hidden={visible} />
