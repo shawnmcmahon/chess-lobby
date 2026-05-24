@@ -1,82 +1,152 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" role="img" aria-label="Chess Lobby production architecture">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 680" role="img" aria-label="Chess Lobby production architecture">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
       <polygon points="0 0, 10 4, 0 8" fill="#475569"/>
+    </marker>
+    <marker id="arrow-dashed" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#94a3b8"/>
     </marker>
     <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
       <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/>
     </filter>
   </defs>
 
-  <rect width="980" height="560" fill="#f8fafc"/>
+  <rect width="1040" height="680" fill="#f8fafc"/>
 
-  <text x="490" y="34" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="700" fill="#0f172a">
+  <text x="520" y="36" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
     Production architecture
   </text>
-  <text x="490" y="56" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#64748b">
-    Runtime traffic and deploy path (Docker on Lightsail Container Service)
+  <text x="520" y="60" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#64748b">
+    Runtime traffic and deploy path
   </text>
 
   <!-- AWS group -->
-  <rect x="40" y="88" width="520" height="280" rx="14" fill="#fff7ed" stroke="#fdba74" stroke-width="1.5"/>
-  <text x="58" y="112" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#c2410c">AWS</text>
+  <rect x="250" y="96" width="430" height="360" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="272" y="122" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="700" fill="#c2410c">AWS</text>
 
   <!-- Convex group -->
-  <rect x="580" y="88" width="360" height="200" rx="14" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
-  <text x="598" y="112" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#6d28d9">Convex Cloud</text>
+  <rect x="720" y="96" width="280" height="360" rx="16" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="742" y="122" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="700" fill="#6d28d9">Convex Cloud</text>
 
   <!-- CI group -->
-  <rect x="300" y="400" width="380" height="88" rx="14" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="318" y="424" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#334155">GitHub Actions</text>
+  <rect x="320" y="520" width="400" height="88" rx="16" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="342" y="546" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="700" fill="#334155">GitHub Actions</text>
 
   <!-- Nodes -->
   <g filter="url(#shadow)">
-    <rect x="70" y="150" width="150" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
-    <text x="145" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Player browser</text>
-    <text x="145" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">React SPA</text>
+    <!-- Player browser -->
+    <rect x="40" y="220" width="170" height="64" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="125" y="248" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Player browser</text>
+    <text x="125" y="268" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">React SPA</text>
 
-    <rect x="260" y="150" width="150" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
-    <text x="335" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">CloudFront</text>
-    <text x="335" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">HTTPS CDN</text>
+    <!-- CloudFront -->
+    <rect x="280" y="150" width="160" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
+    <text x="360" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">CloudFront</text>
+    <text x="360" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">HTTPS CDN</text>
 
-    <rect x="260" y="250" width="150" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
-    <text x="335" y="276" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">S3 bucket</text>
-    <text x="335" y="294" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Static build</text>
+    <!-- S3 -->
+    <rect x="280" y="240" width="160" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
+    <text x="360" y="266" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">S3 bucket</text>
+    <text x="360" y="284" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Static build</text>
 
-    <rect x="58" y="268" width="194" height="88" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-dasharray="4 3"/>
-    <text x="155" y="286" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700" fill="#c2410c">Lightsail Container Service</text>
-    <rect x="68" y="296" width="174" height="52" rx="8" fill="#ffffff" stroke="#fdba74"/>
-    <text x="155" y="318" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#0f172a">Docker container</text>
-    <text x="155" y="336" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">ASP.NET Core 8 + Stockfish</text>
+    <!-- Route 53 hint -->
+    <rect x="470" y="150" width="180" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
+    <text x="560" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Route 53</text>
+    <text x="560" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">thechesslobby.com</text>
 
-    <rect x="600" y="150" width="170" height="56" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
-    <text x="685" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Convex Cloud</text>
-    <text x="685" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Auth, DB, realtime</text>
+    <!-- Lightsail container service -->
+    <rect x="280" y="330" width="370" height="108" rx="12" fill="#fff7ed" stroke="#fdba74" stroke-dasharray="5 4"/>
+    <text x="465" y="352" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#c2410c">Lightsail Container Service</text>
+    <text x="465" y="368" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#9a3412">chess-lobby-engine</text>
 
-    <rect x="600" y="230" width="170" height="44" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
-    <text x="685" y="258" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#0f172a">engine.ts actions</text>
+    <rect x="300" y="382" width="330" height="44" rx="8" fill="#ffffff" stroke="#fdba74"/>
+    <text x="465" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#0f172a">Docker container</text>
+    <text x="465" y="418" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">ASP.NET Core 8 API + Stockfish UCI</text>
 
-    <rect x="340" y="432" width="300" height="44" rx="10" fill="#ffffff" stroke="#94a3b8"/>
-    <text x="490" y="460" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Deploy AWS workflow</text>
+    <!-- Convex main -->
+    <rect x="740" y="150" width="240" height="64" rx="12" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="860" y="178" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Convex backend</text>
+    <text x="860" y="198" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Auth, database, realtime games</text>
+
+    <!-- Vs computer action -->
+    <rect x="740" y="250" width="240" height="56" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="860" y="276" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#0f172a">Vs-computer action</text>
+    <text x="860" y="294" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">calls external engine</text>
+
+    <!-- Fallback -->
+    <rect x="740" y="340" width="240" height="56" rx="10" fill="#faf5ff" stroke="#c4b5fd" stroke-dasharray="4 3"/>
+    <text x="860" y="366" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#6d28d9">Fallback engine</text>
+    <text x="860" y="384" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">chess.js minimax (in Convex)</text>
+
+    <!-- GitHub Actions -->
+    <rect x="360" y="552" width="320" height="44" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="520" y="580" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Deploy AWS workflow</text>
   </g>
 
-  <!-- Arrows -->
-  <line x1="220" y1="178" x2="258" y2="178" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="239" y="168" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">HTTPS</text>
+  <!-- Label helper: pill backgrounds -->
+  <g font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">
+    <!-- HTTPS (browser to CloudFront) -->
+    <rect x="218" y="196" width="56" height="20" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="246" y="210" text-anchor="middle" fill="#334155">HTTPS</text>
 
-  <line x1="335" y1="206" x2="335" y2="248" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <!-- WebSocket - dedicated lane above diagram -->
+    <rect x="430" y="78" width="88" height="22" rx="11" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5"/>
+    <text x="474" y="93" text-anchor="middle" fill="#6d28d9">WebSocket</text>
 
-  <line x1="220" y1="188" x2="598" y2="178" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="410" y="168" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">WebSocket</text>
+    <!-- CloudFront to S3 -->
+    <rect x="372" y="212" width="36" height="20" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="390" y="226" text-anchor="middle" fill="#334155" font-size="10">origin</text>
 
-  <line x1="685" y1="206" x2="685" y2="228" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <!-- Engine call -->
+    <rect x="548" y="288" width="148" height="22" rx="11" fill="#ffffff" stroke="#fdba74"/>
+    <text x="622" y="303" text-anchor="middle" fill="#c2410c" font-size="10">HTTPS POST /api/best-move</text>
 
-  <line x1="600" y1="252" x2="242" y2="322" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="400" y="268" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">HTTPS POST /api/best-move</text>
+    <!-- Fallback label -->
+    <rect x="700" y="318" width="52" height="20" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="726" y="332" text-anchor="middle" fill="#94a3b8" font-size="10">if down</text>
 
-  <line x1="400" y1="454" x2="335" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="350" y="372" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">upload build</text>
+    <!-- Deploy labels -->
+    <rect x="388" y="468" width="84" height="20" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="430" y="482" text-anchor="middle" fill="#334155">upload build</text>
 
-  <line x1="520" y1="454" x2="685" y2="294" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="610" y="372" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">convex deploy</text>
+    <rect x="598" y="468" width="92" height="20" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="644" y="482" text-anchor="middle" fill="#334155">convex deploy</text>
+  </g>
+
+  <!-- Arrows: runtime -->
+  <!-- Browser -> CloudFront -->
+  <line x1="210" y1="240" x2="278" y2="178" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- CloudFront -> S3 -->
+  <line x1="360" y1="206" x2="360" y2="238" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Route 53 -> CloudFront (DNS) -->
+  <line x1="470" y1="178" x2="440" y2="178" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Browser -> Convex via top WebSocket lane -->
+  <path d="M 125 220 L 125 92 L 740 92 L 740 182" fill="none" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Convex backend -> vs-computer action -->
+  <line x1="860" y1="214" x2="860" y2="248" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Vs-computer -> Lightsail Docker -->
+  <line x1="740" y1="278" x2="632" y2="404" stroke="#c2410c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Vs-computer -> fallback (dashed) -->
+  <line x1="860" y1="306" x2="860" y2="338" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-dashed)"/>
+
+  <!-- Deploy arrows -->
+  <line x1="430" y1="552" x2="360" y2="296" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="644" y1="552" x2="860" y2="214" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="40" y="620" width="960" height="44" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+  <line x1="68" y1="642" x2="98" y2="642" stroke="#7c3aed" stroke-width="2.5"/>
+  <text x="108" y="646" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">Realtime (WebSocket)</text>
+  <line x1="230" y1="642" x2="260" y2="642" stroke="#c2410c" stroke-width="2"/>
+  <text x="270" y="646" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">Vs-computer engine call (HTTPS)</text>
+  <line x1="490" y1="642" x2="520" y2="642" stroke="#475569" stroke-width="2"/>
+  <text x="530" y="646" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">Static app delivery (HTTPS)</text>
+  <line x1="720" y1="642" x2="750" y2="642" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="760" y="646" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">Fallback if engine unreachable</text>
 </svg>
