@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Chessboard, type Arrow } from "react-chessboard";
 import { getBoardSquareColors } from "@/lib/boardTheme";
 import { useTheme } from "@/theme/themeContext";
@@ -29,6 +29,7 @@ export function ChessBoardView({
   allowDrawingArrows = true,
 }: ChessBoardViewProps) {
   const { theme } = useTheme();
+  const boardRef = useRef<HTMLDivElement>(null);
   const squareColors = getBoardSquareColors(theme);
   const [internalArrows, setInternalArrows] = useState<Arrow[]>([]);
   const arrows = customArrows ?? internalArrows;
@@ -44,8 +45,20 @@ export function ChessBoardView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setArrows]);
 
+  useEffect(() => {
+    const container = boardRef.current;
+    if (!container) return;
+
+    for (const square of container.querySelectorAll("[data-square]")) {
+      const id = square.getAttribute("data-square");
+      if (id) {
+        square.setAttribute("aria-label", `Square ${id.toUpperCase()}`);
+      }
+    }
+  }, [fen, orientation, theme]);
+
   return (
-    <div className="mx-auto max-w-[480px]">
+    <div ref={boardRef} className="mx-auto max-w-[480px]">
       <Chessboard
         options={{
           position: fen,

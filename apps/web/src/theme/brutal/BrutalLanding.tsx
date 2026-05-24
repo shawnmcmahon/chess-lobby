@@ -141,7 +141,10 @@ export function BrutalLanding({ isAuthenticated }: { isAuthenticated: boolean })
         </div>
       </section>
 
-      <section id="features" className="grid grid-cols-12 gap-5">
+      <section id="features" aria-labelledby="features-heading" className="grid grid-cols-12 gap-5">
+        <h2 id="features-heading" className="sr-only">
+          Features
+        </h2>
         <FeatureCard
           className="col-span-12 md:col-span-6 lg:col-span-4"
           tilt="left"
