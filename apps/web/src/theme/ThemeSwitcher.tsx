@@ -5,10 +5,34 @@ import { THEMES, type ThemeId } from "./themes";
 
 type MenuPlacement = "above" | "below";
 
+const VIEWPORT_PADDING = 8;
+const MENU_GAP = 8;
+
+function resolvePlacement(
+  preferred: MenuPlacement,
+  spaceAbove: number,
+  spaceBelow: number,
+  menuHeight: number,
+): MenuPlacement {
+  const fitsAbove = menuHeight <= spaceAbove;
+  const fitsBelow = menuHeight <= spaceBelow;
+
+  if (preferred === "above") {
+    if (fitsAbove) return "above";
+    if (fitsBelow) return "below";
+    return spaceBelow >= spaceAbove ? "below" : "above";
+  }
+
+  if (fitsBelow) return "below";
+  if (fitsAbove) return "above";
+  return spaceBelow >= spaceAbove ? "below" : "above";
+}
+
 function useMenuPosition(
   open: boolean,
   triggerRef: React.RefObject<HTMLButtonElement | null>,
-  placement: MenuPlacement,
+  menuRef: React.RefObject<HTMLDivElement | null>,
+  preferredPlacement: MenuPlacement,
 ) {
   const [style, setStyle] = useState<React.CSSProperties>({});
 
@@ -19,31 +43,56 @@ function useMenuPosition(
       const trigger = triggerRef.current;
       if (!trigger) return;
       const rect = trigger.getBoundingClientRect();
-      const right = Math.max(8, window.innerWidth - rect.right);
+      const right = Math.max(VIEWPORT_PADDING, window.innerWidth - rect.right);
+      const spaceAbove = Math.max(0, rect.top - VIEWPORT_PADDING - MENU_GAP);
+      const spaceBelow = Math.max(
+        0,
+        window.innerHeight - rect.bottom - VIEWPORT_PADDING - MENU_GAP,
+      );
+      const menuHeight = menuRef.current?.offsetHeight ?? 0;
+      const placement = resolvePlacement(
+        preferredPlacement,
+        spaceAbove,
+        spaceBelow,
+        menuHeight,
+      );
 
       if (placement === "above") {
         setStyle({
           right,
-          bottom: window.innerHeight - rect.top + 8,
+          bottom: window.innerHeight - rect.top + MENU_GAP,
           top: "auto",
+          maxHeight: spaceAbove,
+          overflowY: menuHeight > spaceAbove ? "auto" : undefined,
         });
       } else {
         setStyle({
           right,
-          top: rect.bottom + 8,
+          top: rect.bottom + MENU_GAP,
           bottom: "auto",
+          maxHeight: spaceBelow,
+          overflowY: menuHeight > spaceBelow ? "auto" : undefined,
         });
       }
     }
 
     update();
+
+    const menu = menuRef.current;
+    const resizeObserver =
+      menu && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(update)
+        : null;
+    if (menu && resizeObserver) resizeObserver.observe(menu);
+
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
     return () => {
+      resizeObserver?.disconnect();
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [open, placement, triggerRef]);
+  }, [open, preferredPlacement, triggerRef, menuRef]);
 
   return style;
 }
@@ -60,7 +109,7 @@ export function ThemeSwitcher({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const menuStyle = useMenuPosition(open, triggerRef, menuPlacement);
+  const menuStyle = useMenuPosition(open, triggerRef, menuRef, menuPlacement);
 
   useEffect(() => {
     if (!open) return;
