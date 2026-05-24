@@ -98,7 +98,9 @@ CustomErrorResponses:
 
 ### Refresh flow (sequence)
 
-![SPA refresh flow](spa-refresh-flow.svg)
+![SPA refresh flow](spa-refresh-flow.png)
+
+Source SVG: [spa-refresh-flow.svg](spa-refresh-flow.svg)
 
 Locally, the **Vite dev server** applies the same idea: unknown paths fall back to `index.html` so deep links work during development.
 
