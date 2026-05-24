@@ -6,7 +6,7 @@
    ========================================================================= */
 
 /* -------------------------------------------------------------------------
-   Theme-switcher chrome (lives in the global header on every route)
+   Theme-switcher chrome (profile + landing — not in the global header)
    ------------------------------------------------------------------------- */
 
 .theme-switcher__trigger {
@@ -1724,34 +1724,40 @@
   overflow-x: clip;
 }
 
-.theme-switcher__trigger--compact {
-  padding: 0.35rem;
-  border-radius: 9999px;
-}
-
-.theme-dock {
-  position: fixed;
-  right: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
-  z-index: 35;
+.theme-settings {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  padding: 0.35rem;
-  border-radius: 9999px;
-  background: rgba(14, 14, 22, 0.92);
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
+  background: rgba(14, 14, 22, 0.55);
 }
 
-[data-theme="bento"] .theme-dock {
-  background: rgba(255, 255, 255, 0.94);
+.theme-settings__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.theme-settings__desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  max-width: 28rem;
+  line-height: 1.45;
+}
+
+[data-theme="bento"] .theme-settings {
+  background: rgba(255, 255, 255, 0.72);
   border-color: rgba(14, 14, 16, 0.1);
   color: var(--bento-ink);
 }
 
-[data-theme="brutal"] .theme-dock {
+[data-theme="brutal"] .theme-settings {
   background: var(--brutal-yellow);
   border: var(--brutal-border) solid var(--brutal-ink);
   border-radius: 0;
@@ -1759,21 +1765,60 @@
   color: var(--brutal-ink);
 }
 
-[data-theme="atelier"] .theme-dock {
-  background: rgba(11, 20, 36, 0.94);
+[data-theme="brutal"] .theme-settings__title {
+  font-family: "Archivo Black", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="atelier"] .theme-settings {
+  background: rgba(11, 20, 36, 0.65);
   border-color: var(--atelier-brass-dim);
   color: var(--atelier-parchment);
 }
 
-@media (max-width: 1279px) {
-  .app-main--with-dock {
-    padding-bottom: calc(1.5rem + 3.75rem + env(safe-area-inset-bottom, 0px)) !important;
-  }
+[data-theme="atelier"] .theme-settings__title {
+  font-family: "Cormorant Garamond", serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--atelier-brass);
 }
 
 .app-header {
   position: relative;
   z-index: 40;
+}
+
+/* Mobile + tablet: hamburger menu. Desktop (1280px+): inline nav. */
+.app-header__desktop-nav {
+  display: none;
+}
+
+.app-header__mobile-menu {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.app-header__sign--desktop {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 1280px) {
+  .app-header__desktop-nav {
+    display: flex;
+  }
+
+  .app-header__mobile-menu {
+    display: none;
+  }
+
+  .app-header__sign--desktop {
+    width: auto;
+    justify-content: center;
+  }
 }
 
 .mobile-nav__toggle {
@@ -1797,6 +1842,12 @@
   width: 100%;
   border-radius: 1px;
   background: currentColor;
+}
+
+.app-header[data-theme-variant="default"] .mobile-nav__toggle {
+  border-color: var(--default-glass-border);
+  background: rgba(14, 14, 22, 0.55);
+  color: var(--default-ember);
 }
 
 .app-header[data-theme-variant="bento"] .mobile-nav__toggle {

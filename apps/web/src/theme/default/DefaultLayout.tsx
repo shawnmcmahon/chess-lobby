@@ -27,7 +27,7 @@ export function DefaultLayout() {
             </Link>
           }
         />
-        <main className="default-main app-main--with-dock mx-auto max-w-6xl px-4 py-5 sm:py-6">
+        <main className="default-main mx-auto max-w-6xl px-4 py-5 sm:py-6">
           <Outlet />
         </main>
       </div>
