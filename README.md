@@ -93,20 +93,7 @@ The React app is a **single-page application**: S3 stores one HTML shell (`index
 
 Refresh on a deep link (e.g. `/dashboard`):
 
-```mermaid
-sequenceDiagram
-  participant Browser
-  participant CloudFront
-  participant S3
-  participant React
-
-  Browser->>CloudFront: GET /dashboard
-  CloudFront->>S3: lookup dashboard (missing)
-  S3-->>CloudFront: 404
-  CloudFront-->>Browser: 200 + index.html
-  Browser->>React: load JS, mount App
-  React->>React: BrowserRouter sees /dashboard → Dashboard
-```
+![SPA refresh flow — CloudFront serves index.html, React Router picks the page](docs/spa-refresh-flow.svg)
 
 Route table, nested layouts, and auth guards: **[docs/spa-routing.md](docs/spa-routing.md)**.
 

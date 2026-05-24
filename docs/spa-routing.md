@@ -98,20 +98,7 @@ CustomErrorResponses:
 
 ### Refresh flow (sequence)
 
-```mermaid
-sequenceDiagram
-  participant Browser
-  participant CloudFront
-  participant S3
-  participant React
-
-  Browser->>CloudFront: GET /dashboard
-  CloudFront->>S3: lookup dashboard (missing)
-  S3-->>CloudFront: 404
-  CloudFront-->>Browser: 200 + index.html
-  Browser->>React: load JS, mount App
-  React->>React: BrowserRouter sees /dashboard → Dashboard
-```
+![SPA refresh flow](spa-refresh-flow.svg)
 
 Locally, the **Vite dev server** applies the same idea: unknown paths fall back to `index.html` so deep links work during development.
 
