@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
+import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import { QuickPairGrid } from "@/components/QuickPairGrid";
 import { CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
@@ -45,6 +46,14 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
           </div>
         </div>
       </section>
+
+      <LookingForOpponentSection
+        theme="default"
+        entries={ctrl.lookingForOpponent}
+        loading={ctrl.quickPairLoading}
+        onJoin={ctrl.onJoinLookingForOpponent}
+        onCancel={ctrl.onCancelLookingForOpponent}
+      />
 
       {ctrl.correspondenceGames && ctrl.correspondenceGames.length > 0 && (
         <section className="default-panel p-4">
@@ -171,10 +180,7 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
               <button
                 key={id}
                 type="button"
-                onClick={() => {
-                  ctrl.setTab(id);
-                  ctrl.stopSeeking();
-                }}
+                onClick={() => ctrl.setTab(id)}
                 className="default-tab"
                 data-active={ctrl.tab === id ? "true" : undefined}
               >
@@ -185,23 +191,9 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
 
           {ctrl.tab === "quickPair" && (
             <div className="space-y-3">
-              {ctrl.noOtherPlayersOnline && (
-                <p className="default-mono text-sm text-[var(--default-danger)]">
-                  No other players are online right now — quick pairing needs someone
-                  else in the lobby.
-                </p>
-              )}
-              {ctrl.seeking && (
-                <p className="default-mono text-sm text-[var(--default-ember)]">
-                  Searching for opponent…{" "}
-                  <button type="button" onClick={ctrl.stopSeeking} className="underline">
-                    Cancel
-                  </button>
-                </p>
-              )}
               <QuickPairGrid
                 onSelect={(p) => void ctrl.onQuickPair(p)}
-                disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
+                disabled={ctrl.quickPairLoading}
               />
             </div>
           )}

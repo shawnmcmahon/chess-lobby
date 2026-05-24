@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
@@ -76,7 +77,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
         </p>
         <button
           type="button"
-          disabled={ctrl.noOtherPlayersOnline}
+          disabled={ctrl.quickPairLoading}
           onClick={() =>
             void ctrl.onQuickPair({ label: "5+0", baseTimeMs: 300_000, incrementMs: 0 })
           }
@@ -90,6 +91,14 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
           Pair me · 5+0
         </button>
       </section>
+
+      <LookingForOpponentSection
+        theme="bento"
+        entries={ctrl.lookingForOpponent}
+        loading={ctrl.quickPairLoading}
+        onJoin={ctrl.onJoinLookingForOpponent}
+        onCancel={ctrl.onCancelLookingForOpponent}
+      />
 
       <section
         className="bento-tile col-span-12 lg:col-span-8"
@@ -119,10 +128,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 type="button"
                 className="bento-tab"
                 data-active={ctrl.tab === id ? "true" : undefined}
-                onClick={() => {
-                  ctrl.setTab(id);
-                  ctrl.stopSeeking();
-                }}
+                onClick={() => ctrl.setTab(id)}
               >
                 {label}
               </button>
@@ -131,45 +137,19 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
         </div>
 
         {ctrl.tab === "quickPair" && (
-          <>
-            {ctrl.noOtherPlayersOnline && (
-              <p
-                className="bento-mono mt-4 text-sm"
-                style={{ color: "var(--bento-coral, #e85d4c)" }}
+          <div className="bento-preset-grid mt-5">
+            {TIME_CONTROL_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                className="bento-preset"
+                disabled={ctrl.quickPairLoading}
+                onClick={() => void ctrl.onQuickPair(p)}
               >
-                Nobody else is online — quick pairing needs another player in the lobby.
-              </p>
-            )}
-            {ctrl.seeking && (
-              <div
-                className="bento-mono mt-4 flex items-center gap-2 text-sm"
-                style={{ color: "var(--bento-jade)" }}
-              >
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full" style={{ background: "var(--bento-jade)" }} />
-                Searching for opponent…
-                <button
-                  type="button"
-                  onClick={ctrl.stopSeeking}
-                  className="underline decoration-dotted"
-                >
-                  cancel
-                </button>
-              </div>
-            )}
-            <div className="bento-preset-grid mt-5">
-              {TIME_CONTROL_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  className="bento-preset"
-                  disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
-                  onClick={() => void ctrl.onQuickPair(p)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </>
+                {p.label}
+              </button>
+            ))}
+          </div>
         )}
         {ctrl.tab === "computer" && (
           <div className="mt-5 space-y-4">

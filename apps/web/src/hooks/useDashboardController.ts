@@ -21,29 +21,30 @@ export function useDashboardController() {
   const user = useQuery(api.users.current);
   const pendingInvites = useQuery(api.invites.listPendingForMe);
   const activeGames = useQuery(api.games.listMyActive);
-  const mySeek = useQuery(api.seeks.getMySeek);
+  const lookingForOpponent = useQuery(
+    api.seeks.listLookingForOpponent,
+    user ? {} : "skip",
+  );
   const sendInvite = useMutation(api.invites.send);
   const acceptInvite = useMutation(api.invites.accept);
   const declineInvite = useMutation(api.invites.decline);
   const createGame = useMutation(api.games.create);
-  const createSeek = useMutation(api.seeks.createSeek);
-  const cancelSeek = useMutation(api.seeks.cancelSeek);
+  const createQuickPair = useMutation(api.seeks.createQuickPair);
+  const joinQuickPairGame = useMutation(api.seeks.joinQuickPairGame);
+  const cancelQuickPair = useMutation(api.seeks.cancelQuickPair);
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<PlayTab>("quickPair");
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState(10);
-  // `localSeeking` reflects optimistic "I just clicked pair" state before the
-  // server has confirmed the seek. The exposed `seeking` derives from this OR
-  // a confirmed server-side seek, which lets us avoid syncing state in an effect.
-  const [localSeeking, setLocalSeeking] = useState(false);
-  const [seekStartedAt, setSeekStartedAt] = useState<number | null>(null);
+  const [quickPairLoading, setQuickPairLoading] = useState(false);
+  const [pendingQuickPairGameId, setPendingQuickPairGameId] =
+    useState<Id<"games"> | null>(null);
   const [daysPerTurn, setDaysPerTurn] = useState(3);
   const [selectedPreset, setSelectedPreset] = useState<TimeControlPreset | null>(
     null,
   );
   const [isPublic, setIsPublic] = useState(true);
-  const seeking = localSeeking || mySeek != null;
 
   const presenceState = useLobbyPresence();
 
@@ -65,49 +66,50 @@ export function useDashboardController() {
   );
 
   useEffect(() => {
-    return () => {
-      void cancelSeek({});
-    };
-  }, [cancelSeek]);
-
-  // When the server has dropped our seek (matched + cleared) and a fresh game
-  // for us appears, navigate into it. We do not call setState here — local
-  // seeking state is reset by the unmount/cleanup path on navigation.
-  useEffect(() => {
-    if (!localSeeking || seekStartedAt === null || mySeek !== null || !user) {
+    if (!pendingQuickPairGameId || !activeGames) {
       return;
     }
-    const matchedGame = activeGames?.find(
-      (game) =>
-        game.status === "active" &&
-        game.mode === "human_vs_human" &&
-        game.playType === "live" &&
-        game.createdAt >= seekStartedAt - 5000 &&
-        (game.whiteUserId === user._id || game.blackUserId === user._id),
-    );
-    if (matchedGame) {
-      navigate(`/game/${matchedGame._id}`);
+    const game = activeGames.find((g) => g._id === pendingQuickPairGameId);
+    if (game?.status === "active") {
+      setPendingQuickPairGameId(null);
+      navigate(`/game/${game._id}`);
     }
-  }, [localSeeking, seekStartedAt, mySeek, activeGames, user, navigate]);
+  }, [pendingQuickPairGameId, activeGames, navigate]);
 
   const otherPlayersOnlineCount = presenceState ? onlineUserIds.length : null;
-  const noOtherPlayersOnline =
-    otherPlayersOnlineCount !== null && otherPlayersOnlineCount === 0;
 
   async function onQuickPair(preset: TimeControlPreset) {
-    if (noOtherPlayersOnline) {
-      return;
+    setQuickPairLoading(true);
+    try {
+      const result = await createQuickPair({
+        baseTimeMs: preset.baseTimeMs,
+        incrementMs: preset.incrementMs,
+      });
+      if (result.matched) {
+        setPendingQuickPairGameId(null);
+        navigate(`/game/${result.gameId}`);
+      } else {
+        setPendingQuickPairGameId(result.gameId);
+      }
+    } finally {
+      setQuickPairLoading(false);
     }
-    setLocalSeeking(true);
-    setSeekStartedAt(Date.now());
-    const result = await createSeek({
-      baseTimeMs: preset.baseTimeMs,
-      incrementMs: preset.incrementMs,
-    });
-    if (result.matched && result.gameId) {
-      setLocalSeeking(false);
-      setSeekStartedAt(null);
-      navigate(`/game/${result.gameId}`);
+  }
+
+  async function onJoinLookingForOpponent(gameId: Id<"games">) {
+    setQuickPairLoading(true);
+    try {
+      const joinedGameId = await joinQuickPairGame({ gameId });
+      navigate(`/game/${joinedGameId}`);
+    } finally {
+      setQuickPairLoading(false);
+    }
+  }
+
+  async function onCancelLookingForOpponent(gameId: Id<"games">) {
+    await cancelQuickPair({ gameId });
+    if (pendingQuickPairGameId === gameId) {
+      setPendingQuickPairGameId(null);
     }
   }
 
@@ -171,12 +173,6 @@ export function useDashboardController() {
     navigate(`/game/${gameId}`);
   }
 
-  function stopSeeking() {
-    void cancelSeek({});
-    setLocalSeeking(false);
-    setSeekStartedAt(null);
-  }
-
   function formatCorrespondenceDeadline(game: Doc<"games">) {
     if (!game.daysPerTurn || !game.turnDeadlineAt) return "No timer";
     const days = Math.ceil(
@@ -201,7 +197,8 @@ export function useDashboardController() {
   const liveActiveGames = activeGames?.filter(
     (g) =>
       g.playType !== "correspondence" &&
-      (g.status === "active" || g.status === "waiting"),
+      (g.status === "active" || g.status === "waiting") &&
+      !(g.matchSource === "quick_pair" && g.status === "waiting"),
   );
 
   function canCancelWaitingGame(game: Doc<"games">) {
@@ -215,6 +212,7 @@ export function useDashboardController() {
     user,
     pendingInvites,
     activeGames,
+    lookingForOpponent,
     myTurnGames,
     correspondenceGames,
     liveActiveGames,
@@ -226,7 +224,7 @@ export function useDashboardController() {
     inviteLink,
     difficulty,
     setDifficulty,
-    seeking,
+    quickPairLoading,
     daysPerTurn,
     setDaysPerTurn,
     selectedPreset,
@@ -237,12 +235,12 @@ export function useDashboardController() {
     showPrivateGameToggle,
     canCancelWaitingGame,
     otherPlayersOnlineCount,
-    noOtherPlayersOnline,
     onQuickPair,
+    onJoinLookingForOpponent,
+    onCancelLookingForOpponent,
     onComputer,
     challengePlayer,
     createInviteLink,
-    stopSeeking,
     acceptInvite,
     declineInvite,
     formatCorrespondenceDeadline,

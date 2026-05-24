@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
@@ -67,7 +68,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
             <button
               type="button"
-              disabled={ctrl.noOtherPlayersOnline}
+              disabled={ctrl.quickPairLoading}
               className="brutal-btn brutal-btn--ink mt-3 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() =>
                 void ctrl.onQuickPair({
@@ -82,6 +83,14 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
           </div>
         </div>
       </section>
+
+      <LookingForOpponentSection
+        theme="brutal"
+        entries={ctrl.lookingForOpponent}
+        loading={ctrl.quickPairLoading}
+        onJoin={ctrl.onJoinLookingForOpponent}
+        onCancel={ctrl.onCancelLookingForOpponent}
+      />
 
       {ctrl.pendingInvites && ctrl.pendingInvites.length > 0 && (
         <section
@@ -250,10 +259,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                 type="button"
                 className="brutal-tab"
                 data-active={ctrl.tab === id ? "true" : undefined}
-                onClick={() => {
-                  ctrl.setTab(id);
-                  ctrl.stopSeeking();
-                }}
+                onClick={() => ctrl.setTab(id)}
               >
                 {label}
               </button>
@@ -261,42 +267,19 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
           </div>
 
           {ctrl.tab === "quickPair" && (
-            <>
-              {ctrl.noOtherPlayersOnline && (
-                <p className="brutal-chunk mt-5 text-sm text-[var(--brutal-magenta)]">
-                  NO OTHER PLAYERS ONLINE — QUICK PAIR NEEDS SOMEONE IN THE LOBBY.
-                </p>
-              )}
-              {ctrl.seeking && (
-                <div
-                  className="brutal-card brutal-card--yellow mt-5 brutal-display flex items-center justify-between"
-                  style={{ padding: 12, fontSize: "0.9rem" }}
+            <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+              {TIME_CONTROL_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  className="brutal-preset"
+                  disabled={ctrl.quickPairLoading}
+                  onClick={() => void ctrl.onQuickPair(p)}
                 >
-                  <span>↻ HUNTING OPPONENT…</span>
-                  <button
-                    type="button"
-                    onClick={ctrl.stopSeeking}
-                    className="brutal-btn brutal-btn--ink"
-                    style={{ padding: "6px 10px", fontSize: "0.8rem" }}
-                  >
-                    ✗ STOP
-                  </button>
-                </div>
-              )}
-              <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
-                {TIME_CONTROL_PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    className="brutal-preset"
-                    disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
-                    onClick={() => void ctrl.onQuickPair(p)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </>
+                  {p.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {ctrl.tab === "computer" && (

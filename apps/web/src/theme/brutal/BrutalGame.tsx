@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { GameAbortedBanner } from "@/components/GameAbortedBanner";
 import { GameChat } from "@/components/GameChat";
 import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
+import { TurnIndicator } from "@/components/TurnIndicator";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { BrutalBoard } from "./BrutalBoard";
@@ -29,11 +31,66 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
+  const myColor = ctrl.spectate ? null : ctrl.myColor;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
+      <GameAbortedBanner
+        theme="brutal"
+        status={game.status}
+        endReason={game.endReason}
+      />
+
+      <div className="flex justify-end lg:hidden">
+        <Link to="/dashboard" className="brutal-btn brutal-btn--magenta text-sm">
+          ← LOBBY
+        </Link>
+      </div>
+
+      <section className="col-span-12">
+        <TurnIndicator
+          theme="brutal"
+          currentTurn={game.currentTurn}
+          myColor={myColor}
+          spectate={ctrl.spectate}
+          whiteName={ctrl.whiteName}
+          blackName={ctrl.blackName}
+          status={game.status}
+          className="mb-3"
+        />
+        <BrutalBoard
+          game={game}
+          myColor={myColor}
+          isAuthenticated={ctrl.isAuthenticated}
+          readOnly={ctrl.spectate}
+        />
+      </section>
+
+      <div className="grid grid-cols-12 gap-6">
+        <section
+          className="brutal-card col-span-12 lg:col-span-4 relative lg:col-start-9 lg:row-start-1"
+          style={{ padding: 0, overflow: "hidden", minHeight: 320 }}
+        >
+          <div
+            className="brutal-display"
+            style={{
+              padding: "14px 16px",
+              background: "var(--brutal-ink)",
+              color: "var(--brutal-yellow)",
+              fontSize: "1.1rem",
+              borderBottom: "var(--brutal-border) solid var(--brutal-ink)",
+            }}
+          >
+            ★ TRASH TALK
+          </div>
+          <div style={{ height: 400 }}>
+            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Trash talk" />
+          </div>
+        </section>
+      </div>
+
       <section
-        className="brutal-card brutal-card--ink relative"
+        className="brutal-card brutal-card--ink relative hidden lg:block"
         style={{ padding: 24 }}
       >
         <span className="brutal-sticker" style={{ top: -16, left: 24 }} data-tilt="left">
@@ -103,7 +160,13 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
           </h3>
           <code
             className="brutal-card brutal-card--paper block mt-3"
-            style={{ padding: 12, fontFamily: "'JetBrains Mono', monospace", fontSize: "0.85rem", boxShadow: "4px 4px 0 var(--brutal-ink)", wordBreak: "break-all" }}
+            style={{
+              padding: 12,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.85rem",
+              boxShadow: "4px 4px 0 var(--brutal-ink)",
+              wordBreak: "break-all",
+            }}
           >
             {inviteUrl}
           </code>
@@ -116,37 +179,6 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
           </button>
         </section>
       )}
-
-      <div className="grid grid-cols-12 gap-6">
-        <section className="col-span-12 lg:col-span-8">
-          <BrutalBoard
-            game={game}
-            myColor={ctrl.spectate ? null : ctrl.myColor}
-            isAuthenticated={ctrl.isAuthenticated}
-            readOnly={ctrl.spectate}
-          />
-        </section>
-        <section
-          className="brutal-card col-span-12 lg:col-span-4 relative"
-          style={{ padding: 0, overflow: "hidden", minHeight: 380 }}
-        >
-          <div
-            className="brutal-display"
-            style={{
-              padding: "14px 16px",
-              background: "var(--brutal-ink)",
-              color: "var(--brutal-yellow)",
-              fontSize: "1.1rem",
-              borderBottom: "var(--brutal-border) solid var(--brutal-ink)",
-            }}
-          >
-            ★ TRASH TALK
-          </div>
-          <div style={{ height: 400 }}>
-            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Trash talk" />
-          </div>
-        </section>
-      </div>
     </div>
   );
 }
