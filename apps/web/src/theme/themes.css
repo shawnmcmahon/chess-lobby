@@ -6,8 +6,29 @@
    ========================================================================= */
 
 /* -------------------------------------------------------------------------
+   Global stacking scale — one source of truth for z-index
+   ------------------------------------------------------------------------- */
+
+:root {
+  --z-base: 0;
+  --z-content: 1;
+  --z-stage: 2;
+  --z-decor: 10;
+  --z-popover: 30;
+  --z-header: 40;
+  --z-overlay: 45;
+  --z-modal: 50;
+  --z-dropdown: 60;
+}
+
+/* -------------------------------------------------------------------------
    Theme-switcher chrome (profile + landing — not in the global header)
    ------------------------------------------------------------------------- */
+
+.theme-switcher {
+  position: relative;
+  z-index: var(--z-content);
+}
 
 .theme-switcher__trigger {
   display: inline-flex;
@@ -39,10 +60,6 @@
   --theme-switcher-menu-fg-muted: rgba(243, 239, 233, 0.72);
   --theme-switcher-menu-fg-active: #ffc86a;
   --theme-switcher-menu-fg-active-muted: rgba(255, 200, 106, 0.82);
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 80;
   min-width: 16rem;
   margin: 0;
   padding: 0.35rem;
@@ -53,9 +70,9 @@
   border-radius: 12px;
   box-shadow: 0 18px 36px -16px rgba(0, 0, 0, 0.7);
 }
-.theme-switcher__menu--above {
-  top: auto;
-  bottom: calc(100% + 8px);
+.theme-switcher__menu--portal {
+  position: fixed;
+  z-index: var(--z-dropdown);
 }
 .theme-switcher__option {
   display: flex;
@@ -489,6 +506,8 @@
 }
 
 .brutal-stage {
+  position: relative;
+  z-index: var(--z-stage);
   font-family: "JetBrains Mono", ui-monospace, monospace;
   color: var(--brutal-ink);
 }
@@ -509,6 +528,16 @@
   box-shadow: var(--brutal-shadow);
   padding: 18px;
   position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+/* Stickers/tapes above in-flow body content and nested tiles */
+.brutal-card > :is(.brutal-sticker, .brutal-tape) {
+  z-index: var(--z-decor);
+}
+.brutal-card > :not(.brutal-sticker):not(.brutal-tape) {
+  position: relative;
+  z-index: var(--z-content);
 }
 .brutal-card--yellow {
   background: var(--brutal-yellow);
@@ -594,7 +623,6 @@
   font-size: 0.8rem;
   letter-spacing: 0.02em;
   box-shadow: var(--brutal-shadow-sm);
-  z-index: 2;
 }
 .brutal-sticker--magenta {
   background: var(--brutal-magenta);
@@ -714,9 +742,28 @@
 
 .brutal-dashboard {
   min-height: 70vh;
+  position: relative;
+}
+.brutal-dashboard > section,
+.brutal-dashboard > .grid {
+  position: relative;
+}
+/* Side-by-side columns: left tile decor must not sit under right tile */
+.brutal-dashboard > .grid > section:first-child {
+  z-index: var(--z-decor);
+}
+.brutal-dashboard > .grid > section:last-child {
+  z-index: var(--z-content);
 }
 .brutal-dashboard__player-section {
   min-height: 220px;
+  z-index: 3;
+}
+.brutal-dashboard__player-section .grid > :first-child {
+  z-index: var(--z-decor);
+}
+.brutal-dashboard__player-section .grid > :last-child {
+  z-index: var(--z-content);
 }
 .brutal-dashboard__game-grid {
   min-height: 140px;
@@ -1153,7 +1200,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: var(--z-base);
   background-image:
     radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.45), transparent),
     radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.35), transparent),
@@ -1169,14 +1216,14 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-content);
   opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .default-main {
   position: relative;
-  z-index: 2;
+  z-index: var(--z-stage);
 }
 
 .default-glass {
@@ -1321,11 +1368,11 @@
   inset: -20%;
   background: radial-gradient(circle, rgba(245, 176, 66, 0.18), transparent 65%);
   pointer-events: none;
-  z-index: 0;
+  z-index: var(--z-base);
 }
 .default-board-frame__inner {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   background: var(--default-void-soft);
   border-radius: 10px;
 }
@@ -1395,6 +1442,9 @@
 }
 .default-main > * {
   animation: default-rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.default-main > .theme-settings {
+  animation: none;
 }
 
 /* -------------------------------------------------------------------------
@@ -1759,7 +1809,7 @@
 }
 .atelier-hero-frame__board {
   position: relative;
-  z-index: 2;
+  z-index: var(--z-decor);
   margin: 24px;
   padding: 16px;
   background: rgba(11, 20, 36, 0.85);
@@ -1780,7 +1830,7 @@
 
 .theme-settings {
   position: relative;
-  z-index: 20;
+  z-index: var(--z-popover);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1790,6 +1840,7 @@
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(14, 14, 22, 0.55);
+  overflow: visible;
 }
 
 .theme-settings__title {
@@ -1843,7 +1894,7 @@
 
 .app-header {
   position: relative;
-  z-index: 40;
+  z-index: var(--z-header);
 }
 
 /* Mobile + tablet: hamburger menu. Desktop (1280px+): inline nav. */
@@ -1928,7 +1979,7 @@
 .mobile-nav__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 45;
+  z-index: var(--z-overlay);
   border: none;
   background: rgba(0, 0, 0, 0.45);
   cursor: pointer;
@@ -1938,7 +1989,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
