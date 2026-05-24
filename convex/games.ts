@@ -23,7 +23,6 @@ import {
   listTrackedParticipantKeys,
   participantSessionKey,
   playerColorForUser,
-  SESSION_PING_GRACE_MS,
 } from "./lib/games";
 import { getCurrentUserOrNull } from "./lib/auth";
 import { recordGameStats } from "./lib/stats";
@@ -605,6 +604,36 @@ export const resign = mutation({
 
     const winner = color === "white" ? "black" : "white";
     await finishGame(ctx, args.gameId, { winner, endReason: "resign" });
+  },
+});
+
+export const cancelWaitingGame = mutation({
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) {
+      throw new Error("Game not found");
+    }
+    if (game.status !== "waiting") {
+      throw new Error("Game is not waiting");
+    }
+
+    const userId = await getAuthUserId(ctx);
+    const isHost =
+      (userId !== null &&
+        (game.createdByUserId === userId || game.whiteUserId === userId)) ||
+      (args.guestSessionId !== undefined &&
+        game.whiteGuestSessionId === args.guestSessionId);
+    if (!isHost) {
+      throw new Error("You cannot cancel this game");
+    }
+
+    await abandonGame(ctx, args.gameId, "cancelled");
+    return null;
   },
 });
 
