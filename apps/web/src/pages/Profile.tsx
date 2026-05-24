@@ -15,6 +15,7 @@ import {
   BrutalProfile,
   type BrutalProfileGameRow,
 } from "@/theme/brutal/BrutalProfile";
+import { ThemeSettingsSection } from "@/components/ThemeSettingsSection";
 import { DefaultProfile } from "@/theme/default/DefaultProfile";
 
 const CATEGORIES = [
@@ -157,10 +158,14 @@ export function Profile() {
       }
     : undefined;
 
+  const themeSettings = <ThemeSettingsSection className="mb-8" />;
+
   switch (theme) {
     case "atelier":
       return (
-        <AtelierProfile
+        <>
+          {themeSettings}
+          <AtelierProfile
           loading={false}
           rating={user.rating ?? 1200}
           displayName={displayName}
@@ -185,10 +190,13 @@ export function Profile() {
           canLoadMore={status === "CanLoadMore"}
           onLoadMore={() => loadMore(10)}
         />
+        </>
       );
     case "bento":
       return (
-        <BentoProfile
+        <>
+          {themeSettings}
+          <BentoProfile
           user={user}
           stats={stats ?? undefined}
           displayName={displayName}
@@ -201,10 +209,13 @@ export function Profile() {
           canLoadMore={status === "CanLoadMore"}
           onLoadMore={() => loadMore(10)}
         />
+        </>
       );
     case "brutal":
       return (
-        <BrutalProfile
+        <>
+          {themeSettings}
+          <BrutalProfile
           user={user}
           stats={brutalStats}
           displayName={displayName}
@@ -217,10 +228,13 @@ export function Profile() {
           canLoadMore={status === "CanLoadMore"}
           onLoadMore={() => loadMore(10)}
         />
+        </>
       );
     default:
       return (
-        <DefaultProfile
+        <>
+          {themeSettings}
+          <DefaultProfile
           user={user}
           stats={stats ?? undefined}
           displayName={displayName}
@@ -233,6 +247,7 @@ export function Profile() {
           canLoadMore={status === "CanLoadMore"}
           onLoadMore={() => loadMore(10)}
         />
+        </>
       );
   }
 }

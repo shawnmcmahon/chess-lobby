@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ThemeSwitcher } from "@/theme/ThemeSwitcher";
 
 export type HeaderVariant = "default" | "bento" | "brutal" | "atelier";
 
@@ -64,10 +63,10 @@ function SignButton({
 
   if (isAuthenticated) {
     const classes = {
-      default: "default-btn default-btn--ghost w-full justify-center xl:w-auto",
-      bento: "bento-btn bento-btn--ghost w-full justify-center xl:w-auto",
-      brutal: "brutal-btn brutal-btn--ghost w-full justify-center xl:w-auto",
-      atelier: "atelier-btn atelier-btn--ghost w-full justify-center xl:w-auto",
+      default: "default-btn default-btn--ghost w-full justify-center app-header__sign--desktop",
+      bento: "bento-btn bento-btn--ghost w-full justify-center app-header__sign--desktop",
+      brutal: "brutal-btn brutal-btn--ghost w-full justify-center app-header__sign--desktop",
+      atelier: "atelier-btn atelier-btn--ghost w-full justify-center app-header__sign--desktop",
     } as const;
     return (
       <button type="button" onClick={() => void signOut()} className={classes[variant]}>
@@ -77,10 +76,10 @@ function SignButton({
   }
 
   const classes = {
-    default: "default-btn default-btn--primary w-full justify-center xl:w-auto",
-    bento: "bento-btn w-full justify-center xl:w-auto",
-    brutal: "brutal-btn w-full justify-center xl:w-auto",
-    atelier: "atelier-btn w-full justify-center xl:w-auto",
+    default: "default-btn default-btn--primary w-full justify-center app-header__sign--desktop",
+    bento: "bento-btn w-full justify-center app-header__sign--desktop",
+    brutal: "brutal-btn w-full justify-center app-header__sign--desktop",
+    atelier: "atelier-btn w-full justify-center app-header__sign--desktop",
   } as const;
 
   return (
@@ -130,7 +129,10 @@ export function ResponsiveHeader({
       >
         <div className="min-w-0 shrink">{logo}</div>
 
-        <nav className="hidden items-center gap-3 xl:flex xl:gap-4 2xl:gap-5">
+        <nav
+          className="app-header__desktop-nav items-center gap-3 xl:gap-4 2xl:gap-5"
+          aria-label="Main"
+        >
           <NavLinks isAuthenticated={isAuthenticated} variant={variant} />
           <SignButton
             isAuthenticated={isAuthenticated}
@@ -138,10 +140,9 @@ export function ResponsiveHeader({
             signOut={signOut}
             variant={variant}
           />
-          <ThemeSwitcher />
         </nav>
 
-        <div className="flex shrink-0 items-center xl:hidden">
+        <div className="app-header__mobile-menu">
           <button
             type="button"
             className="mobile-nav__toggle"
