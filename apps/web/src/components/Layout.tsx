@@ -47,7 +47,7 @@ function BentoLayout() {
                 color: "var(--bento-ink)",
               }}
             >
-              chess<span style={{ color: "var(--bento-clay)" }}>·</span>lobby
+              Chess Lobby
             </Link>
           }
         />
@@ -80,7 +80,7 @@ function BrutalLayout() {
               className="brutal-display block truncate text-lg sm:text-2xl"
               style={{ color: "var(--brutal-yellow)" }}
             >
-              <span style={{ color: "var(--brutal-magenta)" }}>♟</span> CHESS//LOBBY
+              Chess Lobby
             </Link>
           }
         />
@@ -144,7 +144,7 @@ function AtelierLayout() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Maison <span style={{ color: "var(--atelier-brass)" }}>Échecs</span>
+              Chess Lobby
             </Link>
           }
         />

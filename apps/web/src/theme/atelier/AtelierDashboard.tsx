@@ -497,7 +497,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
               className="atelier-smallcaps mt-6"
               style={{ color: "var(--atelier-parchment-soft)" }}
             >
-              Open Friend or Post to invite or challenge someone.
+              Open Friend or Post to create an invite link.
             </p>
           )}
         </section>
@@ -573,8 +573,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                     <button
                       type="button"
                       onClick={() => void ctrl.challengePlayer(p._id)}
-                      disabled={!ctrl.canInviteOrChallenge}
-                      className="atelier-btn atelier-btn--ghost disabled:cursor-not-allowed disabled:opacity-50"
+                      className="atelier-btn atelier-btn--ghost"
                       style={{ padding: "6px 14px", fontSize: "0.65rem" }}
                     >
                       Invite

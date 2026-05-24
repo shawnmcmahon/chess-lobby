@@ -52,21 +52,28 @@ function SignButton({
   signOut,
   variant,
   onNavigate,
+  compact = false,
 }: {
   isAuthenticated: boolean;
   isLoading: boolean;
   signOut: () => unknown;
   variant: HeaderVariant;
   onNavigate?: () => void;
+  compact?: boolean;
 }) {
   if (isLoading) return null;
 
+  const widthClass = compact ? "" : "w-full";
+  const layoutClass = compact
+    ? "app-header__sign--compact"
+    : "app-header__sign--desktop";
+
   if (isAuthenticated) {
     const classes = {
-      default: "default-btn default-btn--ghost w-full justify-center app-header__sign--desktop",
-      bento: "bento-btn bento-btn--ghost w-full justify-center app-header__sign--desktop",
-      brutal: "brutal-btn brutal-btn--ghost w-full justify-center app-header__sign--desktop",
-      atelier: "atelier-btn atelier-btn--ghost w-full justify-center app-header__sign--desktop",
+      default: `default-btn default-btn--ghost justify-center ${widthClass} ${layoutClass}`,
+      bento: `bento-btn bento-btn--ghost justify-center ${widthClass} ${layoutClass}`,
+      brutal: `brutal-btn brutal-btn--ghost justify-center ${widthClass} ${layoutClass}`,
+      atelier: `atelier-btn atelier-btn--ghost justify-center ${widthClass} ${layoutClass}`,
     } as const;
     return (
       <button type="button" onClick={() => void signOut()} className={classes[variant]}>
@@ -76,10 +83,10 @@ function SignButton({
   }
 
   const classes = {
-    default: "default-btn default-btn--primary w-full justify-center app-header__sign--desktop",
-    bento: "bento-btn w-full justify-center app-header__sign--desktop",
-    brutal: "brutal-btn w-full justify-center app-header__sign--desktop",
-    atelier: "atelier-btn w-full justify-center app-header__sign--desktop",
+    default: `default-btn default-btn--primary justify-center ${widthClass} ${layoutClass}`,
+    bento: `bento-btn justify-center ${widthClass} ${layoutClass}`,
+    brutal: `brutal-btn justify-center ${widthClass} ${layoutClass}`,
+    atelier: `atelier-btn justify-center ${widthClass} ${layoutClass}`,
   } as const;
 
   return (
@@ -117,6 +124,7 @@ export function ResponsiveHeader({
   }, [menuOpen]);
 
   const closeMenu = () => setMenuOpen(false);
+  const showMobileMenu = isAuthenticated;
 
   return (
     <header
@@ -142,23 +150,37 @@ export function ResponsiveHeader({
           />
         </nav>
 
-        <div className="app-header__mobile-menu">
-          <button
-            type="button"
-            className="mobile-nav__toggle"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-nav-panel"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span className="mobile-nav__toggle-bar" />
-            <span className="mobile-nav__toggle-bar" />
-            <span className="mobile-nav__toggle-bar" />
-          </button>
-        </div>
+        {!showMobileMenu && (
+          <div className="app-header__compact-nav">
+            <SignButton
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+              signOut={signOut}
+              variant={variant}
+              compact
+            />
+          </div>
+        )}
+
+        {showMobileMenu && (
+          <div className="app-header__mobile-menu">
+            <button
+              type="button"
+              className="mobile-nav__toggle"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav-panel"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <span className="mobile-nav__toggle-bar" />
+              <span className="mobile-nav__toggle-bar" />
+              <span className="mobile-nav__toggle-bar" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {menuOpen && (
+      {showMobileMenu && menuOpen && (
         <>
           <button
             type="button"

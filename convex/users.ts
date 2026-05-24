@@ -121,6 +121,9 @@ export const listForLobby = query({
 
     const playingUserIds = new Set<(typeof args.userIds)[number]>();
     for (const game of activeGames) {
+      if (game.mode !== "human_vs_human") {
+        continue;
+      }
       if (game.whiteUserId && userIdSet.has(game.whiteUserId)) {
         playingUserIds.add(game.whiteUserId);
       }

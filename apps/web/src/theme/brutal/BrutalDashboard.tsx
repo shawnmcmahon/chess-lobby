@@ -410,7 +410,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
           ) : (
             <p className="brutal-chunk mt-6 text-[0.9rem]">
-              Open FRIEND or CORRES. to invite or challenge someone.
+              Open FRIEND or CORRES. to create an invite link.
             </p>
           )}
         </section>
@@ -464,8 +464,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   <button
                     type="button"
                     onClick={() => void ctrl.challengePlayer(p._id)}
-                    disabled={!ctrl.canInviteOrChallenge}
-                    className="brutal-btn brutal-btn--magenta disabled:cursor-not-allowed disabled:opacity-50"
+                    className="brutal-btn brutal-btn--magenta"
                     style={{ padding: "6px 10px", fontSize: "0.72rem" }}
                   >
                     FIGHT

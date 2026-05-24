@@ -4,7 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { useLobbyPresence } from "@/components/PresenceProvider";
-import { type TimeControlPreset } from "@/lib/timeControl";
+import {
+  TIME_CONTROL_PRESETS,
+  type TimeControlPreset,
+} from "@/lib/timeControl";
 
 export type PlayTab =
   | "quickPair"
@@ -135,10 +138,9 @@ export function useDashboardController() {
       navigate(`/game/${gameId}`);
       return;
     }
-    if (tab !== "friendChallenge") {
-      return;
-    }
-    const preset = selectedPreset;
+
+    const preset =
+      selectedPreset ?? TIME_CONTROL_PRESETS.find((p) => p.label === "5+0");
     const { gameId } = await sendInvite({
       toUserId,
       playType: "live",
