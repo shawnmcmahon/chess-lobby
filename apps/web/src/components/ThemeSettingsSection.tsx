@@ -1,7 +1,13 @@
 import { ThemeSwitcher } from "@/theme/ThemeSwitcher";
 
 /** Theme picker for profile and landing — kept out of the global header. */
-export function ThemeSettingsSection({ className }: { className?: string }) {
+export function ThemeSettingsSection({
+  className,
+  menuPlacement = "below",
+}: {
+  className?: string;
+  menuPlacement?: "above" | "below";
+}) {
   return (
     <section
       className={`theme-settings ${className ?? ""}`.trim()}
@@ -15,7 +21,7 @@ export function ThemeSettingsSection({ className }: { className?: string }) {
           Pick how the lobby looks on this device. Your choice is saved locally.
         </p>
       </div>
-      <ThemeSwitcher />
+      <ThemeSwitcher menuPlacement={menuPlacement} />
     </section>
   );
 }
