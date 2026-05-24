@@ -1,6 +1,6 @@
 # Optional: Stockfish engine on AWS Lightsail (~$7–10/mo)
 
-By default, **Play vs computer** uses a lightweight built-in minimax engine in Convex (all difficulty levels feel similar). To use real **Stockfish** skill levels (1–20), host `apps/chess-engine` on a small always-on service and point Convex at it.
+By default, **Play vs computer** uses a lightweight built-in minimax engine in Convex (all difficulty levels feel similar). To use real **Stockfish** skill levels (1–20), deploy the `apps/chess-engine` **Docker image** (ASP.NET Core 8 API + Stockfish) to Lightsail and point Convex at it.
 
 This is **optional**. The minimal demo in [deploy-demo.md](deploy-demo.md) intentionally skips the engine to stay at **~$0–2/mo**.
 
@@ -11,8 +11,9 @@ flowchart LR
   Browser --> CloudFront
   CloudFront --> S3
   Browser <-->|WebSocket| ConvexCloud[Convex Cloud]
-  ConvexCloud -->|HTTPS POST /api/best-move| Lightsail[Lightsail engine]
-  Lightsail --> Stockfish[Stockfish UCI]
+  ConvexCloud -->|HTTPS POST /api/best-move| Lightsail[Lightsail Container Service]
+  Lightsail --> Docker[Docker: ASP.NET Core 8 API]
+  Docker --> Stockfish[Stockfish UCI]
 ```
 
 Convex calls your engine from `convex/lib/computerEngine.ts` when these production env vars are set:

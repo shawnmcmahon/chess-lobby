@@ -14,7 +14,7 @@
     Production architecture
   </text>
   <text x="490" y="56" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#64748b">
-    Runtime traffic and deploy path (Stockfish on Lightsail)
+    Runtime traffic and deploy path (Docker on Lightsail Container Service)
   </text>
 
   <!-- AWS group -->
@@ -43,9 +43,11 @@
     <text x="335" y="276" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">S3 bucket</text>
     <text x="335" y="294" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Static build</text>
 
-    <rect x="70" y="280" width="170" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
-    <text x="155" y="306" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Lightsail</text>
-    <text x="155" y="324" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">chess-engine + Stockfish</text>
+    <rect x="58" y="268" width="194" height="88" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-dasharray="4 3"/>
+    <text x="155" y="286" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700" fill="#c2410c">Lightsail Container Service</text>
+    <rect x="68" y="296" width="174" height="52" rx="8" fill="#ffffff" stroke="#fdba74"/>
+    <text x="155" y="318" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600" fill="#0f172a">Docker container</text>
+    <text x="155" y="336" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">ASP.NET Core 8 + Stockfish</text>
 
     <rect x="600" y="150" width="170" height="56" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
     <text x="685" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Convex Cloud</text>
@@ -69,8 +71,8 @@
 
   <line x1="685" y1="206" x2="685" y2="228" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <line x1="600" y1="252" x2="240" y2="308" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="400" y="268" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">POST /api/best-move</text>
+  <line x1="600" y1="252" x2="242" y2="322" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="400" y="268" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">HTTPS POST /api/best-move</text>
 
   <line x1="400" y1="454" x2="335" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="350" y="372" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">upload build</text>

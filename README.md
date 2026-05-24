@@ -51,10 +51,10 @@ Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-i
 | **Frontend** | **AWS** (S3 + CloudFront) | Serves the built React app (HTML, JS, CSS, assets) |
 | **Backend** | **Convex Cloud** | Auth, database, real-time games, chat, lobby presence, vs-computer moves |
 | **CI deploy** | **GitHub Actions** | Builds the SPA, syncs to S3, invalidates CloudFront; deploys Convex |
-| **Chess engine** | **AWS Lightsail** (containers) | ASP.NET + Stockfish (`apps/chess-engine`), ~$10/mo Micro |
+| **Chess engine** | **AWS Lightsail Container Service** | Docker image: ASP.NET Core 8 API + Stockfish (`apps/chess-engine`), ~$10/mo Micro |
 | **Engine fallback** | **Convex** | Minimax via `chess.js` if the external engine is unreachable |
 
-**On AWS:** S3 + CloudFront + Route 53 (stack `chess-lobby-demo`), plus Lightsail container service `chess-lobby-engine`.
+**On AWS:** S3 + CloudFront + Route 53 (stack `chess-lobby-demo`), plus Lightsail Container Service `chess-lobby-engine` running the `chess-engine` Docker image (ASP.NET Core 8 + Stockfish).
 
 **Not on AWS:** Convex (auth, database, realtime games, chat, lobby presence).
 
@@ -66,7 +66,7 @@ Runtime traffic and deploy path in production:
 
 - **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
 - **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
-- **Vs computer:** Convex calls the Lightsail engine (`POST /api/best-move`); falls back to built-in minimax if the engine is down.
+- **Vs computer:** Convex calls the Lightsail container over HTTPS (`POST /api/best-move` on the ASP.NET Core API); falls back to built-in minimax if the engine is down.
 
 ### Local development
 
@@ -148,7 +148,7 @@ Open http://localhost:5173
 |-----------|------|----------------|
 | React SPA | **AWS S3 + CloudFront + Route 53** | https://thechesslobby.com |
 | Convex prod | **Convex Cloud** | https://pastel-buffalo-515.convex.cloud |
-| Vs computer (Stockfish) | **AWS Lightsail** | `chess-lobby-engine` container service (HTTPS) |
+| Vs computer (Stockfish) | **AWS Lightsail Container Service** | `chess-lobby-engine` — Docker image with ASP.NET Core 8 + Stockfish (HTTPS) |
 | Convex prod | **Convex Cloud** | `ENGINE_API_URL` / `ENGINE_API_KEY` point at Lightsail |
 
 **Est. cost:** ~$10–12/mo (static hosting ~$0–2 + Lightsail Micro ~$10) + Convex free tier.
