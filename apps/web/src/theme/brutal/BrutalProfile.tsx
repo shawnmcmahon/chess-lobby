@@ -44,9 +44,8 @@ export type BrutalProfileProps = {
 };
 
 function resultColor(tone: BrutalProfileGameRow["resultTone"]) {
-  if (tone === "win") return "var(--brutal-blue)";
-  if (tone === "loss") return "var(--brutal-magenta)";
-  if (tone === "draw") return "var(--brutal-ink)";
+  if (tone === "win") return "#0a3d91";
+  if (tone === "loss") return "var(--brutal-oxblood)";
   return "var(--brutal-ink)";
 }
 
@@ -87,24 +86,35 @@ export function BrutalProfile({
         <h1 className="brutal-display" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>
           YOUR PROFILE
         </h1>
-        <p className="brutal-chunk mt-2" style={{ fontSize: "1.1rem", color: "var(--brutal-magenta)" }}>
+        <p className="brutal-chunk mt-2" style={{ fontSize: "1.1rem", color: "var(--brutal-yellow)" }}>
           RATING · {user.rating ?? 1200}
         </p>
 
         <form onSubmit={(e) => void onSubmit(e)} className="mt-6 space-y-4">
-          <input
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="brutal-input"
-          />
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            placeholder="BIO"
-            className="brutal-input resize-y"
-          />
+          <label className="block" htmlFor="profile-display-name">
+            <span className="brutal-display text-[0.8rem]">DISPLAY NAME</span>
+            <input
+              id="profile-display-name"
+              name="displayName"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="WHAT THEY CALL YOU"
+              className="brutal-input mt-2"
+            />
+          </label>
+          <label className="block" htmlFor="profile-bio">
+            <span className="brutal-display text-[0.8rem]">BIO (OPTIONAL)</span>
+            <textarea
+              id="profile-bio"
+              name="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={3}
+              placeholder="YOUR TRASH-TALK MANIFESTO"
+              className="brutal-input mt-2 resize-y"
+            />
+          </label>
           <button type="submit" className="brutal-btn brutal-btn--magenta">
             ▶ SAVE CHANGES
           </button>
@@ -188,6 +198,7 @@ export function BrutalProfile({
                     <td className="px-2 py-2">
                       <Link
                         to={`/game/${row.gameId}/review`}
+                        aria-label={`Review game against ${row.opponent}`}
                         className="brutal-btn brutal-btn--blue"
                         style={{ padding: "6px 10px", fontSize: "0.72rem" }}
                       >
