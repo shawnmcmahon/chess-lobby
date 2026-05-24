@@ -2,6 +2,7 @@ import { Chess } from "chess.js";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { getGuestSessionId } from "@/lib/guestSession";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { type MoveRow } from "@/components/MoveList";
@@ -75,11 +76,14 @@ function brutalReviewShell(
 
 export function GameReview() {
   const { gameId } = useParams<{ gameId: string }>();
+  const guestSessionId = getGuestSessionId();
   const user = useQuery(api.users.current);
   const { theme } = useTheme();
   const game = useQuery(
     api.games.get,
-    gameId ? { gameId: gameId as Id<"games"> } : "skip",
+    gameId
+      ? { gameId: gameId as Id<"games">, guestSessionId }
+      : "skip",
   );
   const saveAnalysis = useMutation(api.games.saveAnalysis);
 

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
+import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { BentoBoard } from "./BentoBoard";
@@ -16,7 +17,11 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
     );
   }
   if (!ctrl.game) {
-    return <p style={{ color: "var(--bento-clay)" }}>Game not found.</p>;
+    return (
+      <p style={{ color: "var(--bento-clay)" }}>
+        This game is private or could not be found.
+      </p>
+    );
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
@@ -48,6 +53,11 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
                 engine error · {game.endReason.replace(/^engine_error:\s*/, "")}
               </p>
             )}
+            <GameDisconnectStatus
+              game={game}
+              myColor={ctrl.myColor}
+              className="bento-mono mt-2 text-sm"
+            />
           </div>
           <Link to="/dashboard" className="bento-btn bento-btn--ghost" style={{ color: "var(--bento-paper)", borderColor: "rgba(245,241,234,0.3)" }}>
             ← Dashboard

@@ -10,13 +10,20 @@ import {
 } from "./_generated/server";
 import { applyMove, applyUciMove, STARTING_FEN } from "./lib/chess";
 import {
+  buildClearDisconnectPatch,
+  buildStartDisconnectPatch,
+  canViewGame,
   colorForParticipantKey,
   generateInviteToken,
+  getDisconnectDeadlineAt,
   isLiveSessionGame,
   isParticipant,
+  isSessionOnline,
+  isSpectateEligible,
   listTrackedParticipantKeys,
   participantSessionKey,
   playerColorForUser,
+  SESSION_PING_GRACE_MS,
 } from "./lib/games";
 import { getCurrentUserOrNull } from "./lib/auth";
 import { recordGameStats } from "./lib/stats";
@@ -31,7 +38,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { PaginationOptions } from "convex/server";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
-const SESSION_GRACE_MS = 20_000;
+const DISCONNECT_RESOLUTION_DELAY_MS = 5_000;
 
 async function paginateFinishedGamesForUser(
   ctx: QueryCtx,
@@ -164,6 +171,87 @@ async function upsertParticipantSession(
   });
 }
 
+async function startPlayerDisconnect(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  color: "white" | "black",
+  now: number,
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game) {
+    return;
+  }
+  if (getDisconnectDeadlineAt(game, color) !== undefined) {
+    return;
+  }
+
+  const patch = buildStartDisconnectPatch(game, color, now);
+  await ctx.db.patch(gameId, {
+    ...patch,
+    updatedAt: now,
+  });
+}
+
+async function clearPlayerDisconnect(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  color: "white" | "black",
+  now: number,
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game) {
+    return;
+  }
+
+  const patch = buildClearDisconnectPatch(game, color, now);
+  if (Object.keys(patch).length === 0) {
+    return;
+  }
+
+  await ctx.db.patch(gameId, {
+    ...patch,
+    updatedAt: now,
+  });
+}
+
+async function getSessionsForGame(ctx: QueryCtx, gameId: Id<"games">) {
+  return await ctx.db
+    .query("gameParticipantSessions")
+    .withIndex("by_game", (q) => q.eq("gameId", gameId))
+    .collect();
+}
+
+async function markStaleSessionsDisconnected(
+  ctx: MutationCtx,
+  gameId: Id<"games">,
+  now: number,
+): Promise<void> {
+  const game = await ctx.db.get(gameId);
+  if (!game || !isLiveSessionGame(game)) {
+    return;
+  }
+  if (game.status !== "waiting" && game.status !== "active") {
+    return;
+  }
+
+  const sessions = await getSessionsForGame(ctx, gameId);
+  for (const participantKey of listTrackedParticipantKeys(game)) {
+    const color = colorForParticipantKey(game, participantKey);
+    if (!color) {
+      continue;
+    }
+    if (getDisconnectDeadlineAt(game, color) !== undefined) {
+      continue;
+    }
+
+    const session = sessions.find((entry) => entry.participantKey === participantKey);
+    if (session && !isSessionOnline(session.lastSeenAt, now)) {
+      await startPlayerDisconnect(ctx, gameId, color, now);
+      await ctx.db.delete(session._id);
+    }
+  }
+}
+
 async function resolveSessionDisconnectForGame(
   ctx: MutationCtx,
   gameId: Id<"games">,
@@ -177,30 +265,10 @@ async function resolveSessionDisconnectForGame(
   }
 
   const now = Date.now();
-  const sessions = await ctx.db
-    .query("gameParticipantSessions")
-    .withIndex("by_game", (q) => q.eq("gameId", gameId))
-    .collect();
-
-  const isOnline = (participantKey: string): boolean => {
-    const session = sessions.find((entry) => entry.participantKey === participantKey);
-    if (!session) {
-      return false;
-    }
-    return now - session.lastSeenAt <= SESSION_GRACE_MS;
-  };
-
-  const hasSession = (participantKey: string): boolean =>
-    sessions.some((entry) => entry.participantKey === participantKey);
-
-  const trackedKeys = listTrackedParticipantKeys(game);
 
   if (game.status === "waiting") {
-    const waitingKeys = trackedKeys.filter((key) => hasSession(key));
-    if (waitingKeys.length === 0) {
-      return;
-    }
-    if (waitingKeys.every((key) => !isOnline(key))) {
+    const whiteDeadline = game.whiteDisconnectDeadlineAt;
+    if (whiteDeadline !== undefined && now >= whiteDeadline) {
       await abandonGame(ctx, gameId, "left_waiting");
     }
     return;
@@ -210,26 +278,32 @@ async function resolveSessionDisconnectForGame(
     return;
   }
 
-  const disconnectedKeys = trackedKeys.filter(
-    (key) => hasSession(key) && !isOnline(key),
-  );
-  const onlineKeys = trackedKeys.filter((key) => isOnline(key));
-
-  if (disconnectedKeys.length === 0) {
+  if (game.mode === "human_vs_engine") {
+    const whiteDeadline = game.whiteDisconnectDeadlineAt;
+    if (whiteDeadline !== undefined && now >= whiteDeadline) {
+      await abandonGame(ctx, gameId, "left_engine");
+    }
     return;
   }
 
-  if (onlineKeys.length === 0) {
+  const whiteExpired =
+    game.whiteDisconnectDeadlineAt !== undefined &&
+    now >= game.whiteDisconnectDeadlineAt;
+  const blackExpired =
+    game.blackDisconnectDeadlineAt !== undefined &&
+    now >= game.blackDisconnectDeadlineAt;
+
+  if (!whiteExpired && !blackExpired) {
+    return;
+  }
+
+  if (whiteExpired && blackExpired) {
     await abandonGame(ctx, gameId, "all_left");
     return;
   }
 
-  const disconnectedColor = colorForParticipantKey(game, disconnectedKeys[0]!);
-  if (!disconnectedColor) {
-    return;
-  }
-
-  const winner = disconnectedColor === "white" ? "black" : "white";
+  const loser = whiteExpired ? "white" : "black";
+  const winner = loser === "white" ? "black" : "white";
   await finishGame(ctx, gameId, { winner, endReason: "disconnect" });
 }
 
@@ -272,9 +346,22 @@ function applyClockForMove(
 }
 
 export const get = query({
-  args: { gameId: v.id("games") },
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.gameId);
+    const game = await ctx.db.get(args.gameId);
+    if (!game) {
+      return null;
+    }
+
+    const userId = await getAuthUserId(ctx);
+    if (!canViewGame(game, userId, args.guestSessionId ?? null)) {
+      return null;
+    }
+
+    return game;
   },
 });
 
@@ -303,6 +390,7 @@ export const create = mutation({
     baseTimeMs: v.optional(v.number()),
     incrementMs: v.optional(v.number()),
     daysPerTurn: v.optional(v.number()),
+    isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -348,7 +436,7 @@ export const create = mutation({
           ? computeTurnDeadline(now, args.daysPerTurn)
           : undefined,
       lastMoveAt: now,
-      isPublic: true,
+      isPublic: args.isPublic ?? true,
     });
 
     return { gameId, inviteToken };
@@ -717,16 +805,28 @@ export const listActiveForSpectate = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const take = args.limit ?? 20;
-    const games = await ctx.db
+    const now = Date.now();
+    const candidates = await ctx.db
       .query("games")
       .withIndex("by_status_and_public", (q) =>
         q.eq("status", "active").eq("isPublic", true),
       )
       .order("desc")
-      .take(take);
+      .take(take * 3);
+
+    const eligible: Doc<"games">[] = [];
+    for (const game of candidates) {
+      const sessions = await getSessionsForGame(ctx, game._id);
+      if (isSpectateEligible(game, sessions, now)) {
+        eligible.push(game);
+      }
+      if (eligible.length >= take) {
+        break;
+      }
+    }
 
     return await Promise.all(
-      games.map(async (game) => {
+      eligible.map(async (game) => {
         const whiteUser = game.whiteUserId
           ? await ctx.db.get(game.whiteUserId)
           : null;
@@ -751,17 +851,33 @@ export const listActiveForSpectate = query({
   },
 });
 
+async function countSpectateEligibleGames(ctx: QueryCtx): Promise<number> {
+  const now = Date.now();
+  const candidates = await ctx.db
+    .query("games")
+    .withIndex("by_status_and_public", (q) =>
+      q.eq("status", "active").eq("isPublic", true),
+    )
+    .take(500);
+
+  let count = 0;
+  for (const game of candidates) {
+    const sessions = await getSessionsForGame(ctx, game._id);
+    if (isSpectateEligible(game, sessions, now)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export const getLobbyCounts = query({
   args: { onlineCount: v.number() },
   handler: async (ctx, args) => {
-    const activeGames = await ctx.db
-      .query("games")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .take(500);
+    const inPlayCount = await countSpectateEligibleGames(ctx);
 
     return {
       onlineCount: args.onlineCount,
-      inPlayCount: activeGames.length,
+      inPlayCount,
     };
   },
 });
@@ -801,6 +917,11 @@ export const pingParticipantSession = mutation({
       throw new Error("Could not identify participant session");
     }
 
+    const color = playerColorForUser(game, userId, args.guestSessionId ?? null);
+    if (color) {
+      await clearPlayerDisconnect(ctx, args.gameId, color, Date.now());
+    }
+
     await upsertParticipantSession(ctx, args.gameId, participantKey, Date.now());
     return null;
   },
@@ -831,6 +952,12 @@ export const leaveParticipantSession = mutation({
       return null;
     }
 
+    const color = playerColorForUser(game, userId, args.guestSessionId ?? null);
+    const now = Date.now();
+    if (color) {
+      await startPlayerDisconnect(ctx, args.gameId, color, now);
+    }
+
     const existing = await ctx.db
       .query("gameParticipantSessions")
       .withIndex("by_game_and_participant", (q) =>
@@ -842,9 +969,13 @@ export const leaveParticipantSession = mutation({
       await ctx.db.delete(existing._id);
     }
 
-    await ctx.scheduler.runAfter(SESSION_GRACE_MS, internal.games.applySessionDisconnect, {
-      gameId: args.gameId,
-    });
+    await ctx.scheduler.runAfter(
+      DISCONNECT_RESOLUTION_DELAY_MS,
+      internal.games.applySessionDisconnect,
+      {
+        gameId: args.gameId,
+      },
+    );
 
     return null;
   },
@@ -877,7 +1008,39 @@ export const processInactiveGameSessions = internalMutation({
 
     for (const game of candidates) {
       const before = game.status;
+      await markStaleSessionsDisconnected(ctx, game._id, Date.now());
       await resolveSessionDisconnectForGame(ctx, game._id);
+      const after = await ctx.db.get(game._id);
+      if (after && after.status !== before) {
+        processed += 1;
+      }
+    }
+
+    return { processed };
+  },
+});
+
+export const processExpiredWaitingGames = internalMutation({
+  args: {},
+  returns: v.object({ processed: v.number() }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const waitingGames = await ctx.db
+      .query("games")
+      .withIndex("by_status", (q) => q.eq("status", "waiting"))
+      .take(100);
+
+    let processed = 0;
+
+    for (const game of waitingGames) {
+      const before = game.status;
+
+      if (now > game.inviteExpiresAt) {
+        await abandonGame(ctx, game._id, "invite_expired");
+      } else if (isLiveSessionGame(game)) {
+        await resolveSessionDisconnectForGame(ctx, game._id);
+      }
+
       const after = await ctx.db.get(game._id);
       if (after && after.status !== before) {
         processed += 1;

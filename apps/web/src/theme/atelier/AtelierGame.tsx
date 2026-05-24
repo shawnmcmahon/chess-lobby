@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
+import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { AtelierBoard } from "./AtelierBoard";
@@ -31,7 +32,7 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
         className="atelier-smallcaps text-center mt-12"
         style={{ color: "var(--atelier-oxblood)" }}
       >
-        Game not found.
+        This game is private or could not be found.
       </p>
     );
   }
@@ -99,6 +100,11 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
             Engine error · {game.endReason.replace(/^engine_error:\s*/, "")}
           </p>
         )}
+        <GameDisconnectStatus
+          game={game}
+          myColor={ctrl.myColor}
+          className="atelier-smallcaps mt-2"
+        />
         <div className="mt-3">
           <Link to="/dashboard" className="atelier-btn atelier-btn--ghost">
             ← Salon

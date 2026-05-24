@@ -32,7 +32,9 @@ export function useGameController() {
 
   const game = useQuery(
     api.games.get,
-    gameId ? { gameId: gameId as Id<"games"> } : "skip",
+    gameId
+      ? { gameId: gameId as Id<"games">, guestSessionId }
+      : "skip",
   );
 
   const myColor = useMemo(

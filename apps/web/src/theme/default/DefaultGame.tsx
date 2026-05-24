@@ -1,10 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { GameBoard } from "@/components/GameBoard";
 import { GameChat } from "@/components/GameChat";
+import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 
 export function DefaultGame({ ctrl }: { ctrl: GameController }) {
+  const navigate = useNavigate();
   if (!ctrl.gameId) {
     return <p className="text-[var(--default-danger)]">Missing game id.</p>;
   }
@@ -14,7 +17,11 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
     );
   }
   if (!ctrl.game) {
-    return <p className="text-[var(--default-danger)]">Game not found.</p>;
+    return (
+      <p className="text-[var(--default-danger)]">
+        This game is private or could not be found.
+      </p>
+    );
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
@@ -41,6 +48,11 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
               Engine error: {game.endReason.replace(/^engine_error:\s*/, "")}
             </p>
           )}
+          <GameDisconnectStatus
+            game={game}
+            myColor={ctrl.myColor}
+            className="default-mono mt-2 text-sm text-[var(--default-ember)]"
+          />
         </div>
         <Link to="/dashboard" className="default-btn default-btn--ghost text-sm">
           Dashboard
@@ -53,13 +65,24 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
           <code className="default-mono mt-2 block break-all text-sm text-[var(--default-ember)]">
             {inviteUrl}
           </code>
-          <button
-            type="button"
-            className="default-btn default-btn--ghost mt-3 text-xs"
-            onClick={() => void navigator.clipboard.writeText(inviteUrl)}
-          >
-            Copy link
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="default-btn default-btn--ghost text-xs"
+              onClick={() => void navigator.clipboard.writeText(inviteUrl)}
+            >
+              Copy link
+            </button>
+            {(game.createdByUserId === ctrl.user?._id ||
+              game.whiteUserId === ctrl.user?._id) && (
+              <CancelWaitingGameButton
+                gameId={game._id}
+                className="default-btn default-btn--ghost text-xs"
+                label="Cancel invite"
+                onCancelled={() => navigate("/dashboard")}
+              />
+            )}
+          </div>
         </section>
       )}
 

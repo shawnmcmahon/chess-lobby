@@ -33,10 +33,12 @@ export function getGameChatProps(
   game: Doc<"games">,
 ) {
   const viewerRole = getGameChatViewerRole(ctrl.myColor);
+  const isPrivate = game.isPublic === false;
   return {
     gameId: game._id,
     viewerRole,
     isParticipant: viewerRole === "player",
+    isPrivate,
     guestSessionId: ctrl.isAuthenticated ? undefined : ctrl.guestSessionId,
     guestName: getGameChatGuestName(ctrl, game),
     currentUserId: ctrl.user?._id,

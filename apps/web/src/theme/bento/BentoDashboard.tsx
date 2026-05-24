@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -75,10 +76,11 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
         </p>
         <button
           type="button"
+          disabled={ctrl.noOtherPlayersOnline}
           onClick={() =>
             void ctrl.onQuickPair({ label: "5+0", baseTimeMs: 300_000, incrementMs: 0 })
           }
-          className="bento-btn"
+          className="bento-btn disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             marginTop: 18,
             background: "var(--bento-ink)",
@@ -107,6 +109,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
             {(
               [
                 ["quickPair", "Pair"],
+                ["friendChallenge", "Friend"],
                 ["computer", "Engine"],
                 ["correspondence", "Corres."],
               ] as const
@@ -129,6 +132,14 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
 
         {ctrl.tab === "quickPair" && (
           <>
+            {ctrl.noOtherPlayersOnline && (
+              <p
+                className="bento-mono mt-4 text-sm"
+                style={{ color: "var(--bento-coral, #e85d4c)" }}
+              >
+                Nobody else is online — quick pairing needs another player in the lobby.
+              </p>
+            )}
             {ctrl.seeking && (
               <div
                 className="bento-mono mt-4 flex items-center gap-2 text-sm"
@@ -151,7 +162,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                   key={p.label}
                   type="button"
                   className="bento-preset"
-                  disabled={ctrl.seeking}
+                  disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
                   onClick={() => void ctrl.onQuickPair(p)}
                 >
                   {p.label}
@@ -175,6 +186,13 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 className="mt-2 w-full"
               />
             </label>
+            {ctrl.showPrivateGameToggle && (
+              <PrivateGameToggle
+                isPublic={ctrl.isPublic}
+                onChange={ctrl.setIsPublic}
+                labelClassName="bento-mono text-[0.7rem] opacity-80"
+              />
+            )}
             <div className="bento-preset-grid">
               {TIME_CONTROL_PRESETS.map((p) => (
                 <button
@@ -187,6 +205,36 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+        {ctrl.tab === "friendChallenge" && (
+          <div className="mt-5 space-y-3">
+            <p className="bento-mono text-[0.7rem] opacity-60">
+              Pick a live time control, then challenge someone or create an invite link.
+            </p>
+            <div className="bento-preset-grid">
+              {TIME_CONTROL_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  className="bento-preset"
+                  data-active={
+                    ctrl.selectedPreset?.label === p.label ? "true" : undefined
+                  }
+                  onClick={() => ctrl.setSelectedPreset(p)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {ctrl.selectedPreset && (
+              <p
+                className="bento-mono text-[0.7rem]"
+                style={{ color: "var(--bento-jade)" }}
+              >
+                ▸ {ctrl.selectedPreset.label} selected
+              </p>
+            )}
           </div>
         )}
         {ctrl.tab === "correspondence" && (
@@ -208,60 +256,40 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
               </select>
             </label>
             <p className="bento-mono text-[0.7rem] opacity-60">
-              Then challenge an online player on the right, or open an invite link.
+              Set days per turn, then challenge someone or create an invite link.
             </p>
           </div>
         )}
 
-        {(ctrl.tab === "correspondence" || ctrl.tab === "quickPair") && (
-          <div
-            className="mt-5 rounded-2xl p-4"
-            style={{ background: "rgba(14,14,16,0.04)" }}
-          >
-            <div className="bento-mono mb-2 text-[0.66rem] uppercase tracking-widest opacity-60">
-              Optional preset for invites & friend challenges
-            </div>
-            <div className="bento-preset-grid">
-              {TIME_CONTROL_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  className="bento-preset"
-                  data-active={
-                    ctrl.selectedPreset?.label === p.label ? "true" : undefined
-                  }
-                  onClick={() => ctrl.setSelectedPreset(p)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            {ctrl.selectedPreset && (
-              <p
-                className="bento-mono mt-2 text-[0.7rem]"
-                style={{ color: "var(--bento-jade)" }}
-              >
-                ▸ {ctrl.selectedPreset.label} selected
-              </p>
+        <div className="bento-divider" />
+        {ctrl.canInviteOrChallenge && (
+          <PrivateGameToggle
+            isPublic={ctrl.isPublic}
+            onChange={ctrl.setIsPublic}
+            className="mb-3"
+            labelClassName="bento-mono text-[0.7rem] opacity-80"
+          />
+        )}
+        {ctrl.canInviteOrChallenge ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void ctrl.createInviteLink()}
+              className="bento-btn bento-btn--ghost"
+            >
+              Create invite link
+            </button>
+            {ctrl.inviteLink && (
+              <span className="bento-mono text-[0.7rem] opacity-60 break-all">
+                copied · {ctrl.inviteLink}
+              </span>
             )}
           </div>
+        ) : (
+          <p className="bento-mono text-[0.7rem] opacity-60">
+            Open Friend or Corres. to invite or challenge someone.
+          </p>
         )}
-
-        <div className="bento-divider" />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => void ctrl.createInviteLink()}
-            className="bento-btn bento-btn--ghost"
-          >
-            Create invite link
-          </button>
-          {ctrl.inviteLink && (
-            <span className="bento-mono text-[0.7rem] opacity-60 break-all">
-              copied · {ctrl.inviteLink}
-            </span>
-          )}
-        </div>
       </section>
 
       <section
@@ -305,7 +333,8 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 <button
                   type="button"
                   onClick={() => void ctrl.challengePlayer(player._id)}
-                  className="bento-mono text-[0.7rem] uppercase tracking-widest"
+                  disabled={!ctrl.canInviteOrChallenge}
+                  className="bento-mono text-[0.7rem] uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-40"
                   style={{
                     background: "var(--bento-paper)",
                     color: "var(--bento-ink)",

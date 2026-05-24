@@ -24,17 +24,25 @@ function GameObserverPresenceInner({
 export function GameObserverPresence({
   gameId,
   isParticipant,
+  isPrivate = false,
 }: {
   gameId: Id<"games">;
   isParticipant: boolean;
+  isPrivate?: boolean;
 }) {
   const { isAuthenticated } = useConvexAuth();
   const userId = useQuery(
     api.presence.getUserId,
-    isAuthenticated && !isParticipant ? {} : "skip",
+    isAuthenticated && !isParticipant && !isPrivate ? {} : "skip",
   );
 
-  if (isParticipant || !isAuthenticated || userId === undefined || userId === null) {
+  if (
+    isParticipant ||
+    isPrivate ||
+    !isAuthenticated ||
+    userId === undefined ||
+    userId === null
+  ) {
     return null;
   }
 

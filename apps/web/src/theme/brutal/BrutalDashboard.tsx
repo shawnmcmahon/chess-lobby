@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -66,7 +67,8 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
             <button
               type="button"
-              className="brutal-btn brutal-btn--ink mt-3"
+              disabled={ctrl.noOtherPlayersOnline}
+              className="brutal-btn brutal-btn--ink mt-3 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() =>
                 void ctrl.onQuickPair({
                   label: "5+0",
@@ -238,6 +240,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             {(
               [
                 ["quickPair", "PAIR"],
+                ["friendChallenge", "FRIEND"],
                 ["computer", "CPU"],
                 ["correspondence", "CORRES."],
               ] as const
@@ -259,6 +262,11 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
 
           {ctrl.tab === "quickPair" && (
             <>
+              {ctrl.noOtherPlayersOnline && (
+                <p className="brutal-chunk mt-5 text-sm text-[var(--brutal-magenta)]">
+                  NO OTHER PLAYERS ONLINE — QUICK PAIR NEEDS SOMEONE IN THE LOBBY.
+                </p>
+              )}
               {ctrl.seeking && (
                 <div
                   className="brutal-card brutal-card--yellow mt-5 brutal-display flex items-center justify-between"
@@ -281,7 +289,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                     key={p.label}
                     type="button"
                     className="brutal-preset"
-                    disabled={ctrl.seeking}
+                    disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
                     onClick={() => void ctrl.onQuickPair(p)}
                   >
                     {p.label}
@@ -306,6 +314,13 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   className="mt-2 w-full"
                 />
               </label>
+              {ctrl.showPrivateGameToggle && (
+                <PrivateGameToggle
+                  isPublic={ctrl.isPublic}
+                  onChange={ctrl.setIsPublic}
+                  labelClassName="brutal-chunk text-[0.8rem]"
+                />
+              )}
               <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
@@ -321,37 +336,12 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
           )}
 
-          {ctrl.tab === "correspondence" && (
+          {ctrl.tab === "friendChallenge" && (
             <div className="mt-5 space-y-3">
-              <label className="block">
-                <span className="brutal-display text-[0.9rem]">DAYS PER TURN</span>
-                <select
-                  value={ctrl.daysPerTurn}
-                  onChange={(e) => ctrl.setDaysPerTurn(Number(e.target.value))}
-                  className="brutal-select mt-2"
-                >
-                  {CORRESPONDENCE_DAY_OPTIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d === 0 ? "NO TIMER" : `${d} DAY${d === 1 ? "" : "S"}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <p className="brutal-chunk text-[0.9rem]">
-                Then challenge a player from the lobby strip below.
+                Pick a live time control, then challenge someone or mail a link.
               </p>
-            </div>
-          )}
-
-          {(ctrl.tab === "correspondence" || ctrl.tab === "quickPair") && (
-            <div
-              className="brutal-card brutal-card--yellow mt-5"
-              style={{ padding: 14, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
-            >
-              <div className="brutal-display" style={{ fontSize: "0.8rem" }}>
-                OPTIONAL PRESET FOR INVITES
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
                     key={p.label}
@@ -372,20 +362,57 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void ctrl.createInviteLink()}
-              className="brutal-btn brutal-btn--blue"
-            >
-              ✉ MAIL A LINK
-            </button>
-            {ctrl.inviteLink && (
-              <span className="brutal-chunk text-[0.8rem] break-all">
-                ★ COPIED → {ctrl.inviteLink}
-              </span>
-            )}
-          </div>
+          {ctrl.tab === "correspondence" && (
+            <div className="mt-5 space-y-3">
+              <label className="block">
+                <span className="brutal-display text-[0.9rem]">DAYS PER TURN</span>
+                <select
+                  value={ctrl.daysPerTurn}
+                  onChange={(e) => ctrl.setDaysPerTurn(Number(e.target.value))}
+                  className="brutal-select mt-2"
+                >
+                  {CORRESPONDENCE_DAY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d === 0 ? "NO TIMER" : `${d} DAY${d === 1 ? "" : "S"}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="brutal-chunk text-[0.9rem]">
+                Set days per turn, then challenge someone from the lobby strip.
+              </p>
+            </div>
+          )}
+
+          {ctrl.canInviteOrChallenge && (
+            <PrivateGameToggle
+              isPublic={ctrl.isPublic}
+              onChange={ctrl.setIsPublic}
+              className="mt-6"
+              labelClassName="brutal-chunk text-[0.8rem]"
+            />
+          )}
+
+          {ctrl.canInviteOrChallenge ? (
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void ctrl.createInviteLink()}
+                className="brutal-btn brutal-btn--blue"
+              >
+                ✉ MAIL A LINK
+              </button>
+              {ctrl.inviteLink && (
+                <span className="brutal-chunk text-[0.8rem] break-all">
+                  ★ COPIED → {ctrl.inviteLink}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="brutal-chunk mt-6 text-[0.9rem]">
+              Open FRIEND or CORRES. to invite or challenge someone.
+            </p>
+          )}
         </section>
 
         <section
@@ -437,7 +464,8 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   <button
                     type="button"
                     onClick={() => void ctrl.challengePlayer(p._id)}
-                    className="brutal-btn brutal-btn--magenta"
+                    disabled={!ctrl.canInviteOrChallenge}
+                    className="brutal-btn brutal-btn--magenta disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ padding: "6px 10px", fontSize: "0.72rem" }}
                   >
                     FIGHT
