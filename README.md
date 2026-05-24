@@ -1,8 +1,8 @@
 # Chess Lobby
 
-Multiplayer chess with a React frontend and Convex real-time backend. An optional ASP.NET + Stockfish service exists for local development only.
+**Play live:** [thechesslobby.com](https://thechesslobby.com)
 
-**Live demo:** https://thechesslobby.com (also https://www.thechesslobby.com and the CloudFront URL)
+Multiplayer chess with a React frontend and Convex real-time backend. An optional ASP.NET + Stockfish service exists for local development only.
 
 ## Features
 
@@ -12,10 +12,39 @@ Multiplayer chess with a React frontend and Convex real-time backend. An optiona
 - Challenge online users, **invite links** for anonymous guests, or **play vs computer**
 - **In-game chat** scoped to each match
 - Server-validated moves via `chess.js` on Convex
+- **Four UI themes** — switch anytime from the header
+
+## UI themes
+
+Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-in, lobby dashboard, and a vs-computer game.
+
+### Ember Observatory (default)
+
+| Landing | Sign in | Dashboard | Game |
+|:---:|:---:|:---:|:---:|
+| ![default landing](docs/screenshots/default/landing.png) | ![default login](docs/screenshots/default/login.png) | ![default dashboard](docs/screenshots/default/dashboard.png) | ![default game](docs/screenshots/default/game.png) |
+
+### Atelier Grid (bento)
+
+| Landing | Sign in | Dashboard | Game |
+|:---:|:---:|:---:|:---:|
+| ![bento landing](docs/screenshots/bento/landing.png) | ![bento login](docs/screenshots/bento/login.png) | ![bento dashboard](docs/screenshots/bento/dashboard.png) | ![bento game](docs/screenshots/bento/game.png) |
+
+### Pawn Riot (brutal)
+
+| Landing | Sign in | Dashboard | Game |
+|:---:|:---:|:---:|:---:|
+| ![brutal landing](docs/screenshots/brutal/landing.png) | ![brutal login](docs/screenshots/brutal/login.png) | ![brutal dashboard](docs/screenshots/brutal/dashboard.png) | ![brutal game](docs/screenshots/brutal/game.png) |
+
+### Obsidian Atelier (atelier)
+
+| Landing | Sign in | Dashboard | Game |
+|:---:|:---:|:---:|:---:|
+| ![atelier landing](docs/screenshots/atelier/landing.png) | ![atelier login](docs/screenshots/atelier/login.png) | ![atelier dashboard](docs/screenshots/atelier/dashboard.png) | ![atelier game](docs/screenshots/atelier/game.png) |
 
 ## Architecture
 
-### What runs where (production demo)
+### What runs where (production)
 
 | Layer | Platform | What it does |
 |-------|----------|----------------|
@@ -25,48 +54,42 @@ Multiplayer chess with a React frontend and Convex real-time backend. An optiona
 | **Chess engine** | **Convex** (built-in) | Minimax via `chess.js` — no separate engine server in prod |
 | **Stockfish API** | *Not deployed* | `apps/chess-engine` is local/optional only |
 
-**On AWS (account `058264467102`, stack `chess-lobby-demo`):**
+**On AWS (stack `chess-lobby-demo`):** S3 (static build), CloudFront (HTTPS CDN, SPA fallback to `index.html`), IAM OIDC role for GitHub Actions deploys.
 
-- **S3** — private bucket for `apps/web/dist` static files
-- **CloudFront** — HTTPS CDN in front of S3 (SPA routing: 403/404 → `index.html`)
-- **IAM** — OIDC role so GitHub Actions can upload to S3 and invalidate CloudFront
-
-**Not on AWS:** Convex, auth sessions, game state, chat, or the computer opponent logic.
+**Not on AWS:** Convex, auth, game state, chat, or the built-in computer opponent.
 
 ### Production diagram
 
 ```mermaid
-flowchart TB
-  subgraph github ["GitHub Actions"]
-    Workflow["Deploy AWS workflow"]
+flowchart LR
+  subgraph gh [GitHub Actions]
+    WF[Deploy workflow]
   end
 
-  subgraph aws ["AWS us-east-1"]
-    S3["S3 static build"]
-    CF["CloudFront CDN"]
-    IAM["OIDC deploy role"]
+  subgraph aws [AWS]
+    S3[S3 bucket]
+    CF[CloudFront]
   end
 
-  subgraph convex ["Convex Cloud"]
-    Auth["Convex Auth"]
-    DB[("games users chat invites")]
-    Presence["lobby presence"]
-    Engine["built-in minimax"]
+  subgraph convex [Convex Cloud]
+    ConvexAuth[Auth and API]
+    DB[(Database)]
+    Engine[Minimax engine]
   end
 
-  Browser["Browser"]
-  Workflow -->|"s3 sync"| S3
-  Workflow -->|"convex deploy"| Auth
-  Workflow -.->|"assume role"| IAM
-  Browser -->|"HTTPS"| CF
+  Browser[Browser]
+
+  Browser -->|HTTPS| CF
   CF --> S3
-  Browser <-->|"WebSocket"| Auth
-  Engine -->|"vs computer"| DB
+  Browser <-->|WebSocket| ConvexAuth
+  WF -->|upload| S3
+  WF -->|deploy| ConvexAuth
+  Engine --> DB
 ```
 
 ### Local development
 
-Locally, the Vite dev server replaces CloudFront/S3, and Convex **dev** (`pastel-grouse-840`) replaces production. You can optionally run the .NET Stockfish service on your machine and set `ENGINE_API_URL` on the dev deployment.
+Locally, the Vite dev server replaces CloudFront/S3, and Convex **dev** replaces production. You can optionally run the .NET Stockfish service and set `ENGINE_API_URL` on the dev deployment.
 
 ## Monorepo layout
 
@@ -163,6 +186,7 @@ Optional Stockfish (.NET engine) is for local dev only; production does not set 
 | `npm run dev:web` | Vite dev server |
 | `npm run convex:dev` | Convex dev deployment |
 | `npm run build:web` | Production React build |
+| `npm run screenshots:readme` | Capture README screenshots (Playwright) |
 | `dotnet run --project apps/chess-engine` | Engine API |
 
 ## Environment variables
