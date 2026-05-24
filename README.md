@@ -2,7 +2,7 @@
 
 **Play live:** [thechesslobby.com](https://thechesslobby.com)
 
-Multiplayer chess with a React frontend and Convex real-time backend. An optional ASP.NET + Stockfish service exists for local development only.
+Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** uses Stockfish on AWS Lightsail in production.
 
 ## Features
 
@@ -51,12 +51,12 @@ Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-i
 | **Frontend** | **AWS** (S3 + CloudFront) | Serves the built React app (HTML, JS, CSS, assets) |
 | **Backend** | **Convex Cloud** | Auth, database, real-time games, chat, lobby presence, vs-computer moves |
 | **CI deploy** | **GitHub Actions** | Builds the SPA, syncs to S3, invalidates CloudFront; deploys Convex |
-| **Chess engine** | **Convex** (built-in) | Minimax via `chess.js` — no separate engine server in prod |
-| **Stockfish API** | *Not deployed* | `apps/chess-engine` is local/optional only |
+| **Chess engine** | **AWS Lightsail** (containers) | ASP.NET + Stockfish (`apps/chess-engine`), ~$10/mo Micro |
+| **Engine fallback** | **Convex** | Minimax via `chess.js` if the external engine is unreachable |
 
-**On AWS (stack `chess-lobby-demo`):** S3 (static build), CloudFront (HTTPS CDN, SPA fallback to `index.html`), IAM OIDC role for GitHub Actions deploys.
+**On AWS:** S3 + CloudFront + Route 53 (stack `chess-lobby-demo`), plus Lightsail container service `chess-lobby-engine`.
 
-**Not on AWS:** Convex, auth, game state, chat, or the built-in computer opponent.
+**Not on AWS:** Convex (auth, database, realtime games, chat, lobby presence).
 
 ### Diagram
 
@@ -66,7 +66,7 @@ Runtime traffic and deploy path in production:
 
 - **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
 - **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
-- **Vs computer** uses the built-in minimax engine inside Convex — no separate Stockfish server in prod.
+- **Vs computer:** Convex calls the Lightsail engine (`POST /api/best-move`); falls back to built-in minimax if the engine is down.
 
 ### Local development
 
@@ -148,17 +148,17 @@ Open http://localhost:5173
 |-----------|------|----------------|
 | React SPA | **AWS S3 + CloudFront + Route 53** | https://thechesslobby.com |
 | Convex prod | **Convex Cloud** | https://pastel-buffalo-515.convex.cloud |
-| Vs computer | **Convex built-in engine** | (no extra URL) |
+| Vs computer (Stockfish) | **AWS Lightsail** | `chess-lobby-engine` container service (HTTPS) |
+| Convex prod | **Convex Cloud** | `ENGINE_API_URL` / `ENGINE_API_KEY` point at Lightsail |
 
-**Est. cost:** ~$0–2/mo (AWS static hosting) + Convex free tier.
+**Est. cost:** ~$10–12/mo (static hosting ~$0–2 + Lightsail Micro ~$10) + Convex free tier.
 
-Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)**
-
-Optional Stockfish engine on AWS (~$7–10/mo): **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**  
+Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)** (site + Convex)  
+Engine hosting: **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**  
 Stack outputs: **[docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example)**  
 CI deploy: [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) (Actions → **Deploy AWS** → Run workflow)
 
-Optional Stockfish (.NET engine) is for local dev only; production does not set `ENGINE_API_URL`.
+Wire Convex to the engine: `.\scripts\setup-convex-engine.ps1` (after setting `ENGINE_API_URL` and `ENGINE_API_KEY`).
 
 ## Scripts
 

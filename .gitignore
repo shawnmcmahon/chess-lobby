@@ -24,6 +24,9 @@ obj/
 .DS_Store
 Thumbs.db
 
+# Lightsail deploy (may contain ENGINE_API_KEY)
+infra/engine-deployment.tmp.json
+
 # Logs
 *.log
 npm-debug.log*
