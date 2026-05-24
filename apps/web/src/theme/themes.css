@@ -1989,11 +1989,22 @@
   color: var(--bento-ink);
 }
 
-.app-header[data-theme-variant="brutal"] .mobile-nav__link {
+.app-header[data-theme-variant="brutal"] .mobile-nav__panel .mobile-nav__link {
   font-family: "Archivo Black", sans-serif;
   font-size: 1rem;
   text-transform: uppercase;
   color: var(--brutal-ink);
+}
+
+.app-header[data-theme-variant="brutal"] .app-header__desktop-nav .mobile-nav__link {
+  font-family: "Archivo Black", sans-serif;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--brutal-yellow);
+}
+
+.app-header[data-theme-variant="brutal"] .app-header__desktop-nav .mobile-nav__link:hover {
+  color: var(--brutal-magenta);
 }
 
 .app-header[data-theme-variant="atelier"] .mobile-nav__link {
