@@ -77,10 +77,10 @@ function SignButton({
   }
 
   const classes = {
-    default: "default-btn default-btn--primary w-full justify-center lg:w-auto",
-    bento: "bento-btn w-full justify-center lg:w-auto",
-    brutal: "brutal-btn w-full justify-center lg:w-auto",
-    atelier: "atelier-btn w-full justify-center lg:w-auto",
+    default: "default-btn default-btn--primary w-full justify-center xl:w-auto",
+    bento: "bento-btn w-full justify-center xl:w-auto",
+    brutal: "brutal-btn w-full justify-center xl:w-auto",
+    atelier: "atelier-btn w-full justify-center xl:w-auto",
   } as const;
 
   return (
@@ -126,11 +126,11 @@ export function ResponsiveHeader({
       data-theme-variant={variant}
     >
       <div
-        className={`app-header__inner mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6 lg:py-4 ${innerClassName ?? ""}`.trim()}
+        className={`app-header__inner mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 xl:px-6 xl:py-4 ${innerClassName ?? ""}`.trim()}
       >
         <div className="min-w-0 shrink">{logo}</div>
 
-        <nav className="hidden items-center gap-3 lg:flex lg:gap-4 xl:gap-5">
+        <nav className="hidden items-center gap-3 xl:flex xl:gap-4 2xl:gap-5">
           <NavLinks isAuthenticated={isAuthenticated} variant={variant} />
           <SignButton
             isAuthenticated={isAuthenticated}
@@ -141,8 +141,7 @@ export function ResponsiveHeader({
           <ThemeSwitcher />
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2 lg:hidden">
-          <ThemeSwitcher compact />
+        <div className="flex shrink-0 items-center xl:hidden">
           <button
             type="button"
             className="mobile-nav__toggle"
