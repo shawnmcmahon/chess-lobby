@@ -2,8 +2,8 @@ import { useMutation, useQuery } from "convex/react";
 import { useState, type FormEvent } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import { GameObserverPresence } from "@/components/GameObserverPresence";
 import { GameParticipantPresence } from "@/components/GameParticipantPresence";
+import { GameSpectatorPresence } from "@/components/GameSpectatorPresence";
 import type { GameChatViewerRole } from "@/lib/gameChat";
 import { useTheme } from "@/theme/themeContext";
 import type { ThemeId } from "@/theme/themes";
@@ -17,6 +17,14 @@ type GameChatProps = {
   guestName?: string;
   currentUserId?: Id<"users">;
   headerLabel?: string;
+};
+
+type GameObserver = {
+  key: string;
+  userId?: Id<"users">;
+  guestSessionId?: string;
+  displayName: string;
+  online: boolean;
 };
 
 const CHAT_THEMES: Record<
@@ -104,36 +112,50 @@ const CHAT_THEMES: Record<
   },
 };
 
+function isSelfObserver(
+  observer: GameObserver,
+  currentUserId?: Id<"users">,
+  guestSessionId?: string,
+): boolean {
+  return (
+    (currentUserId !== undefined && observer.userId === currentUserId) ||
+    (guestSessionId !== undefined && observer.guestSessionId === guestSessionId)
+  );
+}
+
 function ObserverList({
   observers,
   styles,
-  viewerRole,
   currentUserId,
+  guestSessionId,
 }: {
-  observers: Array<{ userId: Id<"users">; displayName: string; online: boolean }> | undefined;
+  observers: GameObserver[] | undefined;
   styles: (typeof CHAT_THEMES)[ThemeId];
-  viewerRole: GameChatViewerRole;
   currentUserId?: Id<"users">;
+  guestSessionId?: string;
 }) {
-  const count = observers?.length ?? 0;
-  const label =
-    count === 0
-      ? viewerRole === "observer"
-        ? "No other observers yet"
-        : "No observers watching"
-      : count === 1
+  const loaded = observers !== undefined;
+  const allObservers = observers ?? [];
+  const total = allObservers.length;
+  const totalLabel = !loaded
+    ? "Checking for observers…"
+    : total === 0
+      ? "No observers watching"
+      : total === 1
         ? "1 observer watching"
-        : `${count} observers watching`;
+        : `${total} observers watching`;
 
   return (
     <div className={styles.observers}>
-      <span>{label}</span>
-      {count > 0 && (
+      <span>{totalLabel}</span>
+      {loaded && total > 0 && (
         <div className="mt-1 flex flex-wrap gap-1.5">
-          {observers?.map((observer) => (
-            <span key={observer.userId} className={styles.observerName}>
+          {allObservers.map((observer) => (
+            <span key={observer.key} className={styles.observerName}>
               {observer.displayName}
-              {currentUserId === observer.userId ? " (you)" : ""}
+              {isSelfObserver(observer, currentUserId, guestSessionId)
+                ? " (you)"
+                : ""}
             </span>
           ))}
         </div>
@@ -185,10 +207,12 @@ export function GameChat({
         isParticipant={isParticipant}
         guestSessionId={guestSessionId}
       />
-      <GameObserverPresence
+      <GameSpectatorPresence
         gameId={gameId}
         isParticipant={isParticipant}
         isPrivate={isPrivate}
+        guestSessionId={guestSessionId}
+        guestName={guestName}
       />
       <div className={`flex h-full min-h-[280px] flex-col ${styles.shell}`}>
         <div className={styles.header}>
@@ -196,8 +220,8 @@ export function GameChat({
           <ObserverList
             observers={observers}
             styles={styles}
-            viewerRole={viewerRole}
             currentUserId={currentUserId}
+            guestSessionId={guestSessionId}
           />
         </div>
         <div className={`flex-1 space-y-2 overflow-y-auto p-3 text-sm ${styles.body}`}>

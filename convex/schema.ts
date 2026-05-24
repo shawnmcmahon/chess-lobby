@@ -123,6 +123,15 @@ export default defineSchema({
     .index("by_game", ["gameId"])
     .index("by_game_and_participant", ["gameId", "participantKey"]),
 
+  gameSpectatorSessions: defineTable({
+    gameId: v.id("games"),
+    spectatorKey: v.string(),
+    guestName: v.optional(v.string()),
+    lastSeenAt: v.number(),
+  })
+    .index("by_game", ["gameId"])
+    .index("by_game_and_spectator", ["gameId", "spectatorKey"]),
+
   gameMessages: defineTable({
     gameId: v.id("games"),
     senderUserId: v.optional(v.id("users")),
