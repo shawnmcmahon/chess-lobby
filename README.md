@@ -93,7 +93,7 @@ The React app is a **single-page application**: S3 stores one HTML shell (`index
 
 Refresh on a deep link (e.g. `/dashboard`):
 
-![SPA refresh flow — CloudFront serves index.html, React Router picks the page](docs/spa-refresh-flow.svg)
+![SPA refresh flow](docs/spa-refresh-flow.svg)
 
 Route table, nested layouts, and auth guards: **[docs/spa-routing.md](docs/spa-routing.md)**.
 
