@@ -112,19 +112,19 @@ export function BrutalGameReview({
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
-            <button type="button" onClick={onFirst} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
+            <button type="button" aria-label="First move" onClick={onFirst} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
               ⏮
             </button>
-            <button type="button" onClick={onPrev} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
+            <button type="button" aria-label="Previous move" onClick={onPrev} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
               ◀
             </button>
             <button type="button" onClick={onTogglePlay} className="brutal-btn brutal-btn--ink" style={{ padding: "8px 16px", fontSize: "0.85rem" }}>
               {playing ? "PAUSE" : "PLAY"}
             </button>
-            <button type="button" onClick={onNext} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
+            <button type="button" aria-label="Next move" onClick={onNext} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
               ▶
             </button>
-            <button type="button" onClick={onLast} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
+            <button type="button" aria-label="Last move" onClick={onLast} className="brutal-btn" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
               ⏭
             </button>
           </div>

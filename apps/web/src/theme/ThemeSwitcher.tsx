@@ -36,12 +36,12 @@ export function ThemeSwitcher({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
+        aria-haspopup="true"
         aria-expanded={open}
         aria-label={`Theme: ${active.label}`}
         className={`theme-switcher__trigger${compact ? " theme-switcher__trigger--compact" : ""}`}
       >
-        <span className="theme-switcher__swatch" data-swatch={active.id} />
+        <span className="theme-switcher__swatch" data-swatch={active.id} aria-hidden />
         {!compact && (
           <>
             <span className="theme-switcher__label">{active.label}</span>
@@ -52,32 +52,32 @@ export function ThemeSwitcher({
         )}
       </button>
       {open && (
-        <ul
-          role="listbox"
+        <div
+          role="radiogroup"
+          aria-label="Theme options"
           className={`theme-switcher__menu${menuPlacement === "above" ? " theme-switcher__menu--above" : ""}`}
         >
           {THEMES.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={t.id === theme}
-                onClick={() => {
-                  setTheme(t.id as ThemeId);
-                  setOpen(false);
-                }}
-                className="theme-switcher__option"
-                data-active={t.id === theme ? "true" : undefined}
-              >
-                <span className="theme-switcher__swatch" data-swatch={t.id} />
-                <span className="theme-switcher__option-text">
-                  <span className="theme-switcher__option-label">{t.label}</span>
-                  <span className="theme-switcher__option-tagline">{t.tagline}</span>
-                </span>
-              </button>
-            </li>
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={t.id === theme}
+              onClick={() => {
+                setTheme(t.id as ThemeId);
+                setOpen(false);
+              }}
+              className="theme-switcher__option"
+              data-active={t.id === theme ? "true" : undefined}
+            >
+              <span className="theme-switcher__swatch" data-swatch={t.id} aria-hidden />
+              <span className="theme-switcher__option-text">
+                <span className="theme-switcher__option-label">{t.label}</span>
+                <span className="theme-switcher__option-tagline">{t.tagline}</span>
+              </span>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

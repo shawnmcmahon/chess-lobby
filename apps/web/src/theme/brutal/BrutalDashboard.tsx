@@ -208,6 +208,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
               <li key={g._id}>
                 <Link
                   to={`/game/${g._id}`}
+                  aria-label={`Open ${(g.timeControlCategory ?? "live").toUpperCase()} game (${g.status})`}
                   className="brutal-card brutal-card--paper flex items-center justify-between"
                   style={{ padding: 12, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
                 >
@@ -215,7 +216,9 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                     {(g.timeControlCategory ?? "LIVE").toUpperCase()} ·{" "}
                     {g.status.toUpperCase()}
                   </span>
-                  <span className="brutal-display text-[0.85rem]">→</span>
+                  <span className="brutal-display text-[0.85rem]" aria-hidden>
+                    →
+                  </span>
                 </Link>
               </li>
             ))}
@@ -527,6 +530,7 @@ function BrutalLiveSpectate() {
         <div className="flex items-center gap-1">
           <button
             type="button"
+            aria-label="Previous live game"
             onClick={() =>
               setIndex((i) => (i - 1 + liveGames.length) % liveGames.length)
             }
@@ -540,6 +544,7 @@ function BrutalLiveSpectate() {
           </span>
           <button
             type="button"
+            aria-label="Next live game"
             onClick={() => setIndex((i) => (i + 1) % liveGames.length)}
             className="brutal-btn brutal-btn--ink"
             style={{ padding: "4px 10px", fontSize: "0.75rem" }}
@@ -550,6 +555,7 @@ function BrutalLiveSpectate() {
       </div>
       <Link
         to={`/game/${current.game._id}?spectate=1`}
+        aria-label={`Spectate ${current.whiteName} vs ${current.blackName}`}
         className="brutal-card brutal-card--yellow mt-4 block"
         style={{ padding: 14, boxShadow: "6px 6px 0 var(--brutal-ink)" }}
       >

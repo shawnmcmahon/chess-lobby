@@ -51,14 +51,20 @@ export function ChessBoardView({
 
     for (const square of container.querySelectorAll("[data-square]")) {
       const id = square.getAttribute("data-square");
-      if (id) {
-        square.setAttribute("aria-label", `Square ${id.toUpperCase()}`);
-      }
+      if (!id) continue;
+
+      square.setAttribute("role", "button");
+      square.setAttribute("aria-label", `Square ${id.toUpperCase()}`);
     }
   }, [fen, orientation, theme]);
 
   return (
-    <div ref={boardRef} className="mx-auto max-w-[480px]">
+    <div
+      ref={boardRef}
+      className="mx-auto max-w-[480px]"
+      role="region"
+      aria-label="Chessboard"
+    >
       <Chessboard
         options={{
           position: fen,
