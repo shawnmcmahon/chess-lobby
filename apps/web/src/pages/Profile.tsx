@@ -165,7 +165,7 @@ export function Profile() {
       }
     : undefined;
 
-  const themeSettings = <ThemeSettingsSection className="mb-8" />;
+  const themeSettings = <ThemeSettingsSection className="mb-8" menuPlacement="above" />;
 
   switch (theme) {
     case "atelier":
