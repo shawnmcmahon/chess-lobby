@@ -58,34 +58,30 @@ Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-i
 
 **Not on AWS:** Convex, auth, game state, chat, or the built-in computer opponent.
 
-### Production diagram
+### Diagram
+
+Runtime traffic and deploy path in production:
 
 ```mermaid
-flowchart LR
-  subgraph gh [GitHub Actions]
-    WF[Deploy workflow]
-  end
-
-  subgraph aws [AWS]
-    S3[S3 bucket]
-    CF[CloudFront]
-  end
-
-  subgraph convex [Convex Cloud]
-    ConvexAuth[Auth and API]
-    DB[(Database)]
-    Engine[Minimax engine]
-  end
-
-  Browser[Browser]
+flowchart TD
+  Browser[Player browser]
+  CF[CloudFront CDN]
+  S3[S3 static site]
+  Convex[Convex Cloud]
+  Engine[Built-in chess engine]
+  CI[GitHub Actions]
 
   Browser -->|HTTPS| CF
   CF --> S3
-  Browser <-->|WebSocket| ConvexAuth
-  WF -->|upload| S3
-  WF -->|deploy| ConvexAuth
-  Engine --> DB
+  Browser -->|WebSocket| Convex
+  Convex --> Engine
+  CI -->|upload build| S3
+  CI -->|deploy| Convex
 ```
+
+- **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
+- **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
+- **Vs computer** uses the built-in minimax engine inside Convex — no separate Stockfish server in prod.
 
 ### Local development
 
