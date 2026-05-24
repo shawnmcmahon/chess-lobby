@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import { QuickPairGrid } from "@/components/QuickPairGrid";
@@ -163,6 +164,7 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
             {(
               [
                 ["quickPair", "Quick pairing"],
+                ["friendChallenge", "Play a friend"],
                 ["computer", "Vs computer"],
                 ["correspondence", "Correspondence"],
               ] as const
@@ -184,6 +186,12 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
 
           {ctrl.tab === "quickPair" && (
             <div className="space-y-3">
+              {ctrl.noOtherPlayersOnline && (
+                <p className="default-mono text-sm text-[var(--default-danger)]">
+                  No other players are online right now — quick pairing needs someone
+                  else in the lobby.
+                </p>
+              )}
               {ctrl.seeking && (
                 <p className="default-mono text-sm text-[var(--default-ember)]">
                   Searching for opponent…{" "}
@@ -194,7 +202,7 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
               )}
               <QuickPairGrid
                 onSelect={(p) => void ctrl.onQuickPair(p)}
-                disabled={ctrl.seeking}
+                disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
               />
             </div>
           )}
@@ -214,7 +222,32 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                   className="mt-1 w-full"
                 />
               </label>
+              {ctrl.showPrivateGameToggle && (
+                <PrivateGameToggle
+                  isPublic={ctrl.isPublic}
+                  onChange={ctrl.setIsPublic}
+                  labelClassName="default-mono text-xs text-[var(--default-mist)]"
+                />
+              )}
               <QuickPairGrid onSelect={(p) => void ctrl.onComputer(p)} />
+            </div>
+          )}
+
+          {ctrl.tab === "friendChallenge" && (
+            <div className="space-y-3">
+              <p className="default-mono text-xs text-[var(--default-mist)]">
+                Choose a live time control, then challenge someone online or create an
+                invite link.
+              </p>
+              <QuickPairGrid
+                onSelect={(p) => ctrl.setSelectedPreset(p)}
+                disabled={false}
+              />
+              {ctrl.selectedPreset && (
+                <p className="default-mono text-xs text-[var(--default-ember-dim)]">
+                  Selected: {ctrl.selectedPreset.label}
+                </p>
+              )}
             </div>
           )}
 
@@ -237,25 +270,9 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                 </select>
               </label>
               <p className="default-mono text-xs text-[var(--default-mist)]">
-                Challenge an online friend below or create an invite link.
+                Set days per turn, then challenge an online friend or create an invite
+                link.
               </p>
-            </div>
-          )}
-
-          {(ctrl.tab === "correspondence" || ctrl.tab === "quickPair") && (
-            <div className="default-panel default-panel--inset pt-2">
-              <p className="default-mono mb-2 text-xs text-[var(--default-mist)]">
-                Optional time preset for friend challenges / invite links
-              </p>
-              <QuickPairGrid
-                onSelect={(p) => ctrl.setSelectedPreset(p)}
-                disabled={false}
-              />
-              {ctrl.selectedPreset && (
-                <p className="default-mono mt-2 text-xs text-[var(--default-ember-dim)]">
-                  Selected: {ctrl.selectedPreset.label}
-                </p>
-              )}
             </div>
           )}
         </section>
@@ -264,23 +281,30 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
           <section className="default-panel p-4">
             <h2 className="default-display text-lg text-[var(--default-ember)]">Sidebar</h2>
             <div className="mt-3 space-y-2">
-              {ctrl.tab !== "quickPair" && (
-                <PrivateGameToggle
-                  isPublic={ctrl.isPublic}
-                  onChange={ctrl.setIsPublic}
-                  labelClassName="default-mono text-xs text-[var(--default-mist)]"
-                />
+              {ctrl.canInviteOrChallenge && (
+                <>
+                  <PrivateGameToggle
+                    isPublic={ctrl.isPublic}
+                    onChange={ctrl.setIsPublic}
+                    labelClassName="default-mono text-xs text-[var(--default-mist)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void ctrl.createInviteLink()}
+                    className="default-btn default-btn--ghost w-full"
+                  >
+                    Create invite link
+                  </button>
+                  {ctrl.inviteLink && (
+                    <p className="default-mono break-all text-xs text-[var(--default-mist)]">
+                      Link copied: {ctrl.inviteLink}
+                    </p>
+                  )}
+                </>
               )}
-              <button
-                type="button"
-                onClick={() => void ctrl.createInviteLink()}
-                className="default-btn default-btn--ghost w-full"
-              >
-                Create invite link
-              </button>
-              {ctrl.inviteLink && (
-                <p className="default-mono break-all text-xs text-[var(--default-mist)]">
-                  Link copied: {ctrl.inviteLink}
+              {!ctrl.canInviteOrChallenge && (
+                <p className="default-mono text-xs text-[var(--default-mist)]">
+                  Open Play a friend or Correspondence to invite or challenge someone.
                 </p>
               )}
             </div>
@@ -329,7 +353,8 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                     <button
                       type="button"
                       onClick={() => void ctrl.challengePlayer(player._id)}
-                      className="default-btn default-btn--primary text-sm"
+                      disabled={!ctrl.canInviteOrChallenge}
+                      className="default-btn default-btn--primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Challenge
                     </button>

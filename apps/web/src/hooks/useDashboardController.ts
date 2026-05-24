@@ -6,7 +6,11 @@ import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { useLobbyPresence } from "@/components/PresenceProvider";
 import { type TimeControlPreset } from "@/lib/timeControl";
 
-export type PlayTab = "quickPair" | "computer" | "correspondence";
+export type PlayTab =
+  | "quickPair"
+  | "friendChallenge"
+  | "computer"
+  | "correspondence";
 
 export type DashboardController = ReturnType<typeof useDashboardController>;
 
@@ -83,7 +87,14 @@ export function useDashboardController() {
     }
   }, [localSeeking, seekStartedAt, mySeek, activeGames, user, navigate]);
 
+  const otherPlayersOnlineCount = presenceState ? onlineUserIds.length : null;
+  const noOtherPlayersOnline =
+    otherPlayersOnlineCount !== null && otherPlayersOnlineCount === 0;
+
   async function onQuickPair(preset: TimeControlPreset) {
+    if (noOtherPlayersOnline) {
+      return;
+    }
     setLocalSeeking(true);
     setSeekStartedAt(Date.now());
     const result = await createSeek({
@@ -109,6 +120,10 @@ export function useDashboardController() {
     navigate(`/game/${gameId}`);
   }
 
+  const canInviteOrChallenge =
+    tab === "correspondence" || tab === "friendChallenge";
+  const showPrivateGameToggle = canInviteOrChallenge || tab === "computer";
+
   async function challengePlayer(toUserId: Id<"users">) {
     if (tab === "correspondence") {
       const { gameId } = await sendInvite({
@@ -118,6 +133,9 @@ export function useDashboardController() {
         isPublic,
       });
       navigate(`/game/${gameId}`);
+      return;
+    }
+    if (tab !== "friendChallenge") {
       return;
     }
     const preset = selectedPreset;
@@ -132,12 +150,15 @@ export function useDashboardController() {
   }
 
   async function createInviteLink() {
+    if (!canInviteOrChallenge) {
+      return;
+    }
     const preset = selectedPreset;
     const { gameId, inviteToken } = await createGame({
       mode: "human_vs_human",
       playType: tab === "correspondence" ? "correspondence" : "live",
-      baseTimeMs: preset?.baseTimeMs,
-      incrementMs: preset?.incrementMs,
+      baseTimeMs: tab === "friendChallenge" ? preset?.baseTimeMs : undefined,
+      incrementMs: tab === "friendChallenge" ? preset?.incrementMs : undefined,
       daysPerTurn:
         tab === "correspondence" && daysPerTurn > 0 ? daysPerTurn : undefined,
       isPublic,
@@ -181,6 +202,13 @@ export function useDashboardController() {
       (g.status === "active" || g.status === "waiting"),
   );
 
+  function canCancelWaitingGame(game: Doc<"games">) {
+    return (
+      game.status === "waiting" &&
+      (game.createdByUserId === user?._id || game.whiteUserId === user?._id)
+    );
+  }
+
   return {
     user,
     pendingInvites,
@@ -203,6 +231,11 @@ export function useDashboardController() {
     setSelectedPreset,
     isPublic,
     setIsPublic,
+    canInviteOrChallenge,
+    showPrivateGameToggle,
+    canCancelWaitingGame,
+    otherPlayersOnlineCount,
+    noOtherPlayersOnline,
     onQuickPair,
     onComputer,
     challengePlayer,

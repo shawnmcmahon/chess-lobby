@@ -241,6 +241,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
               {(
                 [
                   ["quickPair", "Pair"],
+                  ["friendChallenge", "Friend"],
                   ["computer", "Machine"],
                   ["correspondence", "Post"],
                 ] as const
@@ -274,6 +275,14 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
 
           {ctrl.tab === "quickPair" && (
             <>
+              {ctrl.noOtherPlayersOnline && (
+                <p
+                  className="atelier-smallcaps mt-4"
+                  style={{ color: "var(--atelier-oxblood)" }}
+                >
+                  No other players online — quick pairing requires company in the lobby.
+                </p>
+              )}
               {ctrl.seeking && (
                 <div
                   className="atelier-smallcaps mt-4 flex items-center gap-3"
@@ -302,7 +311,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                   <button
                     key={p.label}
                     type="button"
-                    disabled={ctrl.seeking}
+                    disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
                     onClick={() => void ctrl.onQuickPair(p)}
                     className="atelier-preset"
                     style={presetStyle}
@@ -332,6 +341,13 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                   style={{ accentColor: "var(--atelier-brass)" }}
                 />
               </label>
+              {ctrl.showPrivateGameToggle && (
+                <PrivateGameToggle
+                  isPublic={ctrl.isPublic}
+                  onChange={ctrl.setIsPublic}
+                  labelClassName="atelier-smallcaps"
+                />
+              )}
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
@@ -356,24 +372,8 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
           )}
 
-          {ctrl.tab === "correspondence" && (
+          {ctrl.tab === "friendChallenge" && (
             <div className="mt-5 space-y-3">
-              <label className="block">
-                <span className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
-                  Days per turn
-                </span>
-                <select
-                  value={ctrl.daysPerTurn}
-                  onChange={(e) => ctrl.setDaysPerTurn(Number(e.target.value))}
-                  className="atelier-select mt-2"
-                >
-                  {CORRESPONDENCE_DAY_OPTIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d === 0 ? "No timer" : `${d} day${d === 1 ? "" : "s"}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <p
                 style={{
                   fontFamily: "'Cormorant Garamond', serif",
@@ -381,17 +381,9 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                   color: "var(--atelier-parchment-soft)",
                 }}
               >
-                Then summon a player from the roster, or post a sealed invitation.
+                Choose a live cadence, then summon a player or post a sealed invitation.
               </p>
-            </div>
-          )}
-
-          {(ctrl.tab === "correspondence" || ctrl.tab === "quickPair") && (
-            <div className="mt-6">
-              <div className="atelier-rule">
-                <span className="atelier-smallcaps">Optional cadence for invitations</span>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
                     key={p.label}
@@ -433,7 +425,38 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
             </div>
           )}
 
-          {ctrl.tab !== "quickPair" && (
+          {ctrl.tab === "correspondence" && (
+            <div className="mt-5 space-y-3">
+              <label className="block">
+                <span className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
+                  Days per turn
+                </span>
+                <select
+                  value={ctrl.daysPerTurn}
+                  onChange={(e) => ctrl.setDaysPerTurn(Number(e.target.value))}
+                  className="atelier-select mt-2"
+                >
+                  {CORRESPONDENCE_DAY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d === 0 ? "No timer" : `${d} day${d === 1 ? "" : "s"}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: "italic",
+                  color: "var(--atelier-parchment-soft)",
+                }}
+              >
+                Set days per turn, then summon a player from the roster or post a sealed
+                invitation.
+              </p>
+            </div>
+          )}
+
+          {ctrl.canInviteOrChallenge && (
             <PrivateGameToggle
               isPublic={ctrl.isPublic}
               onChange={ctrl.setIsPublic}
@@ -442,30 +465,41 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
             />
           )}
 
-          <div className="atelier-rule mt-6">
-            <span className="atelier-smallcaps">Invitation by post</span>
-          </div>
-          <div className="mt-3 flex items-center gap-3 flex-wrap">
-            <button
-              type="button"
-              onClick={() => void ctrl.createInviteLink()}
-              className="atelier-btn atelier-btn--ghost"
+          {ctrl.canInviteOrChallenge ? (
+            <>
+              <div className="atelier-rule mt-6">
+                <span className="atelier-smallcaps">Invitation by post</span>
+              </div>
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => void ctrl.createInviteLink()}
+                  className="atelier-btn atelier-btn--ghost"
+                >
+                  Sealed link
+                </button>
+                {ctrl.inviteLink && (
+                  <code
+                    className="atelier-mono"
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "var(--atelier-brass)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {ctrl.inviteLink}
+                  </code>
+                )}
+              </div>
+            </>
+          ) : (
+            <p
+              className="atelier-smallcaps mt-6"
+              style={{ color: "var(--atelier-parchment-soft)" }}
             >
-              Sealed link
-            </button>
-            {ctrl.inviteLink && (
-              <code
-                className="atelier-mono"
-                style={{
-                  fontSize: "0.78rem",
-                  color: "var(--atelier-brass)",
-                  wordBreak: "break-all",
-                }}
-              >
-                {ctrl.inviteLink}
-              </code>
-            )}
-          </div>
+              Open Friend or Post to invite or challenge someone.
+            </p>
+          )}
         </section>
 
         <aside className="col-span-12 lg:col-span-5 space-y-6">
@@ -539,7 +573,8 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                     <button
                       type="button"
                       onClick={() => void ctrl.challengePlayer(p._id)}
-                      className="atelier-btn atelier-btn--ghost"
+                      disabled={!ctrl.canInviteOrChallenge}
+                      className="atelier-btn atelier-btn--ghost disabled:cursor-not-allowed disabled:opacity-50"
                       style={{ padding: "6px 14px", fontSize: "0.65rem" }}
                     >
                       Invite
