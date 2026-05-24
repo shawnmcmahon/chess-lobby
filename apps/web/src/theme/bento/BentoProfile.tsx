@@ -85,22 +85,26 @@ export function BentoProfile({
         </div>
 
         <form onSubmit={(e) => void onSubmit(e)} className="mt-6 space-y-3">
-          <label className="block">
+          <label className="block" htmlFor="bento-profile-display-name">
             <span className="bento-mono text-[0.66rem] uppercase tracking-widest opacity-60">
               Display name
             </span>
             <input
+              id="bento-profile-display-name"
+              name="displayName"
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="bento-input mt-2"
             />
           </label>
-          <label className="block">
+          <label className="block" htmlFor="bento-profile-bio">
             <span className="bento-mono text-[0.66rem] uppercase tracking-widest opacity-60">
               Bio
             </span>
             <textarea
+              id="bento-profile-bio"
+              name="bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={3}

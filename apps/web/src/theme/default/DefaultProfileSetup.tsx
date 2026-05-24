@@ -26,20 +26,34 @@ export function DefaultProfileSetup({
           Choose a display name so other players can find and challenge you.
         </p>
         <form onSubmit={(e) => void onSubmit(e)} className="mt-6 space-y-3">
-          <input
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Display name"
-            className="default-input"
-          />
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Bio (optional)"
-            rows={3}
-            className="default-input resize-y"
-          />
+          <label className="block" htmlFor="default-profile-setup-display-name">
+            <span className="default-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--default-mist)]">
+              Display name
+            </span>
+            <input
+              id="default-profile-setup-display-name"
+              name="displayName"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Display name"
+              className="default-input mt-2"
+            />
+          </label>
+          <label className="block" htmlFor="default-profile-setup-bio">
+            <span className="default-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--default-mist)]">
+              Bio (optional)
+            </span>
+            <textarea
+              id="default-profile-setup-bio"
+              name="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Bio (optional)"
+              rows={3}
+              className="default-input mt-2 resize-y"
+            />
+          </label>
           <button type="submit" className="default-btn default-btn--primary w-full">
             Save profile
           </button>

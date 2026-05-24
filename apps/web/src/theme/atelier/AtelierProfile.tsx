@@ -93,18 +93,28 @@ export function AtelierProfile({
           Personal inscription
         </div>
         <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-4">
-          <input
-            required
-            value={displayName}
-            onChange={(e) => onDisplayNameChange(e.target.value)}
-            className="atelier-input"
-          />
-          <textarea
-            value={bio}
-            onChange={(e) => onBioChange(e.target.value)}
-            rows={3}
-            className="atelier-input resize-none"
-          />
+          <label className="block" htmlFor="atelier-profile-display-name">
+            <span className="atelier-smallcaps">Display name</span>
+            <input
+              id="atelier-profile-display-name"
+              name="displayName"
+              required
+              value={displayName}
+              onChange={(e) => onDisplayNameChange(e.target.value)}
+              className="atelier-input mt-2"
+            />
+          </label>
+          <label className="block" htmlFor="atelier-profile-bio">
+            <span className="atelier-smallcaps">Bio (optional)</span>
+            <textarea
+              id="atelier-profile-bio"
+              name="bio"
+              value={bio}
+              onChange={(e) => onBioChange(e.target.value)}
+              rows={3}
+              className="atelier-input mt-2 resize-none"
+            />
+          </label>
           <div className="flex items-center gap-4 flex-wrap">
             <button type="submit" className="atelier-btn">
               Save changes

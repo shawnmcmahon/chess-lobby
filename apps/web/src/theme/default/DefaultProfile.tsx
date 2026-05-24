@@ -80,18 +80,32 @@ export function DefaultProfile({
           Rating: {user.rating ?? 1200}
         </p>
         <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3">
-          <input
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="default-input"
-          />
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            className="default-input resize-y"
-          />
+          <label className="block" htmlFor="default-profile-display-name">
+            <span className="default-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--default-mist)]">
+              Display name
+            </span>
+            <input
+              id="default-profile-display-name"
+              name="displayName"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="default-input mt-2"
+            />
+          </label>
+          <label className="block" htmlFor="default-profile-bio">
+            <span className="default-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--default-mist)]">
+              Bio (optional)
+            </span>
+            <textarea
+              id="default-profile-bio"
+              name="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={3}
+              className="default-input mt-2 resize-y"
+            />
+          </label>
           <button type="submit" className="default-btn default-btn--primary">
             Save changes
           </button>
