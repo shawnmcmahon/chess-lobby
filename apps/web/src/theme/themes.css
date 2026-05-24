@@ -545,7 +545,7 @@
 }
 .brutal-btn--magenta {
   background: var(--brutal-magenta);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-btn--blue {
   background: var(--brutal-blue);
@@ -594,7 +594,7 @@
 .brutal-tape {
   display: inline-block;
   background: var(--brutal-magenta);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
   padding: 2px 10px;
   font-family: "Archivo Black", sans-serif;
   text-transform: uppercase;
