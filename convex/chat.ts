@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { canChatInGame, inferMessageSenderRole } from "./lib/games";
+import { canChatInGame, canViewGame, inferMessageSenderRole } from "./lib/games";
 
 const chatMessageValidator = v.object({
   _id: v.id("gameMessages"),
@@ -18,11 +18,19 @@ const chatMessageValidator = v.object({
 });
 
 export const list = query({
-  args: { gameId: v.id("games") },
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
   returns: v.array(chatMessageValidator),
   handler: async (ctx, args) => {
     const game = await ctx.db.get(args.gameId);
     if (!game) {
+      return [];
+    }
+
+    const userId = await getAuthUserId(ctx);
+    if (!canViewGame(game, userId, args.guestSessionId ?? null)) {
       return [];
     }
 
@@ -70,8 +78,15 @@ export const send = mutation({
     }
 
     const userId = await getAuthUserId(ctx);
+    if (!canViewGame(game, userId, args.guestSessionId ?? null)) {
+      throw new Error("You cannot view this game");
+    }
+
     const senderRole = canChatInGame(game, userId, args.guestSessionId ?? null);
     if (!senderRole) {
+      throw new Error("You cannot send messages in this game");
+    }
+    if (game.isPublic === false && senderRole === "observer") {
       throw new Error("You cannot send messages in this game");
     }
 

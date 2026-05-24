@@ -4,6 +4,7 @@ import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { canViewGame, isParticipant } from "./lib/games";
 
 export const presence = new Presence(components.presence);
 
@@ -61,11 +62,25 @@ const gameObserverValidator = v.object({
 });
 
 export const listGameObservers = query({
-  args: { gameId: v.id("games") },
+  args: {
+    gameId: v.id("games"),
+    guestSessionId: v.optional(v.string()),
+  },
   returns: v.array(gameObserverValidator),
-  handler: async (ctx, { gameId }) => {
-    const game = await ctx.db.get(gameId);
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
     if (!game) {
+      return [];
+    }
+
+    const userId = await getAuthUserId(ctx);
+    if (!canViewGame(game, userId, args.guestSessionId ?? null)) {
+      return [];
+    }
+    if (
+      game.isPublic === false &&
+      !isParticipant(game, userId, args.guestSessionId ?? null)
+    ) {
       return [];
     }
 
@@ -75,7 +90,7 @@ export const listGameObservers = query({
       ),
     );
 
-    const roomToken = `game:${gameId}:spectators`;
+    const roomToken = `game:${args.gameId}:spectators`;
     const present = await presence.list(ctx, roomToken);
 
     const observers = present.filter(

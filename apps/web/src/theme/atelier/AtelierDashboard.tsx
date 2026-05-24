@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 
@@ -430,6 +431,15 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                 </p>
               )}
             </div>
+          )}
+
+          {ctrl.tab !== "quickPair" && (
+            <PrivateGameToggle
+              isPublic={ctrl.isPublic}
+              onChange={ctrl.setIsPublic}
+              className="mt-6"
+              labelClassName="atelier-smallcaps"
+            />
           )}
 
           <div className="atelier-rule mt-6">

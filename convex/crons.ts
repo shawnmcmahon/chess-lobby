@@ -24,4 +24,11 @@ crons.interval(
   {},
 );
 
+crons.interval(
+  "process expired waiting games",
+  { minutes: 5 },
+  internal.games.processExpiredWaitingGames,
+  {},
+);
+
 export default crons;

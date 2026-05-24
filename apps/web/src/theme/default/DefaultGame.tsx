@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { GameBoard } from "@/components/GameBoard";
 import { GameChat } from "@/components/GameChat";
+import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 
@@ -14,7 +15,11 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
     );
   }
   if (!ctrl.game) {
-    return <p className="text-[var(--default-danger)]">Game not found.</p>;
+    return (
+      <p className="text-[var(--default-danger)]">
+        This game is private or could not be found.
+      </p>
+    );
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
@@ -41,6 +46,11 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
               Engine error: {game.endReason.replace(/^engine_error:\s*/, "")}
             </p>
           )}
+          <GameDisconnectStatus
+            game={game}
+            myColor={ctrl.myColor}
+            className="default-mono mt-2 text-sm text-[var(--default-ember)]"
+          />
         </div>
         <Link to="/dashboard" className="default-btn default-btn--ghost text-sm">
           Dashboard

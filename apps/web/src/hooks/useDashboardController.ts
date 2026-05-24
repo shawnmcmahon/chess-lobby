@@ -35,6 +35,7 @@ export function useDashboardController() {
   const [selectedPreset, setSelectedPreset] = useState<TimeControlPreset | null>(
     null,
   );
+  const [isPublic, setIsPublic] = useState(true);
   const seeking = localSeeking || mySeek != null;
 
   const presenceState = useLobbyPresence();
@@ -103,6 +104,7 @@ export function useDashboardController() {
       playType: "live",
       baseTimeMs: preset.baseTimeMs,
       incrementMs: preset.incrementMs,
+      isPublic,
     });
     navigate(`/game/${gameId}`);
   }
@@ -113,6 +115,7 @@ export function useDashboardController() {
         toUserId,
         playType: "correspondence",
         daysPerTurn: daysPerTurn > 0 ? daysPerTurn : undefined,
+        isPublic,
       });
       navigate(`/game/${gameId}`);
       return;
@@ -123,6 +126,7 @@ export function useDashboardController() {
       playType: "live",
       baseTimeMs: preset?.baseTimeMs,
       incrementMs: preset?.incrementMs,
+      isPublic,
     });
     navigate(`/game/${gameId}`);
   }
@@ -136,6 +140,7 @@ export function useDashboardController() {
       incrementMs: preset?.incrementMs,
       daysPerTurn:
         tab === "correspondence" && daysPerTurn > 0 ? daysPerTurn : undefined,
+      isPublic,
     });
     const url = `${window.location.origin}/game/join/${inviteToken}`;
     setInviteLink(url);
@@ -196,6 +201,8 @@ export function useDashboardController() {
     setDaysPerTurn,
     selectedPreset,
     setSelectedPreset,
+    isPublic,
+    setIsPublic,
     onQuickPair,
     onComputer,
     challengePlayer,

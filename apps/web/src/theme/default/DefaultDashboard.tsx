@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
+import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import { QuickPairGrid } from "@/components/QuickPairGrid";
 import { CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
 import type { DashboardController } from "@/hooks/useDashboardController";
@@ -263,6 +264,13 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
           <section className="default-panel p-4">
             <h2 className="default-display text-lg text-[var(--default-ember)]">Sidebar</h2>
             <div className="mt-3 space-y-2">
+              {ctrl.tab !== "quickPair" && (
+                <PrivateGameToggle
+                  isPublic={ctrl.isPublic}
+                  onChange={ctrl.setIsPublic}
+                  labelClassName="default-mono text-xs text-[var(--default-mist)]"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => void ctrl.createInviteLink()}

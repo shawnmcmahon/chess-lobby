@@ -89,6 +89,12 @@ export default defineSchema({
     turnDeadlineAt: v.optional(v.number()),
     lastMoveAt: v.optional(v.number()),
     isPublic: v.optional(v.boolean()),
+    whiteDisconnectGraceRemainingMs: v.optional(v.number()),
+    blackDisconnectGraceRemainingMs: v.optional(v.number()),
+    whiteDisconnectedAt: v.optional(v.number()),
+    blackDisconnectedAt: v.optional(v.number()),
+    whiteDisconnectDeadlineAt: v.optional(v.number()),
+    blackDisconnectDeadlineAt: v.optional(v.number()),
     analysisJson: v.optional(v.string()),
   })
     .index("by_inviteToken", ["inviteToken"])

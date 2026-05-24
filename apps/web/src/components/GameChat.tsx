@@ -12,6 +12,7 @@ type GameChatProps = {
   gameId: Id<"games">;
   viewerRole: GameChatViewerRole;
   isParticipant: boolean;
+  isPrivate?: boolean;
   guestSessionId?: string;
   guestName?: string;
   currentUserId?: Id<"users">;
@@ -145,6 +146,7 @@ export function GameChat({
   gameId,
   viewerRole,
   isParticipant,
+  isPrivate = false,
   guestSessionId,
   guestName,
   currentUserId,
@@ -152,12 +154,16 @@ export function GameChat({
 }: GameChatProps) {
   const { theme } = useTheme();
   const styles = CHAT_THEMES[theme];
-  const messages = useQuery(api.chat.list, { gameId });
-  const observers = useQuery(api.presence.listGameObservers, { gameId });
+  const messages = useQuery(api.chat.list, { gameId, guestSessionId });
+  const observers = useQuery(api.presence.listGameObservers, {
+    gameId,
+    guestSessionId,
+  });
   const send = useMutation(api.chat.send);
   const [body, setBody] = useState("");
 
-  const canSend = viewerRole === "player" || viewerRole === "observer";
+  const canSend =
+    viewerRole === "player" || (viewerRole === "observer" && !isPrivate);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -179,7 +185,11 @@ export function GameChat({
         isParticipant={isParticipant}
         guestSessionId={guestSessionId}
       />
-      <GameObserverPresence gameId={gameId} isParticipant={isParticipant} />
+      <GameObserverPresence
+        gameId={gameId}
+        isParticipant={isParticipant}
+        isPrivate={isPrivate}
+      />
       <div className={`flex h-full min-h-[280px] flex-col ${styles.shell}`}>
         <div className={styles.header}>
           <div>{headerLabel}</div>

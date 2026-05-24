@@ -19,6 +19,7 @@ export const send = mutation({
     baseTimeMs: v.optional(v.number()),
     incrementMs: v.optional(v.number()),
     daysPerTurn: v.optional(v.number()),
+    isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const fromUser = await getCurrentUser(ctx);
@@ -66,7 +67,7 @@ export const send = mutation({
           ? computeTurnDeadline(now, args.daysPerTurn)
           : undefined,
       lastMoveAt: now,
-      isPublic: true,
+      isPublic: args.isPublic ?? true,
     });
 
     await ctx.db.insert("gameInvites", {

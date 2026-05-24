@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { GameChat } from "@/components/GameChat";
+import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { BrutalBoard } from "./BrutalBoard";
@@ -22,7 +23,7 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
   if (!ctrl.game) {
     return (
       <div className="brutal-card brutal-card--magenta brutal-display" style={{ padding: 18 }}>
-        ⚠ GAME NOT FOUND
+        ⚠ PRIVATE GAME OR NOT FOUND
       </div>
     );
   }
@@ -76,6 +77,11 @@ export function BrutalGame({ ctrl }: { ctrl: GameController }) {
             ⚠ ENGINE ERROR · {game.endReason.replace(/^engine_error:\s*/, "").toUpperCase()}
           </div>
         )}
+        <GameDisconnectStatus
+          game={game}
+          myColor={ctrl.myColor}
+          className="brutal-chunk mt-4 text-center"
+        />
         <div className="mt-4 flex justify-center">
           <Link to="/dashboard" className="brutal-btn brutal-btn--magenta">
             ← LOBBY
