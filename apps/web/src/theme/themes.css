@@ -566,6 +566,7 @@
 .brutal-sticker {
   position: absolute;
   background: var(--brutal-yellow);
+  color: var(--brutal-ink);
   border: var(--brutal-border) solid var(--brutal-ink);
   padding: 6px 12px;
   font-family: "Archivo Black", sans-serif;
@@ -577,7 +578,7 @@
 }
 .brutal-sticker--magenta {
   background: var(--brutal-magenta);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-sticker--blue {
   background: var(--brutal-blue);
