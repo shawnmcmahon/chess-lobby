@@ -287,7 +287,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
           </div>
         ) : (
           <p className="bento-mono text-[0.7rem] opacity-60">
-            Open Friend or Corres. to invite or challenge someone.
+            Open Friend or Corres. to create an invite link.
           </p>
         )}
       </section>
@@ -333,8 +333,7 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 <button
                   type="button"
                   onClick={() => void ctrl.challengePlayer(player._id)}
-                  disabled={!ctrl.canInviteOrChallenge}
-                  className="bento-mono text-[0.7rem] uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-40"
+                  className="bento-mono text-[0.7rem] uppercase tracking-widest"
                   style={{
                     background: "var(--bento-paper)",
                     color: "var(--bento-ink)",

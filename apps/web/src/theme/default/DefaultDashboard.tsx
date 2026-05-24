@@ -303,7 +303,7 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
               )}
               {!ctrl.canInviteOrChallenge && (
                 <p className="default-mono text-xs text-[var(--default-mist)]">
-                  Open Play a friend or Correspondence to invite or challenge someone.
+                  Open Play a friend or Correspondence to create an invite link.
                 </p>
               )}
             </div>
@@ -352,8 +352,7 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                     <button
                       type="button"
                       onClick={() => void ctrl.challengePlayer(player._id)}
-                      disabled={!ctrl.canInviteOrChallenge}
-                      className="default-btn default-btn--primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="default-btn default-btn--primary text-sm"
                     >
                       Challenge
                     </button>

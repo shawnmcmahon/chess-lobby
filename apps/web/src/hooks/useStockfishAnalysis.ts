@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { parseCachedEvals } from "@/lib/gameReplay";
 
 export type MoveEval = {
   cp: number;
@@ -68,14 +69,13 @@ export function useStockfishAnalysis(
 
   useEffect(() => {
     if (cachedJson) {
-      try {
-        setEvals(JSON.parse(cachedJson) as MoveEval[]);
-      } catch {
-        setEvals([]);
+      const cachedEvals = parseCachedEvals(cachedJson);
+      setEvals(cachedEvals ?? []);
+      setLoading(cachedEvals === null);
+      setProgress(cachedEvals === null ? 0 : 100);
+      if (cachedEvals !== null) {
+        return;
       }
-      setLoading(false);
-      setProgress(100);
-      return;
     }
 
     if (fens.length === 0) {

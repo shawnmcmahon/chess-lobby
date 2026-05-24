@@ -128,8 +128,12 @@ export function DefaultGameReviewLoading() {
   return <p className="default-mono text-[var(--default-mist)]">Loading review…</p>;
 }
 
-export function DefaultGameReviewNotFound() {
+export function DefaultGameReviewNotFound({
+  message = "Finished game not found.",
+}: {
+  message?: string;
+}) {
   return (
-    <p className="text-[var(--default-danger)]">Finished game not found.</p>
+    <p className="text-[var(--default-danger)]">{message}</p>
   );
 }

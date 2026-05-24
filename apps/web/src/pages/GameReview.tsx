@@ -1,8 +1,7 @@
-import { Chess } from "chess.js";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { getGuestSessionId } from "@/lib/guestSession";
+import { buildGameReplayFromPgn } from "@/lib/gameReplay";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { type MoveRow } from "@/components/MoveList";
@@ -76,56 +75,30 @@ function brutalReviewShell(
 
 export function GameReview() {
   const { gameId } = useParams<{ gameId: string }>();
-  const guestSessionId = getGuestSessionId();
   const user = useQuery(api.users.current);
   const { theme } = useTheme();
   const game = useQuery(
-    api.games.get,
-    gameId
-      ? { gameId: gameId as Id<"games">, guestSessionId }
-      : "skip",
+    api.games.getForReview,
+    gameId ? { gameId: gameId as Id<"games"> } : "skip",
   );
   const saveAnalysis = useMutation(api.games.saveAnalysis);
 
-  const { fens, rows, totalPlies } = useMemo(() => {
-    const startFen = new Chess().fen();
-    if (!game?.pgn) {
-      return { fens: [startFen], rows: [] as MoveRow[], totalPlies: 0 };
-    }
-    const chess = new Chess();
-    chess.loadPgn(game.pgn);
-    const history = chess.history();
-    chess.reset();
-    const positionFens = [chess.fen()];
-    for (const move of history) {
-      chess.move(move);
-      positionFens.push(chess.fen());
-    }
-
-    const moveRows: MoveRow[] = [];
-    for (let i = 0; i < history.length; i += 2) {
-      moveRows.push({
-        moveNumber: Math.floor(i / 2) + 1,
-        white: history[i],
-        black: history[i + 1],
-      });
-    }
-
-    return {
-      fens: positionFens,
-      rows: moveRows,
-      totalPlies: history.length,
-    };
-  }, [game?.pgn]);
+  const { fens, rows, totalPlies, pgnError } = useMemo(
+    () => buildGameReplayFromPgn(game?.pgn),
+    [game?.pgn],
+  );
 
   const replay = useGameReplay(totalPlies);
-  const currentFen = fens[replay.plyIndex] ?? new Chess().fen();
+  const currentFen = fens[replay.plyIndex] ?? fens[0]!;
   const { evals, loading, progress, serialize } = useStockfishAnalysis(
     fens,
     game?.analysisJson,
   );
 
   const rowsWithEvals = useMemo(() => {
+    if (!Array.isArray(evals)) {
+      return rows;
+    }
     return rows.map((row, idx) => ({
       ...row,
       whiteEval: evals[idx * 2 + 1],
@@ -139,6 +112,7 @@ export function GameReview() {
       game.analysisJson ||
       loading ||
       evals.length !== fens.length ||
+      !Array.isArray(evals) ||
       evals.some((e) => !e)
     ) {
       return;
@@ -146,14 +120,37 @@ export function GameReview() {
     void saveAnalysis({ gameId: game._id, analysisJson: serialize() });
   }, [game, loading, evals, fens.length, serialize, saveAnalysis]);
 
-  const currentEval = evals[replay.plyIndex];
+  const currentEval = Array.isArray(evals) ? evals[replay.plyIndex] ?? null : null;
+
+  if (pgnError && game) {
+    if (theme === "bento") {
+      return <BentoGameReviewNotFound message={pgnError} />;
+    }
+    if (theme === "brutal") {
+      return brutalReviewShell(
+        "notFound",
+        replay,
+        rowsWithEvals,
+        totalPlies,
+        loading,
+        progress,
+        currentFen,
+        currentEval,
+        game,
+      );
+    }
+    if (theme === "atelier") {
+      return <AtelierGameReview status="not_found" endReason={pgnError} />;
+    }
+    return <DefaultGameReviewNotFound message={pgnError} />;
+  }
 
   if (theme === "atelier") {
     const atelierStatus = !gameId
       ? ("missing" as const)
       : game === undefined
         ? ("loading" as const)
-        : !game || game.status !== "finished"
+        : !game
           ? ("not_found" as const)
           : ("ready" as const);
 
@@ -166,7 +163,7 @@ export function GameReview() {
         isAnalyzing={loading}
         analyzingProgress={progress}
         currentFen={atelierStatus === "ready" ? currentFen : undefined}
-        currentEval={atelierStatus === "ready" ? evals[replay.plyIndex] ?? null : undefined}
+        currentEval={atelierStatus === "ready" ? currentEval ?? null : undefined}
         replay={atelierStatus === "ready" ? replay : undefined}
         rowsWithEvals={atelierStatus === "ready" ? rowsWithEvals : undefined}
         totalPlies={totalPlies}
@@ -177,7 +174,7 @@ export function GameReview() {
   if (theme === "bento") {
     if (!gameId) return <BentoGameReviewMissing />;
     if (game === undefined) return <BentoGameReviewLoading />;
-    if (!game || game.status !== "finished") return <BentoGameReviewNotFound />;
+    if (!game) return <BentoGameReviewNotFound />;
     return (
       <BentoGameReview
         gameId={game._id}
@@ -221,7 +218,7 @@ export function GameReview() {
         game,
       );
     }
-    if (!game || game.status !== "finished") {
+    if (!game) {
       return brutalReviewShell(
         "notFound",
         replay,
@@ -265,7 +262,7 @@ export function GameReview() {
   if (game === undefined) {
     return <DefaultGameReviewLoading />;
   }
-  if (!game || game.status !== "finished") {
+  if (!game) {
     return <DefaultGameReviewNotFound />;
   }
 

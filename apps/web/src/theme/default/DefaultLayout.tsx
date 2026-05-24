@@ -21,9 +21,6 @@ export function DefaultLayout() {
               className="default-display block truncate text-lg sm:text-xl"
             >
               Chess Lobby
-              <span className="default-mono ml-0 mt-0.5 block text-[0.5rem] font-normal uppercase tracking-[0.28em] text-[var(--default-ember-dim)] sm:ml-2 sm:mt-0 sm:inline sm:text-[0.55rem]">
-                Ember Observatory
-              </span>
             </Link>
           }
         />
