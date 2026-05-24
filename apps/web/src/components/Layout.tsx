@@ -2,21 +2,29 @@ import { Link, Outlet } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { PresenceProvider } from "@/components/PresenceProvider";
 import { ResponsiveHeader } from "@/components/ResponsiveHeader";
+import { ThemeDock } from "@/components/ThemeDock";
 import { DefaultLayout } from "@/theme/default/DefaultLayout";
 import { useTheme } from "@/theme/themeContext";
 
 export function Layout() {
   const { theme } = useTheme();
-  switch (theme) {
-    case "bento":
-      return <BentoLayout />;
-    case "brutal":
-      return <BrutalLayout />;
-    case "atelier":
-      return <AtelierLayout />;
-    default:
-      return <DefaultLayout />;
-  }
+  const page =
+    theme === "bento" ? (
+      <BentoLayout />
+    ) : theme === "brutal" ? (
+      <BrutalLayout />
+    ) : theme === "atelier" ? (
+      <AtelierLayout />
+    ) : (
+      <DefaultLayout />
+    );
+
+  return (
+    <>
+      {page}
+      <ThemeDock />
+    </>
+  );
 }
 
 function BentoLayout() {
@@ -49,7 +57,7 @@ function BentoLayout() {
             </Link>
           }
         />
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 bento-stage">
+        <main className="app-main--with-dock mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 bento-stage">
           <Outlet />
         </main>
       </div>
@@ -98,7 +106,7 @@ function BrutalLayout() {
             ))}
           </div>
         </div>
-        <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6 brutal-stage">
+        <main className="app-main--with-dock mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6 brutal-stage">
           <Outlet />
         </main>
       </div>
