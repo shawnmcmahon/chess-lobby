@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
 import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
@@ -67,10 +68,10 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                 ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
                   (g.currentTurn === "black" && g.blackUserId === u._id));
               return (
-                <li key={g._id}>
+                <li key={g._id} className="flex items-center gap-2">
                   <Link
                     to={`/game/${g._id}`}
-                    className={`default-list-item block ${isMyTurn ? "default-list-item--active" : ""}`}
+                    className={`default-list-item block min-w-0 flex-1 ${isMyTurn ? "default-list-item--active" : ""}`}
                   >
                     <span className="capitalize">{g.status}</span>
                     {g.daysPerTurn ? ` · ${g.daysPerTurn}d/turn` : ""} ·{" "}
@@ -81,6 +82,13 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
                       </span>
                     )}
                   </Link>
+                  {ctrl.canCancelWaitingGame(g) && (
+                    <CancelWaitingGameButton
+                      gameId={g._id}
+                      variant="icon"
+                      theme="default"
+                    />
+                  )}
                 </li>
               );
             })}
@@ -93,10 +101,17 @@ export function DefaultDashboard({ ctrl }: { ctrl: DashboardController }) {
           <h2 className="default-display text-lg">Live games</h2>
           <ul className="mt-3 space-y-2">
             {ctrl.liveActiveGames.map((g) => (
-              <li key={g._id}>
-                <Link to={`/game/${g._id}`} className="default-list-item block">
+              <li key={g._id} className="flex items-center gap-2">
+                <Link to={`/game/${g._id}`} className="default-list-item block min-w-0 flex-1">
                   {g.timeControlCategory ?? "live"} · {g.status}
                 </Link>
+                {ctrl.canCancelWaitingGame(g) && (
+                  <CancelWaitingGameButton
+                    gameId={g._id}
+                    variant="icon"
+                    theme="default"
+                  />
+                )}
               </li>
             ))}
           </ul>

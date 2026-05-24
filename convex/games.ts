@@ -686,6 +686,17 @@ export const cancelWaitingGame = mutation({
     }
 
     await abandonGame(ctx, args.gameId, "cancelled");
+
+    const pendingInvites = await ctx.db
+      .query("gameInvites")
+      .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
+      .collect();
+    for (const invite of pendingInvites) {
+      if (invite.status === "pending") {
+        await ctx.db.patch(invite._id, { status: "declined" });
+      }
+    }
+
     return null;
   },
 });

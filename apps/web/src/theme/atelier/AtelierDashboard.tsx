@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
@@ -158,10 +159,10 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                 ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
                   (g.currentTurn === "black" && g.blackUserId === u._id));
               return (
-                <li key={g._id}>
+                <li key={g._id} className="flex items-center gap-2">
                   <Link
                     to={`/game/${g._id}`}
-                    className="flex items-center justify-between gap-3 py-2 px-2 rounded-sm"
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-sm px-2 py-2"
                     style={{
                       borderBottom: "1px solid rgba(11,20,36,0.12)",
                       background: isMyTurn ? "rgba(123,31,43,0.08)" : undefined,
@@ -187,6 +188,13 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                       </span>
                     )}
                   </Link>
+                  {ctrl.canCancelWaitingGame(g) && (
+                    <CancelWaitingGameButton
+                      gameId={g._id}
+                      variant="icon"
+                      theme="atelier"
+                    />
+                  )}
                 </li>
               );
             })}
@@ -208,10 +216,10 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
           </h2>
           <ul className="mt-4 space-y-2">
             {ctrl.liveActiveGames.map((g) => (
-              <li key={g._id}>
+              <li key={g._id} className="flex items-center gap-2">
                 <Link
                   to={`/game/${g._id}`}
-                  className="flex items-center justify-between py-2"
+                  className="flex min-w-0 flex-1 items-center justify-between py-2"
                   style={{ borderBottom: "1px solid rgba(194,162,88,0.16)" }}
                 >
                   <span
@@ -230,6 +238,13 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                     enter →
                   </span>
                 </Link>
+                {ctrl.canCancelWaitingGame(g) && (
+                  <CancelWaitingGameButton
+                    gameId={g._id}
+                    variant="icon"
+                    theme="atelier"
+                  />
+                )}
               </li>
             ))}
           </ul>
