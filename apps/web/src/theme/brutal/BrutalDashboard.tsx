@@ -8,17 +8,13 @@ import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeCont
 
 export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
   if (!ctrl.user) {
-    return (
-      <p className="brutal-display" style={{ fontSize: "1.4rem", marginTop: 32 }}>
-        LOADING…
-      </p>
-    );
+    return <BrutalDashboardSkeleton />;
   }
   const u = ctrl.user;
   return (
-    <div className="space-y-6">
+    <div className="brutal-dashboard space-y-6">
       <section
-        className="brutal-card brutal-card--ink relative"
+        className="brutal-dashboard__player-section brutal-card brutal-card--ink relative"
         style={{ padding: 24 }}
       >
         <span className="brutal-sticker" style={{ top: -16, left: 24 }} data-tilt="left">
@@ -276,7 +272,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   </button>
                 </div>
               )}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+              <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
                     key={p.label}
@@ -307,7 +303,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                   className="mt-2 w-full"
                 />
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {TIME_CONTROL_PRESETS.map((p) => (
                   <button
                     key={p.label}
@@ -484,7 +480,7 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
         </section>
       )}
 
-      <section className="brutal-card relative" style={{ padding: 22 }}>
+      <section className="brutal-dashboard__spectate brutal-card relative" style={{ padding: 22 }}>
         <span className="brutal-tape" style={{ position: "absolute", top: -14, right: 32 }}>
           ★ SPECTATE
         </span>
@@ -498,7 +494,18 @@ function BrutalLiveSpectate() {
   const liveGames = useQuery(api.games.listActiveForSpectate, { limit: 20 });
   const [index, setIndex] = useState(0);
 
-  if (!liveGames || liveGames.length === 0) {
+  if (liveGames === undefined) {
+    return (
+      <>
+        <h2 className="brutal-display" style={{ fontSize: "1.3rem" }}>
+          LIVE SPECTATOR FEED
+        </h2>
+        <div className="brutal-skeleton mt-4 h-48 w-full" />
+      </>
+    );
+  }
+
+  if (liveGames.length === 0) {
     return (
       <>
         <h2 className="brutal-display" style={{ fontSize: "1.3rem" }}>
@@ -562,6 +569,48 @@ function BrutalLiveSpectate() {
   );
 }
 
+function BrutalDashboardSkeleton() {
+  return (
+    <div className="brutal-dashboard space-y-6" aria-busy="true" aria-label="Loading dashboard">
+      <section
+        className="brutal-dashboard__player-section brutal-card brutal-card--ink relative"
+        style={{ padding: 24 }}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-center">
+          <div className="space-y-4">
+            <div className="brutal-skeleton h-4 w-24" />
+            <div className="brutal-skeleton h-12 w-2/3 max-w-sm" />
+            <div className="flex flex-wrap gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="brutal-card brutal-card--yellow"
+                  style={{ padding: "8px 14px", width: 88, height: 56, boxShadow: "3px 3px 0 var(--brutal-ink)" }}
+                />
+              ))}
+            </div>
+          </div>
+          <div
+            className="brutal-card brutal-card--yellow"
+            style={{ padding: 18, minHeight: 160, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
+          />
+        </div>
+      </section>
+      <div className="grid grid-cols-12 gap-5">
+        <section className="brutal-card col-span-12 lg:col-span-8" style={{ padding: 22, minHeight: 320 }}>
+          <div className="brutal-skeleton h-6 w-40" />
+          <div className="brutal-dashboard__game-grid grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="brutal-skeleton h-12" />
+            ))}
+          </div>
+        </section>
+        <section className="brutal-card brutal-card--yellow col-span-12 lg:col-span-4" style={{ padding: 22, minHeight: 220 }} />
+      </div>
+    </div>
+  );
+}
+
 function Stat({
   label,
   value,
@@ -578,8 +627,8 @@ function Stat({
         ? "brutal-card--magenta"
         : "";
   return (
-    <div className={`brutal-card ${v}`} style={{ padding: "8px 14px", boxShadow: "3px 3px 0 var(--brutal-ink)" }}>
-      <div className="brutal-display" style={{ fontSize: "0.65rem" }}>{label}</div>
+    <div className={`brutal-card brutal-stat ${v}`} style={{ padding: "8px 14px", boxShadow: "3px 3px 0 var(--brutal-ink)" }}>
+      <div className="brutal-display brutal-stat__label" style={{ fontSize: "0.65rem" }}>{label}</div>
       <div className="brutal-chunk" style={{ fontSize: "1.6rem", lineHeight: 1 }}>
         {value}
       </div>

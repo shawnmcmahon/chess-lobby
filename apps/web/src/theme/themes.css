@@ -447,7 +447,7 @@
   --brutal-ink: #0a0a0a;
   --brutal-yellow: #ffe600;
   --brutal-magenta: #ff3d9a;
-  --brutal-blue: #1b6eff;
+  --brutal-blue: #1559d1;
   --brutal-oxblood: #b5302d;
   --brutal-border: 4px;
   --brutal-shadow: 8px 8px 0 #0a0a0a;
@@ -493,14 +493,15 @@
 }
 .brutal-card--yellow {
   background: var(--brutal-yellow);
+  color: var(--brutal-ink);
 }
 .brutal-card--magenta {
   background: var(--brutal-magenta);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-card--blue {
   background: var(--brutal-blue);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-card--ink {
   background: var(--brutal-ink);
@@ -549,7 +550,7 @@
 }
 .brutal-btn--blue {
   background: var(--brutal-blue);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-btn--ink {
   background: var(--brutal-ink);
@@ -582,7 +583,7 @@
 }
 .brutal-sticker--blue {
   background: var(--brutal-blue);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
 }
 .brutal-sticker[data-tilt="left"] {
   transform: rotate(-6deg);
@@ -684,7 +685,40 @@
 }
 .brutal-preset[data-active="true"] {
   background: var(--brutal-magenta);
-  color: var(--brutal-paper);
+  color: var(--brutal-ink);
+}
+
+.brutal-stat__label {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.brutal-dashboard {
+  min-height: 70vh;
+}
+.brutal-dashboard__player-section {
+  min-height: 220px;
+}
+.brutal-dashboard__game-grid {
+  min-height: 140px;
+}
+.brutal-dashboard__spectate {
+  min-height: 220px;
+}
+.brutal-skeleton {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brutal-ink) 6%, transparent) 25%,
+    color-mix(in srgb, var(--brutal-ink) 12%, transparent) 50%,
+    color-mix(in srgb, var(--brutal-ink) 6%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: brutal-skeleton 1.2s ease-in-out infinite;
+  border-radius: 2px;
+}
+@keyframes brutal-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
 }
 
 .brutal-board-frame {
