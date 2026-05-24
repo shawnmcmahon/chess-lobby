@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { GameAbortedBanner } from "@/components/GameAbortedBanner";
 import { GameChat } from "@/components/GameChat";
 import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
+import { TurnIndicator } from "@/components/TurnIndicator";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { AtelierBoard } from "./AtelierBoard";
@@ -38,10 +40,61 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
+  const myColor = ctrl.spectate ? null : ctrl.myColor;
 
   return (
-    <div className="space-y-8">
-      <header className="text-center">
+    <div className="space-y-4 lg:space-y-8">
+      <GameAbortedBanner
+        theme="atelier"
+        status={game.status}
+        endReason={game.endReason}
+      />
+
+      <div className="flex justify-end lg:hidden">
+        <Link to="/dashboard" className="atelier-btn atelier-btn--ghost text-sm">
+          ← Salon
+        </Link>
+      </div>
+
+      <section className="mx-auto w-full" style={{ maxWidth: 620 }}>
+        <TurnIndicator
+          theme="atelier"
+          currentTurn={game.currentTurn}
+          myColor={myColor}
+          spectate={ctrl.spectate}
+          whiteName={ctrl.whiteName}
+          blackName={ctrl.blackName}
+          status={game.status}
+          className="mb-4"
+        />
+        <AtelierBoard
+          game={game}
+          myColor={myColor}
+          isAuthenticated={ctrl.isAuthenticated}
+          readOnly={ctrl.spectate}
+        />
+      </section>
+
+      <div className="grid grid-cols-12 gap-8 items-start">
+        <aside className="atelier-panel col-span-12 lg:col-span-4 relative lg:col-start-9" style={{ padding: 0 }}>
+          <Corners />
+          <div
+            className="atelier-smallcaps"
+            style={{
+              color: "var(--atelier-brass)",
+              padding: "16px 20px",
+              borderBottom: "1px solid var(--atelier-brass-dim)",
+            }}
+          >
+            Salon
+          </div>
+          <div style={{ height: 380 }}>
+            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Salon chat" />
+          </div>
+        </aside>
+      </div>
+
+      <header className="hidden text-center lg:block">
         <div className="atelier-rule mb-4">
           <span className="atelier-smallcaps">Match № {game._id.slice(-6).toUpperCase()}</span>
         </div>
@@ -159,33 +212,6 @@ export function AtelierGame({ ctrl }: { ctrl: GameController }) {
           </div>
         </section>
       )}
-
-      <div className="grid grid-cols-12 gap-8 items-start">
-        <section className="col-span-12 lg:col-span-8 mx-auto" style={{ maxWidth: 620 }}>
-          <AtelierBoard
-            game={game}
-            myColor={ctrl.spectate ? null : ctrl.myColor}
-            isAuthenticated={ctrl.isAuthenticated}
-            readOnly={ctrl.spectate}
-          />
-        </section>
-        <aside className="atelier-panel col-span-12 lg:col-span-4 relative" style={{ padding: 0 }}>
-          <Corners />
-          <div
-            className="atelier-smallcaps"
-            style={{
-              color: "var(--atelier-brass)",
-              padding: "16px 20px",
-              borderBottom: "1px solid var(--atelier-brass-dim)",
-            }}
-          >
-            Salon
-          </div>
-          <div style={{ height: 380 }}>
-            <GameChat {...getGameChatProps(ctrl, game)} headerLabel="Salon chat" />
-          </div>
-        </aside>
-      </div>
     </div>
   );
 }

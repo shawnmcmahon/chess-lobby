@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { GameAbortedBanner } from "@/components/GameAbortedBanner";
 import { GameChat } from "@/components/GameChat";
 import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
+import { TurnIndicator } from "@/components/TurnIndicator";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 import { BentoBoard } from "./BentoBoard";
@@ -25,12 +27,65 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
+  const myColor = ctrl.spectate ? null : ctrl.myColor;
 
   return (
     <div className="bento-grid">
+      <GameAbortedBanner
+        theme="bento"
+        status={game.status}
+        endReason={game.endReason}
+      />
+
+      <div className="col-span-12 flex justify-end lg:hidden">
+        <Link to="/dashboard" className="bento-btn bento-btn--ghost text-sm">
+          ← Dashboard
+        </Link>
+      </div>
+
       <section
-        className="bento-tile bento-tile--ink col-span-12 lg:col-span-8"
-        style={{ padding: 32, animationDelay: "0ms" }}
+        className="bento-tile col-span-12 lg:col-span-8"
+        style={{ padding: 20, animationDelay: "0ms" }}
+      >
+        <TurnIndicator
+          theme="bento"
+          currentTurn={game.currentTurn}
+          myColor={myColor}
+          spectate={ctrl.spectate}
+          whiteName={ctrl.whiteName}
+          blackName={ctrl.blackName}
+          status={game.status}
+          className="mb-4"
+        />
+        <BentoBoard
+          game={game}
+          myColor={myColor}
+          isAuthenticated={ctrl.isAuthenticated}
+          readOnly={ctrl.spectate}
+        />
+      </section>
+
+      <section
+        className="bento-tile col-span-12 lg:col-span-4"
+        style={{ padding: 0, animationDelay: "80ms", background: "var(--bento-paper)" }}
+      >
+        <div className="px-5 pt-5">
+          <div className="bento-tile__eyebrow">Table talk</div>
+          <h3
+            className="bento-tile__title"
+            style={{ fontSize: "1.3rem", marginTop: 4 }}
+          >
+            <em>Chat</em>
+          </h3>
+        </div>
+        <div className="px-2 pb-2 pt-3 min-h-[280px]" style={{ height: 380 }}>
+          <GameChat {...getGameChatProps(ctrl, game)} />
+        </div>
+      </section>
+
+      <section
+        className="bento-tile bento-tile--ink col-span-12 hidden lg:col-span-8 lg:block"
+        style={{ padding: 32, animationDelay: "160ms" }}
       >
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -59,15 +114,19 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
               className="bento-mono mt-2 text-sm"
             />
           </div>
-          <Link to="/dashboard" className="bento-btn bento-btn--ghost" style={{ color: "var(--bento-paper)", borderColor: "rgba(245,241,234,0.3)" }}>
+          <Link
+            to="/dashboard"
+            className="bento-btn bento-btn--ghost"
+            style={{ color: "var(--bento-paper)", borderColor: "rgba(245,241,234,0.3)" }}
+          >
             ← Dashboard
           </Link>
         </div>
       </section>
 
       <section
-        className="bento-tile col-span-12 lg:col-span-4"
-        style={{ padding: 24, animationDelay: "80ms", background: "var(--bento-bg)" }}
+        className="bento-tile col-span-12 hidden lg:col-span-4 lg:block"
+        style={{ padding: 24, animationDelay: "240ms", background: "var(--bento-bg)" }}
       >
         <div className="bento-tile__eyebrow">Position</div>
         <div className="bento-clock" style={{ marginTop: 8 }}>
@@ -79,9 +138,12 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
         </div>
         <div className="bento-divider" />
         <div className="bento-mono text-[0.72rem] opacity-75" style={{ lineHeight: 1.6 }}>
-          <div>turn · <strong>{game.currentTurn}</strong></div>
           <div>
-            tc · <strong>{game.timeControlCategory ?? game.playType ?? "live"}</strong>
+            turn · <strong>{game.currentTurn}</strong>
+          </div>
+          <div>
+            tc ·{" "}
+            <strong>{game.timeControlCategory ?? game.playType ?? "live"}</strong>
           </div>
           {game.daysPerTurn && (
             <div>
@@ -94,7 +156,7 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
       {game.status === "waiting" && (
         <section
           className="bento-tile bento-tile--clay col-span-12"
-          style={{ padding: 22, animationDelay: "160ms" }}
+          style={{ padding: 22, animationDelay: "320ms" }}
         >
           <div className="bento-tile__eyebrow">Waiting room</div>
           <p
@@ -121,36 +183,6 @@ export function BentoGame({ ctrl }: { ctrl: GameController }) {
           </div>
         </section>
       )}
-
-      <section
-        className="bento-tile col-span-12 lg:col-span-8"
-        style={{ padding: 28, animationDelay: "240ms" }}
-      >
-        <BentoBoard
-          game={game}
-          myColor={ctrl.spectate ? null : ctrl.myColor}
-          isAuthenticated={ctrl.isAuthenticated}
-          readOnly={ctrl.spectate}
-        />
-      </section>
-
-      <section
-        className="bento-tile col-span-12 lg:col-span-4"
-        style={{ padding: 0, animationDelay: "320ms", background: "var(--bento-paper)" }}
-      >
-        <div className="px-5 pt-5">
-          <div className="bento-tile__eyebrow">Table talk</div>
-          <h3
-            className="bento-tile__title"
-            style={{ fontSize: "1.3rem", marginTop: 4 }}
-          >
-            <em>Chat</em>
-          </h3>
-        </div>
-        <div className="px-2 pb-2 pt-3 min-h-[320px]" style={{ height: 380 }}>
-          <GameChat {...getGameChatProps(ctrl, game)} />
-        </div>
-      </section>
     </div>
   );
 }

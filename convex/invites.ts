@@ -8,6 +8,7 @@ import {
   categorizeTimeControl,
   computeTurnDeadline,
 } from "./lib/timeControl";
+import { buildLiveGameActivationPatch } from "./lib/liveClock";
 import { playType } from "./schema";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -127,9 +128,7 @@ export const accept = mutation({
     const now = Date.now();
     await ctx.db.patch(invite.gameId, {
       blackUserId: userId,
-      status: "active",
-      updatedAt: now,
-      lastMoveAt: now,
+      ...buildLiveGameActivationPatch(game, now),
     });
     await ctx.db.patch(args.inviteId, { status: "accepted" });
 

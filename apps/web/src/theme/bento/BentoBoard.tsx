@@ -6,6 +6,7 @@ import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { formatDaysLeft } from "@/lib/correspondenceClock";
+import { getLiveClockDisplay } from "@/lib/liveClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -30,20 +31,14 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
 
   const now = useNow(game.status === "active");
 
-  const elapsed =
-    game.status === "active" && game.lastMoveAt ? now - game.lastMoveAt : 0;
-  const displayWhite =
-    game.whiteTimeMs !== undefined
-      ? game.currentTurn === "white" && game.status === "active"
-        ? game.whiteTimeMs - elapsed
-        : game.whiteTimeMs
-      : null;
-  const displayBlack =
-    game.blackTimeMs !== undefined
-      ? game.currentTurn === "black" && game.status === "active"
-        ? game.blackTimeMs - elapsed
-        : game.blackTimeMs
-      : null;
+  const { displayWhite, displayBlack, inFirstMovePhase } = getLiveClockDisplay(
+    game,
+    now,
+  );
+  const displayWhiteOrNull =
+    game.whiteTimeMs !== undefined ? displayWhite : null;
+  const displayBlackOrNull =
+    game.blackTimeMs !== undefined ? displayBlack : null;
 
   const boardOrientation = myColor === "black" ? "black" : "white";
   const canMove =
@@ -90,10 +85,15 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
 
   return (
     <div className="space-y-4">
+      {inFirstMovePhase && (
+        <p className="bento-mono text-center text-[0.72rem] text-[var(--bento-jade)]">
+          First move · 30s to play or the game is aborted
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <ClockTile
           label="Black"
-          time={displayBlack}
+          time={displayBlackOrNull}
           active={game.currentTurn === "black" && game.status === "active"}
           playType={game.playType}
           turnDeadlineAt={game.turnDeadlineAt}
@@ -103,7 +103,7 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
         />
         <ClockTile
           label="White"
-          time={displayWhite}
+          time={displayWhiteOrNull}
           active={game.currentTurn === "white" && game.status === "active"}
           playType={game.playType}
           turnDeadlineAt={game.turnDeadlineAt}
@@ -116,7 +116,7 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
         <div className="mb-2 flex items-center justify-between">
           <span className="bento-board-rank">A · B · C · D · E · F · G · H</span>
           <span className="bento-board-rank">
-            {game.status} · move {parseInt(game.fen.split(" ")[5] ?? "1", 10) || 1}
+            move {parseInt(game.fen.split(" ")[5] ?? "1", 10) || 1}
           </span>
         </div>
         <div className="bento-board-frame__inner">
@@ -130,10 +130,7 @@ export function BentoBoard({ game, myColor, isAuthenticated, readOnly = false }:
           />
         </div>
         <div className="mt-3 flex items-center justify-between bento-mono text-[0.7rem] uppercase tracking-wider opacity-60">
-          <span>
-            {engineThinking ? "Computer thinking…" : `${game.currentTurn} to move`}
-          </span>
-          <span>{game.timeControlCategory ?? game.playType ?? "live"}</span>
+          <span>{engineThinking ? "Computer thinking…" : game.timeControlCategory ?? game.playType ?? "live"}</span>
         </div>
       </div>
       {error && (

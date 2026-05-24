@@ -33,6 +33,8 @@ export const timeControlCategory = v.union(
 
 export const playType = v.union(v.literal("live"), v.literal("correspondence"));
 
+export const matchSource = v.union(v.literal("quick_pair"));
+
 const categoryStats = v.object({
   wins: v.number(),
   losses: v.number(),
@@ -97,6 +99,9 @@ export default defineSchema({
     whiteDisconnectDeadlineAt: v.optional(v.number()),
     blackDisconnectDeadlineAt: v.optional(v.number()),
     analysisJson: v.optional(v.string()),
+    matchSource: v.optional(matchSource),
+    mainClockStarted: v.optional(v.boolean()),
+    firstMoveDeadlineAt: v.optional(v.number()),
   })
     .index("by_inviteToken", ["inviteToken"])
     .index("by_status", ["status"])
@@ -104,7 +109,8 @@ export default defineSchema({
     .index("by_blackUser", ["blackUserId"])
     .index("by_whiteUser_and_status", ["whiteUserId", "status"])
     .index("by_blackUser_and_status", ["blackUserId", "status"])
-    .index("by_status_and_public", ["status", "isPublic"]),
+    .index("by_status_and_public", ["status", "isPublic"])
+    .index("by_status_and_matchSource", ["status", "matchSource"]),
 
   gameInvites: defineTable({
     fromUserId: v.id("users"),
@@ -158,14 +164,4 @@ export default defineSchema({
     .index("by_totalWins", ["totalWins"])
     .index("by_totalLosses", ["totalLosses"])
     .index("by_totalDraws", ["totalDraws"]),
-
-  gameSeeks: defineTable({
-    userId: v.id("users"),
-    timeControlCategory: timeControlCategory,
-    baseTimeMs: v.number(),
-    incrementMs: v.number(),
-    minRating: v.number(),
-    maxRating: v.number(),
-    createdAt: v.number(),
-  }).index("by_category", ["timeControlCategory"]),
 });

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { getLiveClockDisplay } from "@/lib/liveClock";
+import { getTurnIndicatorCopy } from "@/lib/turnIndicator";
 
 type GameClockProps = {
   whiteTimeMs?: number;
@@ -9,6 +11,13 @@ type GameClockProps = {
   playType?: "live" | "correspondence";
   turnDeadlineAt?: number;
   daysPerTurn?: number;
+  mainClockStarted?: boolean;
+  firstMoveDeadlineAt?: number;
+  baseTimeMs?: number;
+  myColor?: "white" | "black" | null;
+  spectate?: boolean;
+  whiteName?: string;
+  blackName?: string;
 };
 
 function formatMs(ms: number): string {
@@ -62,6 +71,13 @@ export function GameClock({
   playType = "live",
   turnDeadlineAt,
   daysPerTurn,
+  mainClockStarted,
+  firstMoveDeadlineAt,
+  baseTimeMs,
+  myColor = null,
+  spectate = false,
+  whiteName = "White",
+  blackName = "Black",
 }: GameClockProps) {
   const [now, setNow] = useState(Date.now());
 
@@ -89,21 +105,51 @@ export function GameClock({
     return null;
   }
 
-  const elapsed = status === "active" && lastMoveAt ? now - lastMoveAt : 0;
-  const displayWhite =
-    currentTurn === "white" && status === "active"
-      ? whiteTimeMs - elapsed
-      : whiteTimeMs;
-  const displayBlack =
-    currentTurn === "black" && status === "active"
-      ? blackTimeMs - elapsed
-      : blackTimeMs;
+  const { displayWhite, displayBlack, inFirstMovePhase, lowWhite, lowBlack } =
+    getLiveClockDisplay(
+      {
+        status,
+        playType,
+        baseTimeMs,
+        mainClockStarted,
+        firstMoveDeadlineAt,
+        whiteTimeMs,
+        blackTimeMs,
+        currentTurn,
+        lastMoveAt,
+      },
+      now,
+    );
 
-  const lowWhite = displayWhite < 30_000;
-  const lowBlack = displayBlack < 30_000;
+  const turnCopy =
+    status === "active"
+      ? getTurnIndicatorCopy({
+          currentTurn,
+          myColor,
+          spectate,
+          whiteName,
+          blackName,
+          status,
+        })
+      : null;
 
   return (
     <div className="mx-auto max-w-[480px] space-y-2">
+      {turnCopy && (
+        <p
+          className={`text-center text-base font-semibold ${
+            turnCopy.isMyTurn ? "text-amber-300" : "text-stone-200"
+          }`}
+          role="status"
+        >
+          {turnCopy.primary}
+        </p>
+      )}
+      {inFirstMovePhase && (
+        <p className="text-center text-xs text-amber-300/80">
+          First move · 30s to play or the game is aborted
+        </p>
+      )}
       <ClockRow
         label="Black"
         timeMs={formatMs(displayBlack)}

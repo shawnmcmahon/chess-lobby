@@ -32,6 +32,13 @@ import {
   computeTurnDeadline,
   type TimeControlCategory,
 } from "./lib/timeControl";
+import {
+  FIRST_MOVE_MS,
+  buildLiveGameActivationPatch,
+  firstMoveDeadlineExpired,
+  isInFirstMovePhase,
+  timedEngineGameStartFields,
+} from "./lib/liveClock";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { PaginationOptions } from "convex/server";
@@ -322,6 +329,9 @@ function applyClockForMove(
   if (game.playType === "correspondence" || game.baseTimeMs === undefined) {
     return {};
   }
+  if (isInFirstMovePhase(game)) {
+    return {};
+  }
 
   const elapsed = now - clockStartTimestamp(game);
   const whiteTime = game.whiteTimeMs ?? game.baseTimeMs;
@@ -457,7 +467,11 @@ export const create = mutation({
         play === "correspondence" && args.daysPerTurn
           ? computeTurnDeadline(now, args.daysPerTurn)
           : undefined,
-      lastMoveAt: now,
+      ...(args.mode === "human_vs_engine" &&
+      play === "live" &&
+      args.baseTimeMs !== undefined
+        ? timedEngineGameStartFields(now)
+        : { lastMoveAt: now }),
       isPublic: args.isPublic ?? true,
     });
 
@@ -499,9 +513,7 @@ export const joinByInvite = mutation({
       }
       await ctx.db.patch(game._id, {
         blackUserId: userId,
-        status: "active",
-        updatedAt: now,
-        lastMoveAt: now,
+        ...buildLiveGameActivationPatch(game, now),
       });
       return game._id;
     }
@@ -519,9 +531,7 @@ export const joinByInvite = mutation({
     await ctx.db.patch(game._id, {
       blackGuestName: guestName,
       blackGuestSessionId: guestSessionId,
-      status: "active",
-      updatedAt: now,
-      lastMoveAt: now,
+      ...buildLiveGameActivationPatch(game, now),
     });
 
     return game._id;
@@ -555,8 +565,17 @@ export const makeMove = mutation({
     }
 
     const now = Date.now();
-    const clock = applyClockForMove(game, color, now);
-    if (clock.forfeit) {
+    const inFirstMovePhase = isInFirstMovePhase(game);
+
+    if (inFirstMovePhase && firstMoveDeadlineExpired(game, now)) {
+      await abandonGame(ctx, args.gameId, "first_move_timeout");
+      return args.gameId;
+    }
+
+    const clock = inFirstMovePhase
+      ? {}
+      : applyClockForMove(game, color, now);
+    if ("forfeit" in clock && clock.forfeit) {
       const winner = clock.forfeit === "white" ? "black" : "white";
       await finishGame(ctx, args.gameId, {
         winner,
@@ -572,10 +591,21 @@ export const makeMove = mutation({
       pgn: result.pgn,
       currentTurn: result.currentTurn,
       updatedAt: now,
-      lastMoveAt: now,
-      whiteTimeMs: clock.whiteTimeMs ?? game.whiteTimeMs,
-      blackTimeMs: clock.blackTimeMs ?? game.blackTimeMs,
     };
+
+    if (inFirstMovePhase) {
+      if (color === "white") {
+        updates.firstMoveDeadlineAt = now + FIRST_MOVE_MS;
+      } else {
+        updates.mainClockStarted = true;
+        updates.firstMoveDeadlineAt = undefined;
+        updates.lastMoveAt = now;
+      }
+    } else {
+      updates.lastMoveAt = now;
+      updates.whiteTimeMs = clock.whiteTimeMs ?? game.whiteTimeMs;
+      updates.blackTimeMs = clock.blackTimeMs ?? game.blackTimeMs;
+    }
 
     if (
       game.playType === "correspondence" &&
@@ -703,8 +733,12 @@ export const applyEngineMoveInternal = internalMutation({
     }
 
     const now = Date.now();
-    const clock = applyClockForMove(game, "black", now);
-    if (clock.forfeit) {
+    const inFirstMovePhase = isInFirstMovePhase(game);
+
+    const clock = inFirstMovePhase
+      ? {}
+      : applyClockForMove(game, "black", now);
+    if ("forfeit" in clock && clock.forfeit) {
       await finishGame(ctx, args.gameId, {
         winner: "white",
         endReason: "timeout",
@@ -718,10 +752,17 @@ export const applyEngineMoveInternal = internalMutation({
       pgn: result.pgn,
       currentTurn: result.currentTurn,
       updatedAt: now,
-      lastMoveAt: now,
-      whiteTimeMs: clock.whiteTimeMs ?? game.whiteTimeMs,
-      blackTimeMs: clock.blackTimeMs ?? game.blackTimeMs,
     };
+
+    if (inFirstMovePhase) {
+      updates.mainClockStarted = true;
+      updates.firstMoveDeadlineAt = undefined;
+      updates.lastMoveAt = now;
+    } else {
+      updates.lastMoveAt = now;
+      updates.whiteTimeMs = clock.whiteTimeMs ?? game.whiteTimeMs;
+      updates.blackTimeMs = clock.blackTimeMs ?? game.blackTimeMs;
+    }
 
     if (result.isGameOver) {
       await ctx.db.patch(args.gameId, updates);
@@ -762,6 +803,14 @@ export const processLiveTimeouts = internalMutation({
 
     for (const game of activeGames) {
       if (game.playType === "correspondence" || game.baseTimeMs === undefined) {
+        continue;
+      }
+
+      if (isInFirstMovePhase(game)) {
+        if (firstMoveDeadlineExpired(game, now)) {
+          await abandonGame(ctx, game._id, "first_move_timeout");
+          processed += 1;
+        }
         continue;
       }
 

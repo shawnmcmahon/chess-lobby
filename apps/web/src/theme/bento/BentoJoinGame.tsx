@@ -113,7 +113,7 @@ export function BentoJoinGame(props: BentoJoinGameProps) {
           style={{ lineHeight: 1.65 }}
         >
           You've been invited to a chess game. Take the {seat} pieces and the
-          clock starts when both players are seated.
+          White has 30 seconds for the first move once both players are seated.
         </p>
         <div className="bento-divider" />
         <div className="bento-mono text-[0.68rem] uppercase tracking-widest opacity-70">

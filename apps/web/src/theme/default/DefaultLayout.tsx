@@ -2,9 +2,11 @@ import { Link, Outlet } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { PresenceProvider } from "@/components/PresenceProvider";
 import { ResponsiveHeader } from "@/components/ResponsiveHeader";
+import { gameMainClassName, useIsLiveGameRoute } from "@/hooks/useIsLiveGameRoute";
 
 export function DefaultLayout() {
   const { isAuthenticated } = useConvexAuth();
+  const isGameRoute = useIsLiveGameRoute();
 
   return (
     <PresenceProvider>
@@ -24,7 +26,12 @@ export function DefaultLayout() {
             </Link>
           }
         />
-        <main className="default-main mx-auto max-w-6xl px-4 py-5 sm:py-6">
+        <main
+          className={gameMainClassName(
+            "default-main mx-auto max-w-6xl px-4 py-5 sm:py-6",
+            isGameRoute,
+          )}
+        >
           <Outlet />
         </main>
       </div>

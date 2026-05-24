@@ -2,6 +2,7 @@ import { Link, Outlet } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { PresenceProvider } from "@/components/PresenceProvider";
 import { ResponsiveHeader } from "@/components/ResponsiveHeader";
+import { gameMainClassName, useIsLiveGameRoute } from "@/hooks/useIsLiveGameRoute";
 import { DefaultLayout } from "@/theme/default/DefaultLayout";
 import { useTheme } from "@/theme/themeContext";
 
@@ -23,6 +24,7 @@ export function Layout() {
 
 function BentoLayout() {
   const { isAuthenticated } = useConvexAuth();
+  const isGameRoute = useIsLiveGameRoute();
   return (
     <PresenceProvider>
       <div
@@ -51,7 +53,12 @@ function BentoLayout() {
             </Link>
           }
         />
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 bento-stage">
+        <main
+          className={gameMainClassName(
+            "mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 bento-stage",
+            isGameRoute,
+          )}
+        >
           <Outlet />
         </main>
       </div>
@@ -61,6 +68,7 @@ function BentoLayout() {
 
 function BrutalLayout() {
   const { isAuthenticated } = useConvexAuth();
+  const isGameRoute = useIsLiveGameRoute();
   return (
     <PresenceProvider>
       <div
@@ -84,7 +92,8 @@ function BrutalLayout() {
             </Link>
           }
         />
-        <div className="brutal-marquee">
+        {!isGameRoute && (
+        <div className="brutal-marquee max-lg:hidden">
           <div className="brutal-marquee__track">
             {Array.from({ length: 4 }).map((_, i) => (
               <span key={i} className="brutal-marquee__item">
@@ -100,7 +109,13 @@ function BrutalLayout() {
             ))}
           </div>
         </div>
-        <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6 brutal-stage">
+        )}
+        <main
+          className={gameMainClassName(
+            "mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6 brutal-stage",
+            isGameRoute,
+          )}
+        >
           <Outlet />
         </main>
       </div>
@@ -110,6 +125,7 @@ function BrutalLayout() {
 
 function AtelierLayout() {
   const { isAuthenticated } = useConvexAuth();
+  const isGameRoute = useIsLiveGameRoute();
   return (
     <PresenceProvider>
       <div
@@ -148,7 +164,12 @@ function AtelierLayout() {
             </Link>
           }
         />
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 atelier-stage relative">
+        <main
+          className={gameMainClassName(
+            "mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 atelier-stage relative",
+            isGameRoute,
+          )}
+        >
           <Outlet />
         </main>
       </div>

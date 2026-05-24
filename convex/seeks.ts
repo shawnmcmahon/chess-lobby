@@ -3,54 +3,87 @@ import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./lib/auth";
 import { generateInviteToken } from "./lib/games";
 import { STARTING_FEN } from "./lib/chess";
-import { categorizeTimeControl, type TimeControlCategory } from "./lib/timeControl";
-import type { Id } from "./_generated/dataModel";
+import { categorizeTimeControl } from "./lib/timeControl";
+import { buildLiveGameActivationPatch } from "./lib/liveClock";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
-const RATING_WINDOW = 200;
 
-async function tryPairSeek(
+async function abandonQuickPairWaitingGames(
   ctx: MutationCtx,
   userId: Id<"users">,
-  userRating: number,
-  category: TimeControlCategory,
+): Promise<void> {
+  const asWhite = await ctx.db
+    .query("games")
+    .withIndex("by_whiteUser_and_status", (q) =>
+      q.eq("whiteUserId", userId).eq("status", "waiting"),
+    )
+    .collect();
+
+  for (const game of asWhite) {
+    if (game.matchSource === "quick_pair") {
+      await ctx.db.patch(game._id, {
+        status: "abandoned",
+        endReason: "cancelled",
+        updatedAt: Date.now(),
+      });
+    }
+  }
+}
+
+async function tryJoinOpenQuickPairGame(
+  ctx: MutationCtx,
+  userId: Id<"users">,
   baseTimeMs: number,
   incrementMs: number,
 ): Promise<{ gameId: Id<"games"> } | null> {
   const candidates = await ctx.db
-    .query("gameSeeks")
-    .withIndex("by_category", (q) => q.eq("timeControlCategory", category))
+    .query("games")
+    .withIndex("by_status_and_matchSource", (q) =>
+      q.eq("status", "waiting").eq("matchSource", "quick_pair"),
+    )
+    .order("desc")
     .take(20);
 
   const match = candidates.find(
-    (seek) =>
-      seek.userId !== userId &&
-      userRating >= seek.minRating &&
-      userRating <= seek.maxRating &&
-      seek.baseTimeMs === baseTimeMs &&
-      seek.incrementMs === incrementMs,
+    (game) =>
+      game.whiteUserId !== userId &&
+      game.baseTimeMs === baseTimeMs &&
+      game.incrementMs === incrementMs &&
+      !game.blackUserId &&
+      !game.blackGuestName,
   );
 
   if (!match) {
     return null;
   }
 
-  await ctx.db.delete(match._id);
-
   const now = Date.now();
-  const inviteToken = generateInviteToken();
-  const whiteIsSeeker = Math.random() < 0.5;
-  const whiteUserId = whiteIsSeeker ? match.userId : userId;
-  const blackUserId = whiteIsSeeker ? userId : match.userId;
+  await ctx.db.patch(match._id, {
+    blackUserId: userId,
+    ...buildLiveGameActivationPatch(match, now),
+  });
 
-  const gameId = await ctx.db.insert("games", {
-    status: "active",
+  return { gameId: match._id };
+}
+
+async function createQuickPairWaitingGame(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  baseTimeMs: number,
+  incrementMs: number,
+): Promise<Id<"games">> {
+  const now = Date.now();
+  const category = categorizeTimeControl(baseTimeMs, incrementMs);
+  const inviteToken = generateInviteToken();
+
+  return await ctx.db.insert("games", {
+    status: "waiting",
     mode: "human_vs_human",
     fen: STARTING_FEN,
     currentTurn: "white",
-    whiteUserId,
-    blackUserId,
+    whiteUserId: userId,
     inviteToken,
     inviteExpiresAt: now + INVITE_TTL_MS,
     createdByUserId: userId,
@@ -62,86 +95,192 @@ async function tryPairSeek(
     incrementMs,
     whiteTimeMs: baseTimeMs,
     blackTimeMs: baseTimeMs,
-    lastMoveAt: now,
     isPublic: true,
+    matchSource: "quick_pair",
   });
-
-  return { gameId };
 }
 
-export const createSeek = mutation({
+const createQuickPairReturns = v.union(
+  v.object({
+    matched: v.literal(true),
+    gameId: v.id("games"),
+  }),
+  v.object({
+    matched: v.literal(false),
+    gameId: v.id("games"),
+  }),
+);
+
+export const createQuickPair = mutation({
   args: {
     baseTimeMs: v.number(),
     incrementMs: v.number(),
   },
+  returns: createQuickPairReturns,
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    const rating = user.rating ?? 1200;
-    const category = categorizeTimeControl(args.baseTimeMs, args.incrementMs);
 
-    const existingSeeks = await ctx.db
-      .query("gameSeeks")
-      .withIndex("by_category", (q) => q.eq("timeControlCategory", category))
-      .take(50);
+    await abandonQuickPairWaitingGames(ctx, user._id);
 
-    for (const seek of existingSeeks) {
-      if (seek.userId === user._id) {
-        await ctx.db.delete(seek._id);
-      }
-    }
-
-    const paired = await tryPairSeek(
+    const joined = await tryJoinOpenQuickPairGame(
       ctx,
       user._id,
-      rating,
-      category,
       args.baseTimeMs,
       args.incrementMs,
     );
 
-    if (paired) {
-      return { matched: true as const, gameId: paired.gameId };
+    if (joined) {
+      return { matched: true as const, gameId: joined.gameId };
+    }
+
+    const gameId = await createQuickPairWaitingGame(
+      ctx,
+      user._id,
+      args.baseTimeMs,
+      args.incrementMs,
+    );
+
+    return { matched: false as const, gameId };
+  },
+});
+
+export const joinQuickPairGame = mutation({
+  args: {
+    gameId: v.id("games"),
+  },
+  returns: v.id("games"),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const game = await ctx.db.get(args.gameId);
+
+    if (!game) {
+      throw new Error("Game not found");
+    }
+    if (game.status !== "waiting" || game.matchSource !== "quick_pair") {
+      throw new Error("Game is not open for joining");
+    }
+    if (game.whiteUserId === user._id) {
+      throw new Error("You cannot join your own game");
+    }
+    if (game.blackUserId || game.blackGuestName) {
+      throw new Error("Game is full");
+    }
+    if (Date.now() > game.inviteExpiresAt) {
+      throw new Error("Game has expired");
     }
 
     const now = Date.now();
-    await ctx.db.insert("gameSeeks", {
-      userId: user._id,
-      timeControlCategory: category,
-      baseTimeMs: args.baseTimeMs,
-      incrementMs: args.incrementMs,
-      minRating: rating - RATING_WINDOW,
-      maxRating: rating + RATING_WINDOW,
-      createdAt: now,
+    await ctx.db.patch(game._id, {
+      blackUserId: user._id,
+      ...buildLiveGameActivationPatch(game, now),
     });
 
-    return { matched: false as const, gameId: null };
+    return game._id;
   },
 });
 
-export const cancelSeek = mutation({
+const hostSummary = v.object({
+  _id: v.id("users"),
+  displayName: v.optional(v.string()),
+  name: v.optional(v.string()),
+  rating: v.optional(v.number()),
+});
+
+export const listLookingForOpponent = query({
   args: {},
+  returns: v.array(
+    v.object({
+      game: v.object({
+        _id: v.id("games"),
+        baseTimeMs: v.optional(v.number()),
+        incrementMs: v.optional(v.number()),
+        timeControlCategory: v.optional(v.string()),
+        status: v.string(),
+        matchSource: v.optional(v.literal("quick_pair")),
+      }),
+      host: v.union(hostSummary, v.null()),
+      isOwnGame: v.boolean(),
+    }),
+  ),
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
-    const seeks = await ctx.db
-      .query("gameSeeks")
-      .take(100);
+    const now = Date.now();
 
-    for (const seek of seeks) {
-      if (seek.userId === user._id) {
-        await ctx.db.delete(seek._id);
+    const candidates = await ctx.db
+      .query("games")
+      .withIndex("by_status_and_matchSource", (q) =>
+        q.eq("status", "waiting").eq("matchSource", "quick_pair"),
+      )
+      .order("desc")
+      .take(20);
+
+    const openGames = candidates.filter(
+      (game) =>
+        !game.blackUserId &&
+        !game.blackGuestName &&
+        game.inviteExpiresAt > now,
+    );
+
+    return await Promise.all(
+      openGames.map(async (game) => {
+        const hostId = game.whiteUserId ?? game.createdByUserId;
+        let host: Doc<"users"> | null = null;
+        if (hostId) {
+          host = await ctx.db.get(hostId);
+        }
+
+        return {
+          game: {
+            _id: game._id,
+            baseTimeMs: game.baseTimeMs,
+            incrementMs: game.incrementMs,
+            timeControlCategory: game.timeControlCategory,
+            status: game.status,
+            matchSource: game.matchSource,
+          },
+          host: host
+            ? {
+                _id: host._id,
+                displayName: host.displayName,
+                name: host.name,
+                rating: host.rating,
+              }
+            : null,
+          isOwnGame: hostId === user._id,
+        };
+      }),
+    );
+  },
+});
+
+export const cancelQuickPair = mutation({
+  args: {
+    gameId: v.optional(v.id("games")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (args.gameId) {
+      const game = await ctx.db.get(args.gameId);
+      if (!game) {
+        throw new Error("Game not found");
       }
+      if (game.status !== "waiting" || game.matchSource !== "quick_pair") {
+        throw new Error("Game is not a quick-pair lobby game");
+      }
+      if (game.whiteUserId !== user._id && game.createdByUserId !== user._id) {
+        throw new Error("You cannot cancel this game");
+      }
+      await ctx.db.patch(game._id, {
+        status: "abandoned",
+        endReason: "cancelled",
+        updatedAt: Date.now(),
+      });
+      return null;
     }
-  },
-});
 
-export const getMySeek = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getCurrentUser(ctx);
-    const seeks = await ctx.db
-      .query("gameSeeks")
-      .take(100);
-
-    return seeks.find((s) => s.userId === user._id) ?? null;
+    await abandonQuickPairWaitingGames(ctx, user._id);
+    return null;
   },
 });

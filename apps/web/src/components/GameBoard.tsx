@@ -6,12 +6,16 @@ import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "./ChessBoardView";
 import { GameClock } from "./GameClock";
+import { getTurnIndicatorCopy } from "@/lib/turnIndicator";
 
 type GameBoardProps = {
   game: Doc<"games">;
   myColor: "white" | "black" | null;
   isAuthenticated: boolean;
   readOnly?: boolean;
+  whiteName?: string;
+  blackName?: string;
+  spectate?: boolean;
 };
 
 export function GameBoard({
@@ -19,6 +23,9 @@ export function GameBoard({
   myColor,
   isAuthenticated,
   readOnly = false,
+  whiteName = "White",
+  blackName = "Black",
+  spectate = false,
 }: GameBoardProps) {
   const makeMove = useMutation(api.games.makeMove);
   const resign = useMutation(api.games.resign);
@@ -77,8 +84,25 @@ export function GameBoard({
     game.status === "active" &&
     game.currentTurn === "black";
 
+  const turnCopy =
+    game.status === "active"
+      ? getTurnIndicatorCopy({
+          currentTurn: game.currentTurn,
+          myColor,
+          spectate,
+          whiteName,
+          blackName,
+          status: game.status,
+        })
+      : null;
+
   return (
     <div className="space-y-3">
+      {turnCopy && (
+        <p className="sr-only" aria-live="polite">
+          {turnCopy.primary}. {turnCopy.secondary}
+        </p>
+      )}
       <GameClock
         whiteTimeMs={game.whiteTimeMs}
         blackTimeMs={game.blackTimeMs}
@@ -88,6 +112,13 @@ export function GameBoard({
         playType={game.playType}
         turnDeadlineAt={game.turnDeadlineAt}
         daysPerTurn={game.daysPerTurn}
+        mainClockStarted={game.mainClockStarted}
+        firstMoveDeadlineAt={game.firstMoveDeadlineAt}
+        baseTimeMs={game.baseTimeMs}
+        myColor={myColor}
+        spectate={spectate}
+        whiteName={whiteName}
+        blackName={blackName}
       />
       <div
         className="mx-auto flex min-h-6 max-w-[480px] items-center justify-center text-sm"

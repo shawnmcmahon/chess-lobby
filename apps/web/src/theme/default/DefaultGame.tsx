@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
+import { GameAbortedBanner } from "@/components/GameAbortedBanner";
 import { GameBoard } from "@/components/GameBoard";
 import { GameChat } from "@/components/GameChat";
 import { GameDisconnectStatus } from "@/components/GameDisconnectStatus";
+import { TurnIndicator } from "@/components/TurnIndicator";
 import type { GameController } from "@/hooks/useGameController";
 import { getGameChatProps } from "@/lib/gameChat";
 
@@ -25,10 +27,23 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
   }
   const game = ctrl.game;
   const inviteUrl = `${window.location.origin}/game/join/${game.inviteToken}`;
+  const myColor = ctrl.spectate ? null : ctrl.myColor;
 
   return (
-    <div className="space-y-4">
-      <section className="default-panel default-panel--accent flex flex-wrap items-center justify-between gap-3 p-5">
+    <div className="space-y-3 lg:space-y-4">
+      <GameAbortedBanner
+        theme="default"
+        status={game.status}
+        endReason={game.endReason}
+      />
+
+      <div className="flex items-center justify-end lg:hidden">
+        <Link to="/dashboard" className="default-btn default-btn--ghost text-sm">
+          Dashboard
+        </Link>
+      </div>
+
+      <section className="default-panel default-panel--accent hidden flex-wrap items-center justify-between gap-3 p-5 lg:flex">
         <div>
           <p className="default-mono text-[0.62rem] uppercase tracking-[0.24em] text-[var(--default-ember-dim)]">
             Match
@@ -86,16 +101,30 @@ export function DefaultGame({ ctrl }: { ctrl: GameController }) {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <div className="default-board-frame">
-          <div className="default-board-frame__glow" aria-hidden />
-          <div className="default-board-frame__inner p-2">
-            <GameBoard
-              game={game}
-              myColor={ctrl.spectate ? null : ctrl.myColor}
-              isAuthenticated={ctrl.isAuthenticated}
-              readOnly={ctrl.spectate}
-            />
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px] lg:gap-6">
+        <div className="min-w-0 space-y-3">
+          <TurnIndicator
+            theme="default"
+            currentTurn={game.currentTurn}
+            myColor={myColor}
+            spectate={ctrl.spectate}
+            whiteName={ctrl.whiteName}
+            blackName={ctrl.blackName}
+            status={game.status}
+          />
+          <div className="default-board-frame">
+            <div className="default-board-frame__glow" aria-hidden />
+            <div className="default-board-frame__inner p-2">
+              <GameBoard
+                game={game}
+                myColor={myColor}
+                isAuthenticated={ctrl.isAuthenticated}
+                readOnly={ctrl.spectate}
+                whiteName={ctrl.whiteName}
+                blackName={ctrl.blackName}
+                spectate={ctrl.spectate}
+              />
+            </div>
           </div>
         </div>
         <GameChat {...getGameChatProps(ctrl, game)} />

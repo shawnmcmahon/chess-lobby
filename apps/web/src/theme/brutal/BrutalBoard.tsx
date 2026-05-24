@@ -6,6 +6,7 @@ import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { formatDaysLeft } from "@/lib/correspondenceClock";
+import { getLiveClockDisplay } from "@/lib/liveClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -30,19 +31,14 @@ export function BrutalBoard({ game, myColor, isAuthenticated, readOnly = false }
 
   const now = useNow(game.status === "active");
 
-  const elapsed = game.status === "active" && game.lastMoveAt ? now - game.lastMoveAt : 0;
-  const displayWhite =
-    game.whiteTimeMs !== undefined
-      ? game.currentTurn === "white" && game.status === "active"
-        ? game.whiteTimeMs - elapsed
-        : game.whiteTimeMs
-      : null;
-  const displayBlack =
-    game.blackTimeMs !== undefined
-      ? game.currentTurn === "black" && game.status === "active"
-        ? game.blackTimeMs - elapsed
-        : game.blackTimeMs
-      : null;
+  const { displayWhite, displayBlack, inFirstMovePhase } = getLiveClockDisplay(
+    game,
+    now,
+  );
+  const displayWhiteOrNull =
+    game.whiteTimeMs !== undefined ? displayWhite : null;
+  const displayBlackOrNull =
+    game.blackTimeMs !== undefined ? displayBlack : null;
 
   const boardOrientation = myColor === "black" ? "black" : "white";
   const canMove =
@@ -86,9 +82,14 @@ export function BrutalBoard({ game, myColor, isAuthenticated, readOnly = false }
 
   return (
     <div className="space-y-4">
+      {inFirstMovePhase && (
+        <p className="brutal-display text-center text-[0.85rem] text-[var(--brutal-magenta)]">
+          FIRST MOVE · 30S OR ABORT
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3">
-        <ClockBlock label="Black" time={displayBlack} active={game.currentTurn === "black"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
-        <ClockBlock label="White" time={displayWhite} active={game.currentTurn === "white"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
+        <ClockBlock label="Black" time={displayBlackOrNull} active={game.currentTurn === "black"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
+        <ClockBlock label="White" time={displayWhiteOrNull} active={game.currentTurn === "white"} status={game.status} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
       </div>
       <div className="brutal-board-frame">
         <span className="brutal-sticker" style={{ top: -16, left: -16 }} data-tilt="left">
@@ -115,7 +116,7 @@ export function BrutalBoard({ game, myColor, isAuthenticated, readOnly = false }
           className="mt-3 flex items-center justify-between brutal-display"
           style={{ color: "var(--brutal-yellow)", fontSize: "0.85rem" }}
         >
-          <span>{engineThinking ? "CPU CALCULATING…" : `${game.currentTurn.toUpperCase()} TO MOVE`}</span>
+          <span>{engineThinking ? "CPU CALCULATING…" : game.timeControlCategory ?? game.playType ?? "live"}</span>
           <span>{(game.timeControlCategory ?? game.playType ?? "live").toUpperCase()}</span>
         </div>
       </div>

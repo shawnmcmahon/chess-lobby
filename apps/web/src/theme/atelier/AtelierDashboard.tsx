@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import { ChessBoardView } from "@/components/ChessBoardView";
+import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import type { DashboardController } from "@/hooks/useDashboardController";
 import { TIME_CONTROL_PRESETS, CORRESPONDENCE_DAY_OPTIONS } from "@/lib/timeControl";
@@ -55,6 +56,14 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
           />
         </div>
       </header>
+
+      <LookingForOpponentSection
+        theme="atelier"
+        entries={ctrl.lookingForOpponent}
+        loading={ctrl.quickPairLoading}
+        onJoin={ctrl.onJoinLookingForOpponent}
+        onCancel={ctrl.onCancelLookingForOpponent}
+      />
 
       {ctrl.pendingInvites && ctrl.pendingInvites.length > 0 && (
         <section className="atelier-panel atelier-panel--parchment">
@@ -249,10 +258,7 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => {
-                    ctrl.setTab(id);
-                    ctrl.stopSeeking();
-                  }}
+                  onClick={() => ctrl.setTab(id)}
                   className="atelier-smallcaps"
                   style={{
                     padding: "6px 14px",
@@ -274,55 +280,22 @@ export function AtelierDashboard({ ctrl }: { ctrl: DashboardController }) {
           </div>
 
           {ctrl.tab === "quickPair" && (
-            <>
-              {ctrl.noOtherPlayersOnline && (
-                <p
-                  className="atelier-smallcaps mt-4"
-                  style={{ color: "var(--atelier-oxblood)" }}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+              {TIME_CONTROL_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  disabled={ctrl.quickPairLoading}
+                  onClick={() => void ctrl.onQuickPair(p)}
+                  className="atelier-preset"
+                  style={presetStyle}
                 >
-                  No other players online — quick pairing requires company in the lobby.
-                </p>
-              )}
-              {ctrl.seeking && (
-                <div
-                  className="atelier-smallcaps mt-4 flex items-center gap-3"
-                  style={{ color: "var(--atelier-brass)" }}
-                >
-                  <span
-                    className="inline-block h-2 w-2 rounded-full animate-pulse"
-                    style={{ background: "var(--atelier-brass)" }}
-                  />
-                  Pairing in progress
-                  <button
-                    type="button"
-                    onClick={ctrl.stopSeeking}
-                    className="underline"
-                    style={{
-                      color: "var(--atelier-oxblood)",
-                      textDecorationStyle: "dotted",
-                    }}
-                  >
-                    cancel
-                  </button>
-                </div>
-              )}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
-                {TIME_CONTROL_PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    disabled={ctrl.seeking || ctrl.noOtherPlayersOnline}
-                    onClick={() => void ctrl.onQuickPair(p)}
-                    className="atelier-preset"
-                    style={presetStyle}
-                  >
-                    <div className="atelier-display" style={{ fontSize: "1.4rem", fontStyle: "italic", color: "var(--atelier-parchment)" }}>
-                      {p.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
+                  <div className="atelier-display" style={{ fontSize: "1.4rem", fontStyle: "italic", color: "var(--atelier-parchment)" }}>
+                    {p.label}
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
 
           {ctrl.tab === "computer" && (

@@ -6,6 +6,7 @@ import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { getGuestSessionId } from "@/lib/guestSession";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { formatDaysLeft } from "@/lib/correspondenceClock";
+import { getLiveClockDisplay } from "@/lib/liveClock";
 import { useNow } from "@/hooks/useNow";
 
 type Props = {
@@ -30,19 +31,14 @@ export function AtelierBoard({ game, myColor, isAuthenticated, readOnly = false 
 
   const now = useNow(game.status === "active");
 
-  const elapsed = game.status === "active" && game.lastMoveAt ? now - game.lastMoveAt : 0;
-  const displayWhite =
-    game.whiteTimeMs !== undefined
-      ? game.currentTurn === "white" && game.status === "active"
-        ? game.whiteTimeMs - elapsed
-        : game.whiteTimeMs
-      : null;
-  const displayBlack =
-    game.blackTimeMs !== undefined
-      ? game.currentTurn === "black" && game.status === "active"
-        ? game.blackTimeMs - elapsed
-        : game.blackTimeMs
-      : null;
+  const { displayWhite, displayBlack, inFirstMovePhase } = getLiveClockDisplay(
+    game,
+    now,
+  );
+  const displayWhiteOrNull =
+    game.whiteTimeMs !== undefined ? displayWhite : null;
+  const displayBlackOrNull =
+    game.blackTimeMs !== undefined ? displayBlack : null;
 
   const boardOrientation = myColor === "black" ? "black" : "white";
   const canMove =
@@ -102,20 +98,27 @@ export function AtelierBoard({ game, myColor, isAuthenticated, readOnly = false 
             readOnly={readOnly}
             allowDrawingArrows
           />
-          <div className="mt-2 flex items-center justify-between px-1">
+          <div className="mt-2 flex items-center justify-center px-1">
             <span className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
-              {engineThinking ? "machine cogitating" : `${game.currentTurn} to play`}
-            </span>
-            <span className="atelier-smallcaps" style={{ color: "var(--atelier-brass)" }}>
-              {game.timeControlCategory ?? game.playType ?? "live"}
+              {engineThinking
+                ? "machine cogitating"
+                : (game.timeControlCategory ?? game.playType ?? "live")}
             </span>
           </div>
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-6">
-        <Dial label="Black" timeMs={displayBlack} active={game.currentTurn === "black" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
-        <Dial label="White" timeMs={displayWhite} active={game.currentTurn === "white" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
+        {inFirstMovePhase && (
+          <p
+            className="atelier-smallcaps col-span-2 text-center"
+            style={{ color: "var(--atelier-brass)" }}
+          >
+            First move · 30s to play or the game is aborted
+          </p>
+        )}
+        <Dial label="Black" timeMs={displayBlackOrNull} active={game.currentTurn === "black" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "black"} now={now} />
+        <Dial label="White" timeMs={displayWhiteOrNull} active={game.currentTurn === "white" && game.status === "active"} playType={game.playType} turnDeadlineAt={game.turnDeadlineAt} daysPerTurn={game.daysPerTurn} isTurnSide={game.currentTurn === "white"} now={now} />
       </div>
 
       {error && (
