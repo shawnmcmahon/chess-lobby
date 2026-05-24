@@ -7,4 +7,4 @@ services:
       - "8080:8080"
     environment:
       ENGINE_API_KEY: dev-secret
-      STOCKFISH_PATH: stockfish
+      STOCKFISH_PATH: /usr/games/stockfish

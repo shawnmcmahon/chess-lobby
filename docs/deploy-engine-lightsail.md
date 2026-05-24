@@ -114,7 +114,7 @@ Create `engine-deployment.json`:
       "ports": { "8080": "HTTP" },
       "environment": {
         "ENGINE_API_KEY": "your-generated-secret",
-        "STOCKFISH_PATH": "stockfish",
+        "STOCKFISH_PATH": "/usr/games/stockfish",
         "ASPNETCORE_URLS": "http://+:8080"
       }
     }
@@ -189,7 +189,7 @@ For lowest cost with a bit more setup:
    ```bash
    docker run -d --restart unless-stopped -p 8080:8080 \
      -e ENGINE_API_KEY='your-generated-secret' \
-     -e STOCKFISH_PATH=stockfish \
+     -e STOCKFISH_PATH=/usr/games/stockfish \
      chess-engine:latest
    ```
 

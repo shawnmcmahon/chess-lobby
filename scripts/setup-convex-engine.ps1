@@ -20,7 +20,7 @@ if (-not $env:ENGINE_API_KEY) {
 
 $url = $env:ENGINE_API_URL.TrimEnd("/")
 if ($url -match "localhost|127\.0\.0\.1") {
-    Write-Host "ENGINE_API_URL cannot be localhost — cloud Convex cannot reach it." -ForegroundColor Red
+    Write-Host "ENGINE_API_URL cannot be localhost - cloud Convex cannot reach it." -ForegroundColor Red
     exit 1
 }
 
