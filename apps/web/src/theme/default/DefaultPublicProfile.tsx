@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { categoryWinRatePercent } from "@/lib/stats";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 
 const CATEGORIES = [
@@ -104,7 +105,8 @@ export function DefaultPublicProfile({
                 <div key={cat} className="default-list-item px-3 py-2 text-sm capitalize">
                   <div className="font-medium">{cat}</div>
                   <div className="default-mono text-[var(--default-mist)]">
-                    {s.wins}W / {s.losses}L / {s.draws}D
+                    {s.wins}W / {s.losses}L / {s.draws}D ·{" "}
+                    {categoryWinRatePercent(s.wins, s.losses, s.draws)} win rate
                   </div>
                 </div>
               );
