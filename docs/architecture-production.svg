@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" role="img" aria-label="Chess Lobby production architecture">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#475569"/>
+    </marker>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="920" height="520" fill="#f8fafc"/>
+
+  <text x="460" y="34" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="700" fill="#0f172a">
+    Production architecture
+  </text>
+  <text x="460" y="56" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#64748b">
+    Runtime traffic and deploy path
+  </text>
+
+  <!-- AWS group -->
+  <rect x="40" y="88" width="420" height="250" rx="14" fill="#fff7ed" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="58" y="112" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#c2410c">AWS</text>
+
+  <!-- Convex group -->
+  <rect x="460" y="88" width="420" height="250" rx="14" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="478" y="112" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#6d28d9">Convex Cloud</text>
+
+  <!-- CI group -->
+  <rect x="300" y="360" width="320" height="88" rx="14" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="318" y="384" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700" fill="#334155">GitHub Actions</text>
+
+  <!-- Nodes -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="150" width="150" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="145" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Player browser</text>
+    <text x="145" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">React SPA</text>
+
+    <rect x="260" y="150" width="150" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
+    <text x="335" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">CloudFront</text>
+    <text x="335" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">HTTPS CDN</text>
+
+    <rect x="260" y="250" width="150" height="56" rx="10" fill="#ffffff" stroke="#fdba74"/>
+    <text x="335" y="276" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">S3 bucket</text>
+    <text x="335" y="294" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Static build</text>
+
+    <rect x="500" y="150" width="170" height="56" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="585" y="176" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Convex Cloud</text>
+    <text x="585" y="194" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">Auth, DB, realtime</text>
+
+    <rect x="500" y="250" width="170" height="56" rx="10" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="585" y="276" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Built-in engine</text>
+    <text x="585" y="294" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#64748b">chess.js minimax</text>
+
+    <rect x="340" y="392" width="240" height="44" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="460" y="420" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Deploy workflow</text>
+  </g>
+
+  <!-- Arrows -->
+  <line x1="220" y1="178" x2="258" y2="178" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="239" y="168" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">HTTPS</text>
+
+  <line x1="335" y1="206" x2="335" y2="248" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <line x1="220" y1="188" x2="498" y2="178" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="360" y="168" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">WebSocket</text>
+
+  <line x1="585" y1="206" x2="585" y2="248" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <line x1="400" y1="414" x2="335" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="350" y="352" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">upload build</text>
+
+  <line x1="520" y1="414" x2="585" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="570" y="352" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#475569">convex deploy</text>
+</svg>

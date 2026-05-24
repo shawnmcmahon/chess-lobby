@@ -62,22 +62,7 @@ Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-i
 
 Runtime traffic and deploy path in production:
 
-```mermaid
-flowchart TD
-  Browser[Player browser]
-  CF[CloudFront CDN]
-  S3[S3 static site]
-  Convex[Convex Cloud]
-  Engine[Built-in chess engine]
-  CI[GitHub Actions]
-
-  Browser -->|HTTPS| CF
-  CF --> S3
-  Browser -->|WebSocket| Convex
-  Convex --> Engine
-  CI -->|upload build| S3
-  CI -->|deploy| Convex
-```
+![Production architecture](docs/architecture-production.svg)
 
 - **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
 - **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
