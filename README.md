@@ -4,6 +4,19 @@
 
 Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** uses Stockfish on AWS Lightsail in production.
 
+## Contents
+
+- [Features](#features)
+- [UI themes](#ui-themes)
+- [Architecture](#architecture)
+- [Monorepo layout](#monorepo-layout)
+- [Prerequisites](#prerequisites)
+- [Quick start (local)](#quick-start-local)
+- [Production hosting (minimal demo)](#production-hosting-minimal-demo)
+- [Scripts](#scripts)
+- [Environment variables](#environment-variables)
+- [Docs](#docs)
+
 ## Features
 
 - Sign in with **Google** or **email/password** (Convex Auth)
@@ -179,3 +192,12 @@ Wire Convex to the engine: `.\scripts\setup-convex-engine.ps1` (after setting `E
 | `SITE_URL` | Convex | OAuth redirect base |
 | `ENGINE_API_URL` / `ENGINE_API_KEY` | Convex | Stockfish service |
 | `ENGINE_API_KEY` | chess-engine | API auth |
+
+## Docs
+
+| Topic | Guide |
+|-------|--------|
+| SPA routing (React Router, refresh / CloudFront fallback) | [docs/spa-routing.md](docs/spa-routing.md) |
+| Demo deploy (S3 + CloudFront + Convex) | [docs/deploy-demo.md](docs/deploy-demo.md) |
+| Stockfish on Lightsail | [docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md) |
+| AWS stack outputs (env template) | [docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example) |
