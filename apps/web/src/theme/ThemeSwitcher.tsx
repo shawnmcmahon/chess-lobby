@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useTheme } from "./themeContext";
 import { THEMES, type ThemeId } from "./themes";
 
-export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
+export function ThemeSwitcher({
+  compact = false,
+  menuPlacement = "below",
+}: {
+  compact?: boolean;
+  menuPlacement?: "above" | "below";
+}) {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,7 +52,10 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
         )}
       </button>
       {open && (
-        <ul role="listbox" className="theme-switcher__menu">
+        <ul
+          role="listbox"
+          className={`theme-switcher__menu${menuPlacement === "above" ? " theme-switcher__menu--above" : ""}`}
+        >
           {THEMES.map((t) => (
             <li key={t.id}>
               <button

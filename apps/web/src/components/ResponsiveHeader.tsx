@@ -64,10 +64,10 @@ function SignButton({
 
   if (isAuthenticated) {
     const classes = {
-      default: "default-btn default-btn--ghost w-full justify-center lg:w-auto",
-      bento: "bento-btn bento-btn--ghost w-full justify-center lg:w-auto",
-      brutal: "brutal-btn brutal-btn--ghost w-full justify-center lg:w-auto",
-      atelier: "atelier-btn atelier-btn--ghost w-full justify-center lg:w-auto",
+      default: "default-btn default-btn--ghost w-full justify-center xl:w-auto",
+      bento: "bento-btn bento-btn--ghost w-full justify-center xl:w-auto",
+      brutal: "brutal-btn brutal-btn--ghost w-full justify-center xl:w-auto",
+      atelier: "atelier-btn atelier-btn--ghost w-full justify-center xl:w-auto",
     } as const;
     return (
       <button type="button" onClick={() => void signOut()} className={classes[variant]}>
