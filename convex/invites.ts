@@ -124,6 +124,9 @@ export const accept = mutation({
     if (!game) {
       throw new Error("Game not found");
     }
+    if (game.status !== "waiting") {
+      throw new Error("Game is no longer open for joining");
+    }
 
     const now = Date.now();
     await ctx.db.patch(invite.gameId, {

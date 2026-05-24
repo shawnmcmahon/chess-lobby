@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
@@ -174,10 +175,10 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                 ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
                   (g.currentTurn === "black" && g.blackUserId === u._id));
               return (
-                <li key={g._id}>
+                <li key={g._id} className="flex items-stretch gap-2">
                   <Link
                     to={`/game/${g._id}`}
-                    className="brutal-card flex items-center justify-between gap-2"
+                    className="brutal-card flex min-w-0 flex-1 items-center justify-between gap-2"
                     style={{
                       padding: 12,
                       boxShadow: "4px 4px 0 var(--brutal-ink)",
@@ -195,6 +196,13 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                       </span>
                     )}
                   </Link>
+                  {ctrl.canCancelWaitingGame(g) && (
+                    <CancelWaitingGameButton
+                      gameId={g._id}
+                      variant="icon"
+                      theme="brutal"
+                    />
+                  )}
                 </li>
               );
             })}
@@ -216,11 +224,11 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
           </h2>
           <ul className="mt-4 space-y-2">
             {ctrl.liveActiveGames.map((g) => (
-              <li key={g._id}>
+              <li key={g._id} className="flex items-stretch gap-2">
                 <Link
                   to={`/game/${g._id}`}
                   aria-label={`Open ${(g.timeControlCategory ?? "live").toUpperCase()} game (${g.status})`}
-                  className="brutal-card brutal-card--paper flex items-center justify-between"
+                  className="brutal-card brutal-card--paper flex min-w-0 flex-1 items-center justify-between"
                   style={{ padding: 12, boxShadow: "4px 4px 0 var(--brutal-ink)" }}
                 >
                   <span className="brutal-display" style={{ fontSize: "0.95rem" }}>
@@ -231,6 +239,13 @@ export function BrutalDashboard({ ctrl }: { ctrl: DashboardController }) {
                     →
                   </span>
                 </Link>
+                {ctrl.canCancelWaitingGame(g) && (
+                  <CancelWaitingGameButton
+                    gameId={g._id}
+                    variant="icon"
+                    theme="brutal"
+                  />
+                )}
               </li>
             ))}
           </ul>

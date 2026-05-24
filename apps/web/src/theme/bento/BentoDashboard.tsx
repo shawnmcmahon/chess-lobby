@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
+import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { ChessBoardView } from "@/components/ChessBoardView";
 import { LookingForOpponentSection } from "@/components/LookingForOpponentSection";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
@@ -409,10 +410,10 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                 ((g.currentTurn === "white" && g.whiteUserId === u._id) ||
                   (g.currentTurn === "black" && g.blackUserId === u._id));
               return (
-                <li key={g._id}>
+                <li key={g._id} className="flex items-center gap-2">
                   <Link
                     to={`/game/${g._id}`}
-                    className="flex items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
+                    className="flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
                     style={{
                       background: isMyTurn
                         ? "rgba(245, 176, 66, 0.12)"
@@ -429,6 +430,13 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                       <span style={{ color: "var(--bento-jade)" }}>your turn →</span>
                     )}
                   </Link>
+                  {ctrl.canCancelWaitingGame(g) && (
+                    <CancelWaitingGameButton
+                      gameId={g._id}
+                      variant="icon"
+                      theme="bento"
+                    />
+                  )}
                 </li>
               );
             })}
@@ -450,10 +458,10 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
           </h3>
           <ul className="mt-4 space-y-2">
             {ctrl.liveActiveGames.map((g) => (
-              <li key={g._id}>
+              <li key={g._id} className="flex items-center gap-2">
                 <Link
                   to={`/game/${g._id}`}
-                  className="flex items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
+                  className="flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 bento-mono text-sm hover:bg-stone-100"
                   style={{ background: "rgba(14,14,16,0.04)" }}
                 >
                   <span>
@@ -461,6 +469,13 @@ export function BentoDashboard({ ctrl }: { ctrl: DashboardController }) {
                   </span>
                   <span className="opacity-60">→</span>
                 </Link>
+                {ctrl.canCancelWaitingGame(g) && (
+                  <CancelWaitingGameButton
+                    gameId={g._id}
+                    variant="icon"
+                    theme="bento"
+                  />
+                )}
               </li>
             ))}
           </ul>
