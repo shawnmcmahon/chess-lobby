@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { CancelWaitingGameButton } from "@/components/CancelWaitingGameButton";
 import { LiveGamesCarousel } from "@/components/LiveGamesCarousel";
 import { PrivateGameToggle } from "@/components/PrivateGameToggle";
 import { QuickPairGrid } from "@/components/QuickPairGrid";
