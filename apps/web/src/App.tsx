@@ -2,7 +2,10 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Layout } from "@/components/Layout";
-import { Landing } from "@/pages/Landing";
+
+const Landing = lazy(() =>
+  import("@/pages/Landing").then((m) => ({ default: m.Landing })),
+);
 
 const Dashboard = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),

@@ -1,22 +1,29 @@
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { useTheme } from "@/theme/themeContext";
-import {
-  AtelierProfile,
-  type AtelierProfileStat,
-} from "@/theme/atelier/AtelierProfile";
-import {
-  BentoProfile,
-  type BentoGameHistoryRow,
-} from "@/theme/bento/BentoProfile";
-import {
-  BrutalProfile,
-  type BrutalProfileGameRow,
-} from "@/theme/brutal/BrutalProfile";
+import type { AtelierProfileStat } from "@/theme/atelier/AtelierProfile";
+import type { BentoGameHistoryRow } from "@/theme/bento/BentoProfile";
+import type { BrutalProfileGameRow } from "@/theme/brutal/BrutalProfile";
 import { ThemeSettingsSection } from "@/components/ThemeSettingsSection";
-import { DefaultProfile } from "@/theme/default/DefaultProfile";
+
+const AtelierProfile = lazy(() =>
+  import("@/theme/atelier/AtelierProfile").then((m) => ({ default: m.AtelierProfile })),
+);
+const BentoProfile = lazy(() =>
+  import("@/theme/bento/BentoProfile").then((m) => ({ default: m.BentoProfile })),
+);
+const BrutalProfile = lazy(() =>
+  import("@/theme/brutal/BrutalProfile").then((m) => ({ default: m.BrutalProfile })),
+);
+const DefaultProfile = lazy(() =>
+  import("@/theme/default/DefaultProfile").then((m) => ({ default: m.DefaultProfile })),
+);
+
+function ProfileThemeFallback() {
+  return <div className="min-h-[40vh]" aria-hidden />;
+}
 
 const CATEGORIES = [
   "bullet",
@@ -165,88 +172,96 @@ export function Profile() {
       return (
         <>
           {themeSettings}
-          <AtelierProfile
-          loading={false}
-          rating={user.rating ?? 1200}
-          displayName={displayName}
-          onDisplayNameChange={setDisplayName}
-          bio={bio}
-          onBioChange={setBio}
-          saved={saved}
-          onSubmit={onSubmit}
-          stats={atelierStats}
-          totalWins={stats?.totalWins ?? 0}
-          totalLosses={stats?.totalLosses ?? 0}
-          totalDraws={stats?.totalDraws ?? 0}
-          gameRows={gameHistory.map((row) => ({
-            id: row.gameId,
-            opponent: row.opponent,
-            resultLabel: row.resultLabel,
-            resultTone: row.resultTone,
-            category: row.category,
-            date: row.date,
-            reviewHref: `/game/${row.gameId}/review`,
-          }))}
-          canLoadMore={status === "CanLoadMore"}
-          onLoadMore={() => loadMore(10)}
-        />
+          <Suspense fallback={<ProfileThemeFallback />}>
+            <AtelierProfile
+              loading={false}
+              rating={user.rating ?? 1200}
+              displayName={displayName}
+              onDisplayNameChange={setDisplayName}
+              bio={bio}
+              onBioChange={setBio}
+              saved={saved}
+              onSubmit={onSubmit}
+              stats={atelierStats}
+              totalWins={stats?.totalWins ?? 0}
+              totalLosses={stats?.totalLosses ?? 0}
+              totalDraws={stats?.totalDraws ?? 0}
+              gameRows={gameHistory.map((row) => ({
+                id: row.gameId,
+                opponent: row.opponent,
+                resultLabel: row.resultLabel,
+                resultTone: row.resultTone,
+                category: row.category,
+                date: row.date,
+                reviewHref: `/game/${row.gameId}/review`,
+              }))}
+              canLoadMore={status === "CanLoadMore"}
+              onLoadMore={() => loadMore(10)}
+            />
+          </Suspense>
         </>
       );
     case "bento":
       return (
         <>
           {themeSettings}
-          <BentoProfile
-          user={user}
-          stats={stats ?? undefined}
-          displayName={displayName}
-          setDisplayName={setDisplayName}
-          bio={bio}
-          setBio={setBio}
-          onSubmit={onSubmit}
-          saved={saved}
-          gameHistory={gameHistory}
-          canLoadMore={status === "CanLoadMore"}
-          onLoadMore={() => loadMore(10)}
-        />
+          <Suspense fallback={<ProfileThemeFallback />}>
+            <BentoProfile
+              user={user}
+              stats={stats ?? undefined}
+              displayName={displayName}
+              setDisplayName={setDisplayName}
+              bio={bio}
+              setBio={setBio}
+              onSubmit={onSubmit}
+              saved={saved}
+              gameHistory={gameHistory}
+              canLoadMore={status === "CanLoadMore"}
+              onLoadMore={() => loadMore(10)}
+            />
+          </Suspense>
         </>
       );
     case "brutal":
       return (
         <>
           {themeSettings}
-          <BrutalProfile
-          user={user}
-          stats={brutalStats}
-          displayName={displayName}
-          setDisplayName={setDisplayName}
-          bio={bio}
-          setBio={setBio}
-          saved={saved}
-          onSubmit={onSubmit}
-          gameRows={brutalGameRows}
-          canLoadMore={status === "CanLoadMore"}
-          onLoadMore={() => loadMore(10)}
-        />
+          <Suspense fallback={<ProfileThemeFallback />}>
+            <BrutalProfile
+              user={user}
+              stats={brutalStats}
+              displayName={displayName}
+              setDisplayName={setDisplayName}
+              bio={bio}
+              setBio={setBio}
+              saved={saved}
+              onSubmit={onSubmit}
+              gameRows={brutalGameRows}
+              canLoadMore={status === "CanLoadMore"}
+              onLoadMore={() => loadMore(10)}
+            />
+          </Suspense>
         </>
       );
     default:
       return (
         <>
           {themeSettings}
-          <DefaultProfile
-          user={user}
-          stats={stats ?? undefined}
-          displayName={displayName}
-          setDisplayName={setDisplayName}
-          bio={bio}
-          setBio={setBio}
-          onSubmit={onSubmit}
-          saved={saved}
-          finishedGames={finishedGames}
-          canLoadMore={status === "CanLoadMore"}
-          onLoadMore={() => loadMore(10)}
-        />
+          <Suspense fallback={<ProfileThemeFallback />}>
+            <DefaultProfile
+              user={user}
+              stats={stats ?? undefined}
+              displayName={displayName}
+              setDisplayName={setDisplayName}
+              bio={bio}
+              setBio={setBio}
+              onSubmit={onSubmit}
+              saved={saved}
+              finishedGames={finishedGames}
+              canLoadMore={status === "CanLoadMore"}
+              onLoadMore={() => loadMore(10)}
+            />
+          </Suspense>
         </>
       );
   }

@@ -29,4 +29,37 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes("node_modules/react-chessboard") ||
+            id.includes("node_modules/@dnd-kit")
+          ) {
+            return "chessboard";
+          }
+          if (
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules/react/jsx-runtime") ||
+            id.includes("node_modules/react/index")
+          ) {
+            return "react-vendor";
+          }
+          if (
+            id.includes("node_modules/react-router") ||
+            id.includes("node_modules/@remix-run/router")
+          ) {
+            return "router";
+          }
+          if (
+            id.includes("node_modules/convex") ||
+            id.includes("node_modules/@convex-dev")
+          ) {
+            return "convex-vendor";
+          }
+        },
+      },
+    },
+  },
 });
