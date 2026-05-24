@@ -9,6 +9,7 @@ Multiplayer chess with a React frontend and Convex real-time backend. **Play vs 
 - [Features](#features)
 - [UI themes](#ui-themes)
 - [Architecture](#architecture)
+  - [How the SPA is served](#how-the-spa-is-served)
 - [Monorepo layout](#monorepo-layout)
 - [Prerequisites](#prerequisites)
 - [Quick start (local)](#quick-start-local)
@@ -80,6 +81,34 @@ Runtime traffic and deploy path in production:
 - **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
 - **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
 - **Vs computer:** Convex calls the Lightsail container over HTTPS (`POST /api/best-move` on the ASP.NET Core API); falls back to built-in minimax if the engine is down.
+
+### How the SPA is served
+
+The React app is a **single-page application**: S3 stores one HTML shell (`index.html`) plus static JS/CSS assets. There is no `dashboard.html` or `game.html` — every URL serves the same shell, then client-side JavaScript takes over.
+
+1. **First load or refresh** — CloudFront fetches from S3. For paths like `/dashboard`, S3 has no matching file, so CloudFront is configured to return `index.html` anyway (SPA fallback).
+2. **React boots** — `main.tsx` mounts `<App />` into `#root`.
+3. **React Router** — `BrowserRouter` reads the URL path and renders the matching page component (`Landing`, `Dashboard`, `Game`, etc.) without a full page reload.
+4. **In-app navigation** — `<Link>` and `useNavigate()` update the URL via the History API; only the React tree re-renders.
+
+Refresh on a deep link (e.g. `/dashboard`):
+
+```mermaid
+sequenceDiagram
+  participant Browser
+  participant CloudFront
+  participant S3
+  participant React
+
+  Browser->>CloudFront: GET /dashboard
+  CloudFront->>S3: lookup dashboard (missing)
+  S3-->>CloudFront: 404
+  CloudFront-->>Browser: 200 + index.html
+  Browser->>React: load JS, mount App
+  React->>React: BrowserRouter sees /dashboard → Dashboard
+```
+
+Route table, nested layouts, and auth guards: **[docs/spa-routing.md](docs/spa-routing.md)**.
 
 ### Local development
 
