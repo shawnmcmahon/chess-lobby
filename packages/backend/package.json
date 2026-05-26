@@ -1,0 +1,27 @@
+{
+  "name": "@chess-lobby/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.787.0",
+    "@aws-sdk/client-dynamodb": "^3.787.0",
+    "@aws-sdk/client-sqs": "^3.787.0",
+    "@aws-sdk/lib-dynamodb": "^3.787.0",
+    "chess.js": "^1.4.0",
+    "jose": "^6.0.11"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.149",
+    "@types/node": "^24.12.3",
+    "typescript": "^5.8.3"
+  }
+}

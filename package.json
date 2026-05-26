@@ -2,13 +2,15 @@
   "name": "chess-lobby",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "packages/backend"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
+    "typecheck:backend": "npm run typecheck --workspace=@chess-lobby/backend",
     "convex:dev": "npx convex dev",
     "convex:deploy": "npx convex deploy",
     "screenshots:readme": "node scripts/capture-readme-screenshots.mjs"
