@@ -2,6 +2,8 @@
 
 This branch explores migrating Chess Lobby off Convex to an AWS-native stack. **Nothing here is deployed or wired into production** — it is a code-only spike on `feature/aws-backend-rewrite`.
 
+**Full checklist:** [MIGRATION_STATUS.md](./MIGRATION_STATUS.md) — every Convex file/endpoint mapped to its AWS counterpart (~15% complete).
+
 ## Architecture
 
 ```
