@@ -40,6 +40,22 @@ export class SubscriptionsRepository {
     return (result.Items as SubscriptionRecord[] | undefined) ?? [];
   }
 
+  async delete(subscriptionKey: string, connectionId: string): Promise<void> {
+    await getDocClient().send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TABLES.subscriptions]: [
+            {
+              DeleteRequest: {
+                Key: { subscriptionKey, connectionId },
+              },
+            },
+          ],
+        },
+      }),
+    );
+  }
+
   async deleteAllForConnection(connectionId: string): Promise<void> {
     const subs = await this.listByConnection(connectionId);
     if (subs.length === 0) return;
