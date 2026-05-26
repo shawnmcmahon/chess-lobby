@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Chess Lobby AWS backend reference template. Defines DynamoDB tables and Lambda
+  function stubs. WebSocket API Gateway routes must be wired before deploy —
+  this file is documentation-only and is NOT deployed by CI.
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 30
+    MemorySize: 256
+    Architectures:
+      - arm64
+
+Resources:
+  GamesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "chess-lobby-games-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: gameId
+          AttributeType: S
+        - AttributeName: inviteToken
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: gameId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      GlobalSecondaryIndexes:
+        - IndexName: by_inviteToken
+          KeySchema:
+            - AttributeName: inviteToken
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: by_status
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "chess-lobby-users-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+
+  ConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "chess-lobby-connections-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  SubscriptionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "chess-lobby-subscriptions-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: subscriptionKey
+          AttributeType: S
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: subscriptionKey
+          KeyType: HASH
+        - AttributeName: connectionId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: by_connectionId
+          KeySchema:
+            - AttributeName: connectionId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Handler entry points live in packages/backend/src/handlers/
+  # Bundle with esbuild/sam build before deploy.
+  MessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "chess-lobby-ws-message-${Stage}"
+      CodeUri: ../../packages/backend/
+      Handler: dist/handlers/websocket/message.handler
+      Environment:
+        Variables:
+          GAMES_TABLE: !Ref GamesTable
+          SUBSCRIPTIONS_TABLE: !Ref SubscriptionsTable
+          CONNECTIONS_TABLE: !Ref ConnectionsTable
+
+Outputs:
+  GamesTableName:
+    Value: !Ref GamesTable
+  WebSocketHandlersNote:
+    Value: "Wire API Gateway WebSocket $connect/$disconnect/$default routes to Lambda handlers in packages/backend/src/handlers/websocket/"
