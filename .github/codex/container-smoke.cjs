@@ -1,6 +1,9 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const cp = require('node:child_process');
+const net = require('node:net');
+const os = require('node:os');
+assert.deepEqual(Object.keys(os.networkInterfaces()),['lo'],'Candidate execution must have only loopback networking');
 for (const name of ['GITHUB_ENV','GITHUB_OUTPUT','GITHUB_PATH','GITHUB_TOKEN','OPENAI_API_KEY','ACTIONS_RUNTIME_TOKEN','BASH_ENV']) assert.equal(process.env[name],undefined,`${name} must not reach candidate code`);
 const readOnly = path => assert.throws(()=>fs.appendFileSync(path,'attempted host mutation'),error=>['EACCES','EROFS'].includes(error.code));
 readOnly('/candidate/.git/config');
@@ -12,3 +15,7 @@ fs.writeFileSync('/candidate/isolation-passed.txt','Candidate source is writable
 // These adversarial command strings must remain plain log output.
 process.stdout.write('::set-output name=smoke-bypass::true\n::set-env name=BASH_ENV::/tmp/hook\n::add-path::/tmp/hijack\n');
 process.stdout.write('Container isolation assertions passed.\n');
+const socket = net.connect({host:'1.1.1.1',port:443});
+socket.setTimeout(3000,()=>{socket.destroy();throw new Error('Outbound connection did not fail promptly');});
+socket.on('connect',()=>{socket.destroy();throw new Error('Outbound networking must be blocked');});
+socket.on('error',error=>{assert.ok(['ENETUNREACH','EHOSTUNREACH'].includes(error.code));process.stdout.write('Outbound networking is blocked.\n');});

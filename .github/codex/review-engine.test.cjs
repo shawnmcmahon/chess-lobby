@@ -5,6 +5,12 @@ const os = require('node:os');
 const path = require('node:path');
 const cp = require('node:child_process');
 const e = require('./review-engine.cjs');
+test('networked dependency restore accepts package data without MSBuild execution', () => {
+  const {packageReferences}=require('./restore.cjs');
+  assert.deepEqual(packageReferences('<Project><PackageReference Include="xunit" Version="2.9.3" /><Target Name="Restore"><Exec Command="attack" /></Target></Project>'),['<PackageReference Include="xunit" Version="2.9.3" />']);
+  assert.throws(()=>packageReferences('<PackageReference Include="xunit" Version="$(Injected)" />'),/literal/);
+  assert.throws(()=>packageReferences('<PackageReference Include="bad&amp;name" Version="1.0.0" />'),/literal/);
+});
 test('provider identity cannot be spoofed by a matching login', () => {
   assert.equal(e.trusted({ ...e.PROVIDER, type:'Bot' }), true);
   assert.equal(e.trusted({ ...e.PROVIDER, id:1, type:'Bot' }), false);

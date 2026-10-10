@@ -9,7 +9,9 @@ const profiles = {
 };
 const profile = profiles[process.argv[2]];
 if (!profile) throw new Error('Unknown validation profile.');
-for (const [command,args] of [['npm',['ci']],...profile]) {
+// Dependencies were downloaded without repository source or lifecycle scripts.
+// Rebuild lifecycle hooks and all candidate-controlled commands only offline.
+for (const [command,args] of [['npm',['rebuild','--offline']],...profile]) {
   process.stdout.write(`Running ${command} ${args.join(' ')}\n`);
   cp.execFileSync(command,args,{cwd:process.argv[3],stdio:'inherit',env:{...process.env,VITE_CONVEX_URL:'https://placeholder.convex.cloud',NEXT_PUBLIC_CONVEX_URL:'https://example.convex.cloud'},timeout:12*60*1000});
 }

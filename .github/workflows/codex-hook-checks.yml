@@ -8,7 +8,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -36,6 +36,12 @@ jobs:
         run: |
           test -z "$SMOKE_OUTPUT"
           test -z "${BASH_ENV:-}"
+      - name: Verify manifest-only downloads and offline Chess validation
+        run: |
+          mkdir validation-candidate
+          git archive HEAD | tar -x -C validation-candidate
+          git -C validation-candidate init
+          bash .github/codex/validate-container.sh chess-lobby validation-candidate
       - name: Validate workflow syntax
         run: |
           curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz actionlint
