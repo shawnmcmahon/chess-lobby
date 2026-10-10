@@ -20,7 +20,7 @@ local network="$1" workspace="$2" script="$3"
 docker run --rm --read-only --user "$(id -u):$(id -g)" --network "$network" \
   --cap-drop=ALL --security-opt=no-new-privileges \
   --memory=4g --cpus=2 --pids-limit=512 \
-  --tmpfs /tmp:rw,nosuid,nodev,size=1g \
+  --tmpfs /tmp:rw,exec,nosuid,nodev,size=1g \
   --mount "type=bind,source=$workspace,target=/candidate" \
   "${gitMount[@]}" \
   --mount "type=bind,source=$restoreRoot/nuget,target=/dependencies/nuget" \
