@@ -1,6 +1,6 @@
 # GitHub review hook
 
-Native Codex Code Review is enabled for all pull requests on every push in this repository. Security Review runs alongside Code Review. These are repository-specific settings in ChatGPT Settings → Code Review; global preferences and credit overage are unchanged.
+Native Codex Code Review and Security Review are each enabled for all pull requests on every push in this repository. These are repository-specific settings in ChatGPT Settings → Code Review; global preferences and credit overage are unchanged.
 
 The `Codex review follow-up` GitHub workflow acknowledges current, unresolved findings from the verified Codex bot. It runs offline from the desktop, deduplicates review events, links findings and preserves an audit trail. It excludes forks, drafts, stale findings and PRs by other authors from automatic repair. It never resolves findings or merges PRs.
 
@@ -8,4 +8,4 @@ Automatic repair is credential-gated and disabled at installation. Securely add 
 
 Disable repair with `CODEX_REVIEW_REPAIR_ENABLED=false`; cancel already-running attempts in Actions. Disable the entire follow-up workflow in Actions to stop receipts. Native review switches are independent. A maintainer can replay the hook through Run workflow with a PR number, or use the documented linked-account comment `@codex fix the findings` after configuring a legacy cloud environment for the repository.
 
-Shared source, validation profiles, usage implications and recovery details: [engine guide](https://github.com/shawnmcmahon/chess-lobby/blob/d001680b3a2fe2fe97c667f7bc8910b55844d5f8/.github/codex/README.md). The workflow pins that immutable source commit; later engine updates require an explicit reviewed pin update.
+Shared source, validation profiles, usage implications and recovery details: [engine guide](https://github.com/shawnmcmahon/chess-lobby/blob/c414b1b9f7eddc9f2cd0268ff334e62611e635c1/.github/codex/README.md). The workflow pins that immutable source commit; later engine updates require an explicit reviewed pin update.
