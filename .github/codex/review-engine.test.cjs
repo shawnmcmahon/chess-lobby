@@ -24,6 +24,13 @@ test('finding keys deduplicate reordered events and change for a new head', () =
   assert.equal(e.fingerprint('a',[{id:2},{id:1}]),e.fingerprint('a',[{id:1},{id:2}]));
   assert.notEqual(e.fingerprint('a',[{id:1}]),e.fingerprint('b',[{id:1}]));
 });
+test('security summaries must be complete for the exact current head', () => {
+  const summary=(head,status)=>`<!-- codex-security-review:v1 ${JSON.stringify({headSha:head,status})} -->`;
+  assert.equal(e.completedSummaryAt(summary('head','completed'),'head'),true);
+  assert.equal(e.completedSummaryAt(summary('old','completed'),'head'),false);
+  assert.equal(e.completedSummaryAt(summary('head','running'),'head'),false);
+  assert.equal(e.completedSummaryAt('@codex please fix','head'),false);
+});
 test('audit state is accepted only from the workflow bot', () => {
   const body='<!-- codex-review-followup:v1 {"head":"a","attempt":true} -->';
   assert.equal(e.states([{id:1,body,user:{login:'shawnmcmahon',type:'User'}}]).length,0);
@@ -71,4 +78,30 @@ test('missing API credentials acknowledge real findings without starting repair'
 test('publishing aborts before writes when the PR head changed', async () => {
   const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:'new',ref:'feature',repo:{full_name:'owner/repo'}}}})}}};
   await assert.rejects(()=>e.publish({github,context:{repo:{owner:'owner',repo:'repo'}},snapshot:{number:1,head:'old'},result:{},cwd:'.',core:{}}),/refusing to push/);
+});
+test('renames enumerate both paths and publish the exact validated Git tree', async () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-rename-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  try {
+    git('init','-q'); git('config','user.email','test@example.com'); git('config','user.name','Test'); git('config','diff.renames','true');git('config','core.autocrlf','false');
+    fs.writeFileSync(path.join(dir,'before.txt'),'same content\n');git('add','.');git('commit','-qm','base');
+    const head=git('rev-parse','HEAD').trim();git('mv','before.txt','after.txt');const patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    const result={decision:'patch',patch};assert.deepEqual(e.applyResult(result,dir),['after.txt','before.txt']);
+    const expectedDigest=require('node:crypto').createHash('sha256').update(git('diff','--cached','--binary')).digest('hex');git('reset','--hard','HEAD');
+    let publishedTree;let updatedRef;
+    const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}}})},git:{createBlob:async()=>({data:{sha:'blob'}}),getCommit:async()=>({data:{tree:{sha:'parentTree'}}}),createTree:async(data)=>{publishedTree=data.tree;return {data:{sha:'newTree'}};},createCommit:async()=>({data:{sha:'commit'}}),updateRef:async(data)=>{updatedRef=data;}}}};
+    const commit=await e.publish({github,context:{repo:{owner:'owner',repo:'repo'}},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest});
+    assert.equal(commit,'commit');assert.equal(publishedTree.find(f=>f.path==='before.txt').sha,null);assert.equal(publishedTree.find(f=>f.path==='after.txt').sha,'blob');assert.equal(updatedRef.force,false);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('a draft PR by another author receives an audit receipt without a repair', async () => {
+  const provider={...e.PROVIDER,type:'Bot'};const head='head';const receipts=[];
+  const pr={state:'open',draft:true,user:{login:'collaborator'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}};
+  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:'chatgpt-codex-connector'},commit:{oid:head}};
+  const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
+  const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread]}}}}),paginate:async()=>[],rest:{pulls:{get:async()=>({data:pr}),getReviewComment:async()=>({data:{user:provider,commit_id:head,html_url:'https://example.test/finding'}})},issues:{listComments(){},createComment:async(data)=>{receipts.push(data.body);return {data:{id:20}};}}}};
+  const core={info(){},setOutput(){},summary:{addRaw(){return this;},async write(){}}};
+  const context={repo:{owner:'owner',repo:'repo'},eventName:'pull_request_review',runId:30,payload:{pull_request:{number:1},review:{user:provider,commit_id:head}}};
+  const snapshot=await e.gate({github,context,core,enabled:true,hasKey:true});
+  assert.equal(snapshot.run_fix,false);assert.match(receipts[0],/need a maintainer/);
 });

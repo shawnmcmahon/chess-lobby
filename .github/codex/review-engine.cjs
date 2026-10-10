@@ -9,6 +9,11 @@ const actionable = (body) => /\bP[012]\b|\b(?:Critical|High|Medium)\b/i.test(bod
 const clean = (text) => String(text || '').replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, '').slice(0, 6000);
 const fingerprint = (head, findings) => crypto.createHash('sha256').update(JSON.stringify([head, findings.map(f => f.id).sort()])).digest('hex').slice(0, 24);
 const eligible = (pr, repository) => pr.state === 'open' && !pr.draft && pr.head.repo?.full_name === repository && pr.user.login === 'shawnmcmahon' && !pr.head.ref.startsWith('codex/review-fix-');
+function completedSummaryAt(body, head) {
+  const match = String(body || '').match(/<!-- codex-security-review:v1 (\{[^\n]*\}) -->/);
+  if (!match) return false;
+  try { const metadata=JSON.parse(match[1]);return metadata.status === 'completed' && metadata.headSha === head; } catch {return false;}
+}
 function states(comments) {
   return comments.filter(c => c.user.login === 'github-actions[bot]' && c.user.type === 'Bot').flatMap(c => {
     const start = c.body.indexOf(MARKER);
@@ -61,17 +66,23 @@ async function gate({ github, context, core, enabled, hasKey }) {
   const number = Number(event.pull_request?.number || event.issue?.number || event.inputs?.pull_request);
   if (!Number.isSafeInteger(number) || number < 1 || (!manual && context.eventName === 'issue_comment' && !event.issue?.pull_request)) return null;
   const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: number });
-  if (!eligible(pr, `${context.repo.owner}/${context.repo.repo}`)) { core.info('Only open, ready, same-repository PRs authored by Shawn are eligible for repair.'); return null; }
+  if (pr.state !== 'open') { core.info('Closed PRs are not acknowledged.'); return null; }
+  const repairEligible = eligible(pr, `${context.repo.owner}/${context.repo.repo}`);
   if (event.review && event.review.commit_id !== pr.head.sha) { core.info('Ignored a stale review.'); return null; }
+  if (!manual && context.eventName === 'issue_comment' && !completedSummaryAt(source.body, pr.head.sha)) { core.info('Waiting for a completed summary at the current head.'); return null; }
+  const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: number, per_page: 100 });
+  if (manual) {
+    const reviews = await github.paginate(github.rest.pulls.listReviews, { ...context.repo, pull_number: number, per_page: 100 });
+    if (!reviews.some(r => trusted(r.user) && r.commit_id === pr.head.sha && r.state !== 'DISMISSED') && !comments.some(c => trusted(c.user) && completedSummaryAt(c.body, pr.head.sha))) { core.info('The current head needs a completed provider review before replay.'); return null; }
+  }
   const findings = await getFindings(github, context.repo, number, pr.head.sha);
   if (!findings.length) { await core.summary.addRaw(`PR #${number}: no current, unresolved findings from the configured provider.`).write(); return null; }
-  const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: number, per_page: 100 });
   const history = states(comments);
   const key = fingerprint(pr.head.sha, findings);
-  const attempt = enabled && hasKey && canAttempt(history, pr.head.sha);
+  const attempt = repairEligible && enabled && hasKey && canAttempt(history, pr.head.sha);
   const previous = history.find(s => s.key === key && s.attempt === attempt);
   if (previous) { core.info('This finding set has already been acknowledged.'); return null; }
-  const reason = !enabled ? 'Automatic repair is disabled. A maintainer can ask `@codex fix the findings` using their linked account.' : !hasKey ? 'Automatic repair is waiting for a repository OPENAI_API_KEY secret. No API request was made.' : !canAttempt(history, pr.head.sha) ? 'The repair limit was reached (one attempt per head, two per PR). A maintainer must review the remaining findings.' : 'A bounded repair attempt is starting. A small patch can be pushed to this PR only after project validation and a current-head check.';
+  const reason = !repairEligible ? 'These findings need a maintainer: automatic repair applies only to open, ready, same-repository PRs authored by Shawn.' : !enabled ? 'Automatic repair is disabled. A maintainer can address the findings manually; the linked-account @codex fix trigger also requires a configured legacy cloud environment.' : !hasKey ? 'Automatic repair is waiting for a repository OPENAI_API_KEY secret. No API request was made.' : !canAttempt(history, pr.head.sha) ? 'The repair limit was reached (one attempt per head, two per PR). A maintainer must review the remaining findings.' : 'A bounded repair attempt is starting. A small patch can be pushed to this PR only after project validation and a current-head check.';
   const marker = `${MARKER}${JSON.stringify({ key, head: pr.head.sha, attempt, run: context.runId })} -->`;
   const { data: receipt } = await github.rest.issues.createComment({ ...context.repo, issue_number: number, body: `${marker}\nCodex review follow-up: ${findings.length} current finding(s) at \`${pr.head.sha}\`.\n\n${reason}\n\n${findings.map(f => `- [Finding ${f.id}](${f.url})`).join('\n')}\n\n[Workflow audit](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}). Findings remain open until a maintainer verifies the result. This hook never merges pull requests.` });
   const snapshot = { number, head: pr.head.sha, branch: pr.head.ref, findings, key, comment_id: receipt.id, run_fix: attempt };
@@ -91,7 +102,9 @@ function applyResult(result, cwd) {
   const patchPath = require('node:path').join(require('node:os').tmpdir(), `codex-${crypto.randomUUID()}.patch`);
   fs.writeFileSync(patchPath, result.patch);
   try { git(['-c', 'core.hooksPath=/dev/null', 'apply', '--index', '--whitespace=error-all', patchPath], cwd); } finally { fs.unlinkSync(patchPath); }
-  const paths = git(['diff', '--cached', '--name-only', '-z'], cwd).split('\0').filter(Boolean);
+  // Enumerate a rename as its deletion and addition so the REST tree matches the
+  // validated Git index exactly, even if rename detection is configured globally.
+  const paths = git(['diff', '--cached', '--no-renames', '--name-only', '-z'], cwd).split('\0').filter(Boolean);
   if (!paths.length || paths.length > 20) throw new Error('A patch must change between one and twenty files.');
   for (const path of paths) {
     validatePath(path);
@@ -130,4 +143,4 @@ async function finish({ github, context, core, snapshot, result, validation, pub
   await github.rest.issues.createComment({ ...context.repo, issue_number: snapshot.number, body: `Codex repair result for \`${snapshot.head}\`: ${status}\n\n${explanation}\n\nFindings remain unresolved. This hook never merges pull requests.` });
   await core.summary.addRaw(status).write();
 }
-module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, states, canAttempt, getFindings, gate, validatePath, applyResult, publish, finish };
+module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, completedSummaryAt, states, canAttempt, getFindings, gate, validatePath, applyResult, publish, finish };
