@@ -44,7 +44,7 @@ public class EngineTests
 
     [Theory]
     [InlineData("null")]
-    [InlineData("{}")] 
+    [InlineData("{}")]
     [InlineData("{")]
     [InlineData("{\"fen\":\"8/8/8/8/8/8/8/8 w - - 0 1\"}")]
     [InlineData("{\"fen\":\"4k3/8/8/8/8/8/8/4K3 w - - 0 1\\ngo infinite\"}")]
