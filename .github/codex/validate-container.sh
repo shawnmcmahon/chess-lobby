@@ -41,6 +41,8 @@ if [[ "$profile" != '--smoke' ]]; then
   # configuration, lifecycle scripts, or runner credentials/command files.
   cp "$candidate/package.json" "$candidate/package-lock.json" "$restoreRoot/source/"
   if [[ "$profile" == 'chess-lobby' ]]; then
+    mkdir -p "$restoreRoot/source/apps/web"
+    cp "$candidate/apps/web/package.json" "$restoreRoot/source/apps/web/"
     mkdir -p "$restoreRoot/source/manifests"
     cp "$candidate/apps/chess-engine/ChessEngine.csproj" "$restoreRoot/source/manifests/engine.csproj"
     cp "$candidate/tests/ChessEngine.Tests/ChessEngine.Tests.csproj" "$restoreRoot/source/manifests/tests.csproj"
