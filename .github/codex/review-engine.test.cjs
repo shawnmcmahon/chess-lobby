@@ -46,8 +46,8 @@ test('patch applies exactly to the supplied base and stale patches fail', () => 
     assert.throws(()=>e.applyResult({decision:'needs_human',patch:''},dir));
   } finally { fs.rmSync(dir,{recursive:true,force:true}); }
 });
-test('resolved, outdated and old-head findings are excluded before repair', async () => {
-  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:e.PROVIDER.login},commit:{oid:'head'}};
+test('GraphQL bot names omit the suffix; REST still verifies numeric identity', async () => {
+  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:'chatgpt-codex-connector'},commit:{oid:'head'}};
   const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
   let reads=0;
   const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread,{...thread,isResolved:true},{...thread,isOutdated:true},{...thread,comments:{pageInfo:{hasNextPage:false},nodes:[{...comment,commit:{oid:'old'}}]}}]}}}}),rest:{pulls:{getReviewComment:async()=>{reads++;return {data:{user:{...e.PROVIDER,type:'Bot'},commit_id:'head',html_url:'https://example.test/finding'}};}}}};

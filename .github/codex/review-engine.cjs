@@ -37,7 +37,7 @@ async function getFindings(github, repo, number, head) {
     for (const thread of connection.nodes) {
       if (thread.isResolved || thread.isOutdated || thread.comments.pageInfo.hasNextPage) continue;
       for (const comment of thread.comments.nodes) {
-        if (comment.author?.login !== PROVIDER.login || comment.commit?.oid !== head || !actionable(comment.body)) continue;
+        if (![PROVIDER.login, PROVIDER.login.replace(/\[bot\]$/, '')].includes(comment.author?.login) || comment.commit?.oid !== head || !actionable(comment.body)) continue;
         // REST confirms the numeric bot identity; a display name alone is not trusted.
         const { data: original } = await github.rest.pulls.getReviewComment({ ...repo, comment_id: comment.databaseId });
         if (!trusted(original.user) || original.commit_id !== head) continue;
