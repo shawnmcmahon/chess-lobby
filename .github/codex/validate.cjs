@@ -1,6 +1,6 @@
 const cp = require('node:child_process');
 const profiles = {
-  'chess-lobby': [['npm',['run','build:web']],['node',['--experimental-strip-types','--test','tests/computer-engine.test.mjs']],['pwsh',['-File','tests/deploy-engine-lambda.tests.ps1']],['dotnet',['test','tests/ChessEngine.Tests/ChessEngine.Tests.csproj','-c','Release']]],
+  'chess-lobby': [['node',['node_modules/typescript/bin/tsc','--project','convex/tsconfig.json','--noEmit']],['npm',['run','build:web']],['node',['--experimental-strip-types','--test','tests/computer-engine.test.mjs']],['pwsh',['-File','tests/deploy-engine-lambda.tests.ps1']],['dotnet',['test','tests/ChessEngine.Tests/ChessEngine.Tests.csproj','-c','Release']]],
   'community-tier-list': [['npm',['run','typecheck']],['npm',['test']],['npm',['run','lint']],['npm',['run','build']]],
   'adonea-metro-district': [['npm',['run','typecheck']],['npm',['run','verify']],['npm',['run','build']]],
   'tollgate-crossing-metro-district': [['npm',['run','typecheck']],['npm',['run','verify']],['npm',['run','build']]],

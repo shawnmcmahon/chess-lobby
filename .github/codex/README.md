@@ -33,6 +33,6 @@ Findings are never automatically resolved. Review the final commit, current CI, 
 
 ## Validation profiles
 
-Chess Lobby: web build, computer-engine regressions, Lambda deployment unit tests, .NET engine tests. Community Tier List: typecheck, tests, lint, build. Adonea and Tollgate: typecheck, verification scripts, build. Portfolio: TypeScript check and build (its legacy `next lint` script is not supported by its current Next.js version). Pristine: lint, build, typecheck, tests, and both CDK synth checks. These are offline checks; deployed integration, Docker/Lambda smoke tests, and live Convex checks still require the existing CI or a maintainer. The hook never deploys anything.
+Chess Lobby: offline Convex TypeScript check, web build, computer-engine regressions, Lambda deployment unit tests, .NET engine tests. Community Tier List: typecheck, tests, lint, build. Adonea and Tollgate: typecheck, verification scripts, build. Portfolio: TypeScript check and build (its legacy `next lint` script is not supported by its current Next.js version). Pristine: lint, build, typecheck, tests, and both CDK synth checks. These are offline checks; deployed integration, Docker/Lambda smoke tests, and live Convex checks still require the existing CI or a maintainer. The hook never deploys anything.
 
 Sources: [native GitHub reviews](https://learn.chatgpt.com/docs/third-party/github), [Codex GitHub Action](https://learn.chatgpt.com/docs/github-action), [GitHub token event behavior](https://docs.github.com/en/actions/concepts/security/github_token).

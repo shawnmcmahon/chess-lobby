@@ -17,6 +17,10 @@ jobs:
         with:
           node-version: '24'
       - run: node --test .github/codex/review-engine.test.cjs
+      - name: Check the offline Convex validation command
+        run: |
+          npm ci --ignore-scripts
+          node node_modules/typescript/bin/tsc --project convex/tsconfig.json --noEmit
       - name: Validate workflow syntax
         run: |
           curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz actionlint
