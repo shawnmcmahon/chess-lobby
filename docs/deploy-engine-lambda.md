@@ -1,6 +1,8 @@
 # On-demand Stockfish engine on AWS Lambda
 
-Implementation status (2026-10-09): the .NET 10 adapter, native engine packaging, infrastructure, deployment workflow, and tests are implemented. Production still uses Lightsail. GitHub's Linux CI has passed the container/emulator tests. Local Docker Desktop startup attempts are stopped. Local AWS CLI profiles have no credentials, but the connected AWS MCP identity has been verified in account `058264467102`, including the existing website stack and live Lightsail service; replacement deployment is underway through that connection. Production Convex settings have not been changed.
+Deployment status (2026-10-10 UTC): the .NET 10 + native Stockfish Lambda replacement is deployed in account `058264467102`, us-east-1. Production Convex now uses its Function URL. Native cold/warm requests, concurrent requests, timed production computer games, human multiplayer, private chat, password sign-in, and presence passed. The dedicated `chess-lobby-engine` Lightsail container service was deleted and its absence verified. Existing S3/CloudFront/DNS hosting is unchanged. Local Docker Desktop work is stopped; Linux image builds and validation ran in GitHub CI, and deployment used connected AWS access.
+
+Current function URL: `https://4epw473km3adiseigmyve5oggm0utkkp.lambda-url.us-east-1.on.aws/`. Deployed image digest: `sha256:7a87fda0270d7be896d625174306e8b1653e739b82301c326197ccb86b64a945`, from validated CI run `38010891434`. The runtime/backend/infrastructure source is unchanged from that tested revision. Failed startup candidates were removed; `keep-current` protects this first verified release. Future verified releases can also retain `keep-rollback`.
 
 ## Architecture and resources
 
@@ -119,7 +121,7 @@ $env:ENGINE_API_KEY = 'your-existing-strong-key-from-secure-storage'
 ./scripts/deploy-engine-lambda.ps1 -Profile shawnmdev
 ```
 
-The script checks identity, builds and validates the Linux image before creating resources, deploys the repository stack, pushes a unique immutable release tag, resolves the image digest, and deploys the function stack. It protects the active and previous image with rotating `keep-current`/`keep-rollback` tags so failed future candidate builds cannot expire the active image. It runs the endpoint smoke test and prints the Function URL, digest, and ECR **compressed** size. It never invokes Convex or Lightsail commands. CloudFormation's account-specific change-set validation and all live endpoint checks remain untested until authenticated deployment.
+The script checks identity, builds and validates the Linux image before creating resources, deploys the repository stack, pushes a unique immutable release tag, resolves the image digest, and deploys the function stack. It protects the active and previous image with rotating `keep-current`/`keep-rollback` tags so failed future candidate builds cannot expire the active image. It runs the endpoint smoke test and prints the Function URL, digest, and ECR **compressed** size. It never invokes Convex or Lightsail commands. Both stacks have passed account-specific change-set review and deployment. The connected-AWS path and real endpoint checks passed; the local CLI script itself has mocked sequencing coverage because local CLI credentials and Docker were unavailable.
 
 On failure, inspect the specific operation and validation events before retrying:
 
@@ -166,14 +168,46 @@ aws lightsail delete-container-service --service-name chess-lobby-engine --profi
 
 Confirm the service has been removed and check later billing. After deletion, rollback to Lightsail requires recreating it from the saved configuration; the old endpoint may change. The deployment script never performs this command. To remove the Lambda replacement, delete its function stack; its log group and ECR repository are retained and must be reviewed separately if full cleanup is desired.
 
-## Cost estimate and measurements still needed
+## Deployed measurements and monthly savings
 
-Run `node scripts/estimate-engine-cost.mjs` to calculate the **engine-only** estimate. Defaults: ten games/month, sixty engine replies/game, two billed seconds/reply, 2 GiB Lambda memory, and 1 GiB retained ECR storage. At the published [Lambda on-demand rates](https://aws.amazon.com/lambda/pricing/) and [ECR storage rate](https://aws.amazon.com/ecr/pricing/), the script computes **$0.04000 compute + $0.00012 requests + $0.10 storage = $0.14012/month**, before free allowances, logs and transfer. It excludes existing site hosting, Convex, DNS and domain renewal and is not an audited bill.
+AWS `REPORT` records separate handler and initialization time from billed duration:
 
-Replace assumed duration and retained storage with actual AWS measurements, for example:
+| Request | .NET init | Native initialization | Handler duration | Billed duration |
+|---|---:|---:|---:|---:|
+| Cold development Convex → Lambda game | 995.19 ms | 13,403 ms | 14,463.36 ms | 15,459 ms |
+| Second cold direct endpoint check | 903.53 ms | Included in handler | 5,099.48 ms | 6,004 ms |
+| Final cold production game | 851.98 ms | Included in handler | 2,074.92 ms | 2,927 ms |
+| Representative warm 800 ms search | — | Reused process | 814.25 ms | 815 ms |
+
+Cold startup varied across environments. Earlier five- and twelve-second initialization limits timed out, so the final deployment allows 22 seconds for native initialization within a 25-second app deadline, followed by a 30-second Lambda deadline and a 35-second Convex fetch deadline. Search remains capped at 1.5 seconds. The cold development game finished in about 16.5 seconds and the final cold production game in about 3.5 seconds, both within the existing timed-game first-move grace period and with no fallback. Six additional production computer replies at skills 1 and 20 passed concurrently with no fallback. Maximum observed memory was 383 MiB. Temporary verification functions, games, messages, and auth records were removed afterward.
+
+The retired service was verified through `GetContainerServicePowers`: **Micro × 1, $10/month maximum**. Cost Explorer reported **$9.6774192 for 720 hours in September 2026** for the matching us-east-1 container usage type, excluding credits/refunds. Another account Lightsail instance in us-west-2 belongs to a separate workload and is excluded from these Chess savings. October accrued usage remains payable; deleting the service stops future container-service charges, as described in [Lightsail billing documentation](https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-faq-containers.html).
+
+Retained compressed storage was calculated from unique manifest layer/config descriptors, avoiding image-index double counting:
+
+| Repository | Purpose | Compressed bytes | Estimated storage/month |
+|---|---|---:|---:|
+| `chess-lobby-engine-lambda-ecr-images` | Current verified Lambda image | 379,132,647 | $0.03531 |
+| `chess-engine` | Original Lightsail image for recreation | 117,120,017 | $0.01091 |
+| Total | Current engine plus old image | 496,252,664 (0.46217 GiB) | $0.04622 |
+
+The 567.4 MiB uncompressed Docker image size is not the ECR billing size. ECR cleanup may take up to 24 hours. Subsequent retained release candidates and rollback images increase storage; remeasure all retained unique layers after deployments. Rates used: [Lambda](https://aws.amazon.com/lambda/pricing/) $0.0000166667/GB-second and $0.20/million requests; [ECR](https://aws.amazon.com/ecr/pricing/) $0.10/GB-month; [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/) $0.50/GB ingested and $0.03/GB archived, with seven-day retention.
+
+Light-traffic estimate: one game per visitor, 60 computer replies per game, one 15.459-second cold invocation per game and 59 warm invocations at 0.815 seconds, 2 GiB memory. Compact logs are estimated at 600 bytes per request plus cold-start diagnostics.
+
+| Visitors/games per month | Lambda compute + requests | Estimated logs | Total ECR storage | Engine total/month |
+|---:|---:|---:|---:|---:|
+| 1 | $0.00213 | $0.00002 | $0.04622 | **$0.04836** |
+| 10 | $0.02130 | $0.00017 | $0.04622 | **$0.06769** |
+
+Idle compute/request cost is zero; ECR storage remains recurring. Compared with the recent 30-day charge and the $10 plan maximum, expected net savings are approximately **$9.60–$9.95/month** at this traffic. The old image storage existed before migration, so it is shown in the engine total but is not treated as a new migration charge. Even the conservative scenario of 600 invocations all billed at 15.459 seconds costs under $0.36/month including the current retained storage and estimated logs. These estimates precede free allowances/credits, exclude data transfer and existing site/Convex/DNS/domain costs, and are not actual future bills. Remaining shared-account free allowances were not verified.
+
+Reproduce or vary the measured scenario:
 
 ```powershell
-node scripts/estimate-engine-cost.mjs --billed-seconds 3 --retained-ecr-gib 0.8
+node scripts/estimate-engine-cost.mjs --games 10 --moves 60 --billed-seconds 0.815 --cold-starts-per-game 1 --cold-billed-seconds 15.459 --retained-ecr-gib 0.4621713087
 ```
 
-Linux CI measured 567.4 MiB uncompressed for the image. ECR compressed storage and AWS runtime must be measured after deployment. ECR charges reflect unique retained layers, not simply image count times uncompressed Docker size. Cleanup may take up to 24 hours; retain only the two documented `keep-*` pins so the protection rule works as intended. This removes the engine's always-running charge after Lightsail retirement, while retaining on-demand Stockfish strength and the live .NET component.
+The first 57 verification invocations totaled 74.203 billed seconds: approximately $0.00247 compute plus $0.000011 requests before allowances. This includes failed startup investigations; CI, image storage during validation, logs, API-query fees, and temporary Lightsail overlap are separate. The monthly bill will retain prorated Lightsail charges accrued before deletion.
+
+The old service/deployment and previous Convex engine settings were saved in `.tools.local/lightsail-rollback.dpapi`, encrypted for the original Windows user/machine; decryption was checked without printing secrets. This ignored file must be preserved separately if archiving the worktree. After retirement, Lightsail rollback requires recreation and may receive a different endpoint. The original image is still available in ECR.

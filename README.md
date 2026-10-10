@@ -2,7 +2,7 @@
 
 **Play live:** [thechesslobby.com](https://thechesslobby.com)
 
-Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** currently uses Stockfish on AWS Lightsail in production. An on-demand .NET 10 + Stockfish Lambda replacement is implemented; deployment and production cutover are pending. See [the Lambda migration guide](docs/deploy-engine-lambda.md).
+Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** uses on-demand .NET 10 + native Stockfish on AWS Lambda. Production cutover and native gameplay verification are complete; the dedicated Lightsail container service was deleted. See [the Lambda deployment and cost guide](docs/deploy-engine-lambda.md).
 
 ## Contents
 
