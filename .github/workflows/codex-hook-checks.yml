@@ -8,7 +8,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -21,6 +21,21 @@ jobs:
         run: |
           npm ci --ignore-scripts
           node node_modules/typescript/bin/tsc --project convex/tsconfig.json --noEmit
+      - name: Test candidate isolation and hostile workflow command output
+        id: isolation
+        run: |
+          mkdir -p isolation-candidate/.git
+          printf 'read-only Git metadata\n' > isolation-candidate/.git/config
+          printf 'host-only runner command file\n' > /tmp/codex-host-command-probe
+          bash .github/codex/validate-container.sh --smoke isolation-candidate
+          test -f isolation-candidate/isolation-passed.txt
+          test "$(cat /tmp/codex-host-command-probe)" = 'host-only runner command file'
+      - name: Confirm hostile output did not alter the runner
+        env:
+          SMOKE_OUTPUT: ${{ steps.isolation.outputs.smoke-bypass }}
+        run: |
+          test -z "$SMOKE_OUTPUT"
+          test -z "${BASH_ENV:-}"
       - name: Validate workflow syntax
         run: |
           curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz actionlint
