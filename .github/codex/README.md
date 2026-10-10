@@ -4,7 +4,7 @@ This repository hosts the shared, commit-pinned GitHub workflow used by Shawn's 
 
 ## What runs
 
-Native Codex Code Review and Security Review are configured separately in ChatGPT Settings → Code Review → the selected repository. Code Review covers all PRs on every push; Security Review covers all PRs whenever Code Review runs. Account-wide preferences, credit overage, required approvals, deployments and merge rules are unchanged. Native review usage counts against the connected ChatGPT account's review limits.
+Native Codex Code Review and Security Review are configured separately in ChatGPT Settings → Code Review → the selected repository. Code Review and Security Review each cover all PRs on every push. Account-wide preferences, credit overage, required approvals, deployments and merge rules are unchanged. Native review usage counts against the connected ChatGPT account's review limits.
 
 The GitHub hook accepts submitted reviews and created/edited PR summary comments only from `chatgpt-codex-connector[bot]` (GitHub user ID `199175422`). It reads unresolved, current-head inline findings, confirms the bot's numeric identity through GitHub, and posts an audit receipt with links. Event delivery is serialized per PR and repeated finding sets are acknowledged once. A maintainer can replay the hook in Actions with a PR number; replay still fetches and validates real provider findings. It does not accept a human comment containing a forged bot name or priority.
 
