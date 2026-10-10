@@ -1,60 +1,60 @@
 using System.Diagnostics;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace ChessEngine.Services;
 
-public sealed class StockfishService : IDisposable
+public interface IChessEngine
 {
-    private readonly string _stockfishPath;
+    Task<string> GetBestMoveAsync(string fen, int skill = 10, int movetimeMs = 800, CancellationToken cancellationToken = default);
+}
+
+public sealed partial class StockfishService(IConfiguration configuration) : IChessEngine, IDisposable
+{
+    public const int MaxMovetimeMs = 1500;
+    private readonly string _stockfishPath = configuration["STOCKFISH_PATH"] ?? (OperatingSystem.IsWindows() ? "stockfish.exe" : "stockfish");
     private readonly SemaphoreSlim _lock = new(1, 1);
     private Process? _process;
-    private StreamWriter? _input;
-    private StreamReader? _output;
 
-    public StockfishService(IConfiguration configuration)
+    public async Task<string> GetBestMoveAsync(string fen, int skill = 10, int movetimeMs = 800, CancellationToken cancellationToken = default)
     {
-        _stockfishPath =
-            configuration["STOCKFISH_PATH"]
-            ?? (OperatingSystem.IsWindows() ? "stockfish.exe" : "stockfish");
-    }
-
-    public async Task<string> GetBestMoveAsync(
-        string fen,
-        int skill = 10,
-        int movetimeMs = 800,
-        CancellationToken cancellationToken = default)
-    {
-        await _lock.WaitAsync(cancellationToken);
+        if (!FenValidation.IsValid(fen)) throw new ArgumentException("Invalid FEN", nameof(fen));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        await _lock.WaitAsync(timeout.Token);
         try
         {
-            await EnsureProcessAsync(cancellationToken);
-            await SendAsync($"setoption name Skill Level value {Math.Clamp(skill, 0, 20)}", cancellationToken);
-            await SendAsync($"position fen {fen}", cancellationToken);
-            await SendAsync($"go movetime {Math.Clamp(movetimeMs, 100, 30000)}", cancellationToken);
-
-            var bestMove = await ReadUntilBestMoveAsync(cancellationToken);
-            if (string.IsNullOrEmpty(bestMove) || bestMove == "(none)")
+            await EnsureProcessAsync(timeout.Token);
+            // Independent requests across Lambda freeze/thaw and different games.
+            await SendAsync("ucinewgame", timeout.Token);
+            await SendAsync($"setoption name Skill Level value {Math.Clamp(skill, 0, 20)}", timeout.Token);
+            await SendAsync("isready", timeout.Token);
+            await ReadUntilAsync("readyok", timeout.Token);
+            await SendAsync($"position fen {fen}", timeout.Token);
+            await SendAsync($"go movetime {Math.Clamp(movetimeMs, 100, MaxMovetimeMs)}", timeout.Token);
+            while (true)
             {
-                throw new InvalidOperationException("Engine returned no move");
+                var line = await ReadLineAsync(timeout.Token);
+                if (!line.StartsWith("bestmove ", StringComparison.Ordinal)) continue;
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2 || !UciMovePattern().IsMatch(parts[1])) throw new InvalidOperationException("Engine returned no legal move");
+                return parts[1];
             }
-
-            return bestMove;
         }
-        finally
+        catch
         {
-            _lock.Release();
+            // Cancelled searches must not compute in the background or pollute the next result.
+            ResetProcess();
+            throw;
         }
+        finally { _lock.Release(); }
     }
 
-    private async Task EnsureProcessAsync(CancellationToken cancellationToken)
+    private async Task EnsureProcessAsync(CancellationToken token)
     {
-        if (_process is { HasExited: false })
-        {
-            return;
-        }
-
-        _process?.Dispose();
-
-        var startInfo = new ProcessStartInfo
+        if (_process is { HasExited: false }) return;
+        ResetProcess();
+        _process = Process.Start(new ProcessStartInfo
         {
             FileName = _stockfishPath,
             RedirectStandardInput = true,
@@ -62,94 +62,51 @@ public sealed class StockfishService : IDisposable
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-        };
-
-        _process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start Stockfish process");
-
-        _input = _process.StandardInput;
-        _output = _process.StandardOutput;
-
-        await SendAsync("uci", cancellationToken);
-        await ReadUntilAsync("uciok", cancellationToken);
-        await SendAsync("isready", cancellationToken);
-        await ReadUntilAsync("readyok", cancellationToken);
+        }) ?? throw new InvalidOperationException("Failed to start Stockfish");
+        _process.StandardInput.AutoFlush = true;
+        _ = DrainErrorsAsync(_process.StandardError);
+        await SendAsync("uci", token);
+        await ReadUntilAsync("uciok", token);
+        await SendAsync("setoption name Threads value 1", token);
+        await SendAsync("setoption name Hash value 32", token);
+        await SendAsync("isready", token);
+        await ReadUntilAsync("readyok", token);
     }
 
-    private async Task SendAsync(string command, CancellationToken cancellationToken)
-    {
-        if (_input is null)
-        {
-            throw new InvalidOperationException("Stockfish not initialized");
-        }
+    private async Task SendAsync(string command, CancellationToken token) =>
+        await _process!.StandardInput.WriteLineAsync(command.AsMemory(), token);
 
-        await _input.WriteLineAsync(command.AsMemory(), cancellationToken);
-        await _input.FlushAsync(cancellationToken);
+    private async Task<string> ReadLineAsync(CancellationToken token) =>
+        await _process!.StandardOutput.ReadLineAsync(token) ?? throw new InvalidOperationException("Stockfish exited unexpectedly");
+
+    private async Task ReadUntilAsync(string expected, CancellationToken token)
+    {
+        while (await ReadLineAsync(token) != expected) { }
     }
 
-    private async Task<string> ReadUntilBestMoveAsync(CancellationToken cancellationToken)
+    private static async Task DrainErrorsAsync(StreamReader reader)
     {
-        var bestMove = "";
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var line = await ReadLineAsync(cancellationToken);
-            if (line.StartsWith("bestmove ", StringComparison.Ordinal))
-            {
-                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length >= 2)
-                {
-                    bestMove = parts[1];
-                }
-                break;
-            }
-        }
-
-        return bestMove;
+        try { while (await reader.ReadLineAsync() is not null) { } }
+        catch (ObjectDisposedException) { }
+        catch (IOException) { }
     }
 
-    private async Task ReadUntilAsync(string token, CancellationToken cancellationToken)
+    private void ResetProcess()
     {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var line = await ReadLineAsync(cancellationToken);
-            if (line.Contains(token, StringComparison.Ordinal))
-            {
-                return;
-            }
-        }
-    }
-
-    private async Task<string> ReadLineAsync(CancellationToken cancellationToken)
-    {
-        if (_output is null)
-        {
-            throw new InvalidOperationException("Stockfish not initialized");
-        }
-
-        var line = await _output.ReadLineAsync(cancellationToken);
-        return line ?? string.Empty;
-    }
-
-    public void Dispose()
-    {
+        if (_process is null) return;
         try
         {
-            if (_input is not null && _process is { HasExited: false })
-            {
-                _input.WriteLine("quit");
-                _input.Flush();
-            }
+            if (!_process.HasExited) _process.Kill(entireProcessTree: true);
+            _process.WaitForExit(1000);
         }
-        catch
-        {
-            // ignore shutdown errors
-        }
-
-        _process?.Dispose();
-        _lock.Dispose();
+        finally { _process.Dispose(); _process = null; }
     }
+
+    public void Dispose() { ResetProcess(); _lock.Dispose(); }
+
+    [GeneratedRegex(@"\A[a-h][1-8][a-h][1-8][qrbn]?\z")]
+    private static partial Regex UciMovePattern();
 }
 
-public record BestMoveRequest(string Fen, int? Skill, int? MovetimeMs);
-
-public record BestMoveResponse(string BestMove);
+public record BestMoveRequest(string? Fen, int? Skill, int? MovetimeMs);
+public record BestMoveResponse([property: JsonPropertyName("bestMove")] string BestMove);

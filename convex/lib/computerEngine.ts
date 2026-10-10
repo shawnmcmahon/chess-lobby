@@ -111,26 +111,31 @@ function isLocalEngineUrl(url: string): boolean {
 export async function getBestMove(
   fen: string,
   skill: number,
-  _movetimeMs: number,
+  movetimeMs: number,
 ): Promise<string> {
   const engineUrl = process.env.ENGINE_API_URL;
   const engineKey = process.env.ENGINE_API_KEY;
 
   if (engineUrl && !isLocalEngineUrl(engineUrl)) {
     try {
-      const response = await fetch(`${engineUrl}/api/best-move`, {
+      const response = await fetch(`${engineUrl.replace(/\/+$/, "")}/api/best-move`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(engineKey ? { "X-Api-Key": engineKey } : {}),
         },
-        body: JSON.stringify({ fen, skill, movetimeMs: _movetimeMs }),
+        body: JSON.stringify({ fen, skill, movetimeMs }),
+        // Include cold-start headroom; bound failures so computer games can fall back.
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (response.ok) {
         const data = (await response.json()) as { bestMove?: string };
-        if (data.bestMove) {
-          return data.bestMove;
+        if (data.bestMove && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(data.bestMove)) {
+          const position = new Chess(fen);
+          const move = data.bestMove;
+          position.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] });
+          return move;
         }
       } else {
         console.error("External engine failed", await response.text());

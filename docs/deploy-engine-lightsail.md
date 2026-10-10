@@ -1,5 +1,7 @@
 # Optional: Stockfish engine on AWS Lightsail (~$7–10/mo)
 
+This describes the existing production service and rollback target. For new engine deployments, use the [.NET 10 on-demand Lambda migration](deploy-engine-lambda.md). Keep Lightsail running until Lambda has passed direct endpoint and production gameplay checks. The ordinary HTTP Dockerfile now uses .NET 10; the live deployed Lightsail image stays unchanged until explicitly redeployed.
+
 By default, **Play vs computer** uses a lightweight built-in minimax engine in Convex (all difficulty levels feel similar). To use real **Stockfish** skill levels (1–20), deploy the `apps/chess-engine` **Docker image** (ASP.NET Core 8 API + Stockfish) to Lightsail and point Convex at it.
 
 This is **optional**. The minimal demo in [deploy-demo.md](deploy-demo.md) intentionally skips the engine to stay at **~$0–2/mo**.

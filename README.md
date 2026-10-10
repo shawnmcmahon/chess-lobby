@@ -2,7 +2,7 @@
 
 **Play live:** [thechesslobby.com](https://thechesslobby.com)
 
-Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** uses Stockfish on AWS Lightsail in production.
+Multiplayer chess with a React frontend and Convex real-time backend. **Play vs computer** currently uses Stockfish on AWS Lightsail in production. An on-demand .NET 10 + Stockfish Lambda replacement is implemented; deployment and production cutover are pending. See [the Lambda migration guide](docs/deploy-engine-lambda.md).
 
 ## Contents
 
@@ -106,7 +106,7 @@ Locally, the Vite dev server replaces CloudFront/S3, and Convex **dev** replaces
 ```
 chess-lobby/
 ├── apps/web/           # React + Vite + Tailwind
-├── apps/chess-engine/  # ASP.NET Core 8 + Stockfish (UCI)
+├── apps/chess-engine/  # ASP.NET Core 10 + Stockfish (HTTP or Lambda)
 ├── convex/             # Convex backend
 └── chess-lobby.sln
 ```
@@ -114,7 +114,7 @@ chess-lobby/
 ## Prerequisites
 
 - Node.js 18+
-- .NET 8 SDK
+- .NET 10 SDK
 - Stockfish (for local engine): `stockfish` on PATH, or use Docker
 
 ## Quick start (local)
@@ -184,6 +184,7 @@ Open http://localhost:5173
 
 Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)** (site + Convex)  
 Engine hosting: **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**  
+On-demand replacement and migration: **[docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md)**
 Stack outputs: **[docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example)**  
 CI deploy: [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) (Actions → **Deploy AWS** → Run workflow)
 
@@ -216,4 +217,5 @@ Wire Convex to the engine: `.\scripts\setup-convex-engine.ps1` (after setting `E
 | SPA routing (React Router, refresh / CloudFront fallback) | [docs/spa-routing.md](docs/spa-routing.md) |
 | Demo deploy (S3 + CloudFront + Convex) | [docs/deploy-demo.md](docs/deploy-demo.md) |
 | Stockfish on Lightsail | [docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md) |
+| On-demand Stockfish Lambda migration | [docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md) |
 | AWS stack outputs (env template) | [docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example) |

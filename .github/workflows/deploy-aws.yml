@@ -1,4 +1,4 @@
-# Minimal demo deploy: React → S3+CloudFront, Convex (built-in engine — no Stockfish on AWS)
+# Website + Convex deploy. Engine Lambda deployment is a separate manual workflow.
 # Configure repository secrets before running:
 #   AWS_ROLE_ARN, AWS_S3_BUCKET, AWS_CLOUDFRONT_DISTRIBUTION_ID
 #   VITE_CONVEX_URL, CONVEX_DEPLOY_KEY

@@ -1,0 +1,30 @@
+# Build native code on the same OS and architecture as the Lambda runtime.
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023 AS stockfish
+RUN dnf install -y gcc-c++ make git tar gzip && dnf clean all
+WORKDIR /build
+# Stockfish 17.1; portable x86-64 does not assume AVX2/BMI2 on Lambda hosts.
+RUN git clone https://github.com/official-stockfish/Stockfish.git . \
+    && git checkout 03e27488f3d21d8ff4dbf3065603afa21dbd0ef3 \
+    && make -C src -j2 build ARCH=x86-64 COMP=gcc \
+    && strip src/stockfish \
+    && mkdir -p /licenses/stockfish \
+    && git archive HEAD | gzip -n > /licenses/stockfish/source.tar.gz \
+    && cp Copying.txt /licenses/stockfish/ \
+    && cp src/*.nnue /licenses/stockfish/
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY apps/chess-engine/ChessEngine.csproj apps/chess-engine/
+RUN dotnet restore apps/chess-engine/ChessEngine.csproj
+COPY apps/chess-engine/ apps/chess-engine/
+RUN dotnet publish apps/chess-engine/ChessEngine.csproj -c Release -r linux-x64 --self-contained false -o /publish
+
+FROM public.ecr.aws/lambda/dotnet:10
+RUN dnf install -y libstdc++ && dnf clean all
+WORKDIR /var/task
+COPY --from=build /publish/ .
+COPY --from=stockfish /build/src/stockfish /opt/stockfish
+# Exact corresponding source, license, and NNUE files used to build the binary.
+COPY --from=stockfish /licenses/ /opt/licenses/
+ENV STOCKFISH_PATH=/opt/stockfish
+CMD ["ChessEngine"]

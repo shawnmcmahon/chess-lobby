@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/bin
+**/obj
+**/dist
+.env*
+**/*.local
+**/*.log
+infra/engine-deployment.tmp.json
