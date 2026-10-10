@@ -39,6 +39,12 @@ jobs:
           test -z "${BASH_ENV:-}"
       - name: Verify manifest-only downloads and offline Chess validation
         run: |
+          mkdir -p isolation-candidate/node_modules
+          printf 'trusted input\n' > isolation-candidate/source.txt
+          printf 'trusted input\n' > isolation-candidate/node_modules/tooling.txt
+          bash .github/codex/validate-container.sh --command-smoke isolation-candidate
+          test "$(cat isolation-candidate/source.txt)" = 'trusted input'
+          test "$(cat isolation-candidate/node_modules/tooling.txt)" = 'trusted input'
           mkdir validation-candidate
           git archive HEAD | tar -x -C validation-candidate
           git -C validation-candidate init

@@ -92,9 +92,9 @@ jobs:
             standalone root utility scripts or key-generation helpers,
             executable modes, symlinks, binaries, or unrelated behavior. Keep the patch under
             100 KB and 20 files. Do not run network-dependent integration or deployment commands.
-            Never change, delete or rename existing tests, mocks or fixtures. Add a new focused
-            regression test using existing test discovery when meaningful. If existing tests
-            must change, return needs_human. If the finding needs a product choice,
+            Never add, change, delete or rename tests, mocks or fixtures. If the finding
+            needs new or changed test coverage, return needs_human with the proposed test.
+            Use the unchanged baseline checks. If the finding needs a product choice,
             infrastructure change, secrets, or cannot be verified, return needs_human and explain.
             Return a JSON object with decision, explanation, and patch. For patch, include the
             exact textual output of git diff HEAD after staging new files; escape JSON correctly.

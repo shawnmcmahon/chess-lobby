@@ -102,7 +102,8 @@ function validatePath(path) {
   const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
   const rootScript = !path.includes('/') && /\.(?:[cm]?js|ps1|psm1|sh|py|bat|cmd)$/i.test(path);
   const keyGenerator = /(?:^|\/)(?:(?:generate|create)[-_]?(?:keys|jwks|jwt)|keygen)(?:\.[^/]*)?\.(?:[cm]?[jt]s|py|ps1|sh)$/i.test(path);
-  if (protectedDirectory.test(path) || protectedFile.test(path) || validationControl.test(path) || rootScript || keyGenerator) throw new Error(`Protected path requires human review: ${path}`);
+  const testPath = /(?:^|\/)(?:tests?|specs?|__tests__|__mocks__|fixtures)(?:\/|$)|(?:^|\/)[^/]+\.(?:test|spec|tests)\.[^/]+$|(?:^|\/)(?:test|spec)[-_][^/]+$|Tests\.(?:cs|fs|vb)$/i;
+  if (protectedDirectory.test(path) || protectedFile.test(path) || validationControl.test(path) || rootScript || keyGenerator || testPath.test(path)) throw new Error(`Protected path requires human review: ${path}`);
 }
 function applyResult(result, cwd) {
   if (result.decision !== 'patch') throw new Error('Codex deferred this finding for human judgment.');
