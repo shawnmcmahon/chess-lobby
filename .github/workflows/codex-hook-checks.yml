@@ -1,0 +1,57 @@
+name: Review hook checks
+on:
+  pull_request:
+    paths: ['.github/codex/**', '.github/workflows/codex-*.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: node --test .github/codex/review-engine.test.cjs
+      - name: Check the offline Convex validation command
+        run: |
+          npm ci --ignore-scripts
+          node node_modules/typescript/bin/tsc --project convex/tsconfig.json --noEmit
+      - name: Test candidate isolation and hostile workflow command output
+        id: isolation
+        run: |
+          mkdir -p isolation-candidate/.git
+          printf 'read-only Git metadata\n' > isolation-candidate/.git/config
+          printf 'trusted baseline test\n' > isolation-candidate/baseline.test.mjs
+          printf 'host-only runner command file\n' > /tmp/codex-host-command-probe
+          bash .github/codex/validate-container.sh --smoke isolation-candidate
+          test -f isolation-candidate/isolation-passed.txt
+          test "$(cat /tmp/codex-host-command-probe)" = 'host-only runner command file'
+      - name: Confirm hostile output did not alter the runner
+        env:
+          SMOKE_OUTPUT: ${{ steps.isolation.outputs.smoke-bypass }}
+        run: |
+          test -z "$SMOKE_OUTPUT"
+          test -z "${BASH_ENV:-}"
+      - name: Verify manifest-only downloads and offline Chess validation
+        run: |
+          mkdir -p isolation-candidate/node_modules
+          printf 'trusted input\n' > isolation-candidate/source.txt
+          printf 'trusted input\n' > isolation-candidate/node_modules/tooling.txt
+          bash .github/codex/validate-container.sh --command-smoke isolation-candidate
+          test "$(cat isolation-candidate/source.txt)" = 'trusted input'
+          test "$(cat isolation-candidate/node_modules/tooling.txt)" = 'trusted input'
+          mkdir validation-candidate
+          git archive HEAD | tar -x -C validation-candidate
+          git -C validation-candidate init
+          git -C validation-candidate add .
+          git -C validation-candidate -c core.hooksPath=/dev/null -c user.name=Validation -c user.email=validation@example.invalid commit -qm 'Trusted baseline'
+          bash .github/codex/validate-container.sh chess-lobby validation-candidate
+      - name: Validate workflow syntax
+        run: |
+          curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz actionlint
+          ./actionlint .github/workflows/codex-*.yml

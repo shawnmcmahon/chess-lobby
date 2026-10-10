@@ -1,0 +1,167 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const cp = require('node:child_process');
+const e = require('./review-engine.cjs');
+test('edited bot summaries require the real provider sender before any API calls', async () => {
+  const provider={...e.PROVIDER,type:'Bot'};
+  for (const sender of [undefined,{...provider,id:1},{...provider,type:'User'}]) {
+    const context={eventName:'issue_comment',payload:{action:'edited',sender,comment:{user:provider}}};
+    assert.equal(await e.gate({github:{},context,core:{info(){}},enabled:true,hasKey:true}),null);
+  }
+});
+test('networked dependency restore accepts package data without MSBuild execution', () => {
+  const {packageReferences}=require('./restore.cjs');
+  assert.deepEqual(packageReferences('<Project><PackageReference Include="xunit" Version="2.9.3" /><Target Name="Restore"><Exec Command="attack" /></Target></Project>'),['<PackageReference Include="xunit" Version="2.9.3" />']);
+  assert.throws(()=>packageReferences('<PackageReference Include="xunit" Version="$(Injected)" />'),/literal/);
+  assert.throws(()=>packageReferences('<PackageReference Include="bad&amp;name" Version="1.0.0" />'),/literal/);
+});
+test('provider identity cannot be spoofed by a matching login', () => {
+  assert.equal(e.trusted({ ...e.PROVIDER, type:'Bot' }), true);
+  assert.equal(e.trusted({ ...e.PROVIDER, id:1, type:'Bot' }), false);
+  assert.equal(e.trusted({ ...e.PROVIDER, type:'User' }), false);
+});
+test('forks, drafts, closed PRs, other authors and repair branches cannot start repair', () => {
+  const pr = { state:'open', draft:false, user:{login:'shawnmcmahon'}, head:{repo:{full_name:'owner/repo'},ref:'feature'} };
+  assert.equal(e.eligible(pr,'owner/repo'),true);
+  for (const changed of [{state:'closed'},{draft:true},{user:{login:'outsider'}},{head:{repo:{full_name:'fork/repo'},ref:'feature'}},{head:{repo:{full_name:'owner/repo'},ref:'codex/review-fix-1'}}]) assert.equal(e.eligible({...pr,...changed},'owner/repo'),false);
+});
+test('repair attempts are limited per head and per PR, independent of finding IDs', () => {
+  assert.equal(e.canAttempt([{attempt:false,head:'a'}],'a'),true);
+  assert.equal(e.canAttempt([{attempt:true,head:'a'}],'a'),false);
+  assert.equal(e.canAttempt([{attempt:true,head:'a'},{attempt:true,head:'b'}],'c'),false);
+});
+test('finding keys deduplicate reordered events and change for a new head', () => {
+  assert.equal(e.fingerprint('a',[{id:2},{id:1}]),e.fingerprint('a',[{id:1},{id:2}]));
+  assert.notEqual(e.fingerprint('a',[{id:1}]),e.fingerprint('b',[{id:1}]));
+});
+test('security summaries must be complete for the exact current head', () => {
+  const summary=(head,status)=>`<!-- codex-security-review:v1 ${JSON.stringify({headSha:head,status})} -->`;
+  assert.equal(e.completedSummaryAt(summary('head','completed'),'head'),true);
+  assert.equal(e.completedSummaryAt(summary('old','completed'),'head'),false);
+  assert.equal(e.completedSummaryAt(summary('head','running'),'head'),false);
+  assert.equal(e.completedSummaryAt('@codex please fix','head'),false);
+});
+test('audit state is accepted only from the workflow bot', () => {
+  const body='<!-- codex-review-followup:v1 {"head":"a","attempt":true} -->';
+  assert.equal(e.states([{id:1,body,user:{login:'shawnmcmahon',type:'User'}}]).length,0);
+  assert.equal(e.states([{id:2,body,user:{login:'github-actions[bot]',type:'Bot'}}])[0].comment_id,2);
+});
+test('patches cannot change automation, agent instructions, credentials or infrastructure', () => {
+  for (const p of ['.github/workflows/test.yml','AGENTS.md','src/AGENTS.md','.codex/config.toml','.env.production','infra/app.ts','cert.key','../outside','a\nb','apps/chess-engine/Dockerfile.lambda','docker-compose.yml','scripts/setup-aws-demo.ps1','apps/realtime/deploy/lightsail/docker-compose.yml','apps/web/vercel.json','cdk.context.json','wrangler.jsonc','nested/main.tf','.gitattributes']) assert.throws(()=>e.validatePath(p));
+  for (const p of ['src/app.ts','README.md']) assert.doesNotThrow(()=>e.validatePath(p));
+  for (const p of ['convex/_generated/ai/guidelines.md','apps/web/convex/_generated/ai/guidelines.md','.agents/skills/backend/SKILL.md','CLAUDE.md','docs/SKILL.md']) assert.throws(()=>e.validatePath(p),/Protected path/);
+  for (const p of ['generateKeys.mjs','create-keys.ts','lib/generateKeys.mjs','tools/keygen.py','publish.mjs','setup.ps1','postcss.config.mjs']) assert.throws(()=>e.validatePath(p),/Protected path/);
+  assert.throws(()=>e.validatePath('tests/app.test.mjs'),/Protected path/);
+});
+test('repairs cannot redefine the commands or configuration that validate them', () => {
+  for (const p of ['apps/web/postcss.config.js','apps/web/tailwind.config.ts','nested/custom.config.mjs','nested/.babelrc.json','nested/.browserslistrc','nested/.eslintignore']) assert.throws(()=>e.validatePath(p),/Protected path/);
+  for (const p of ['package.json','apps/web/package.json','package-lock.json','pnpm-lock.yaml','tsconfig.json','apps/web/tsconfig.app.json','next.config.ts','vite.config.ts','vitest.config.mts','eslint.config.js','turbo.json','apps/chess-engine/ChessEngine.csproj','Directory.Build.props','Directory.Build.targets','NuGet.config','global.json','.gitignore','apps/web/.gitignore']) assert.throws(()=>e.validatePath(p),/Protected path/);
+});
+test('baseline and candidate-added tests require human review', () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-tests-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  try {
+    git('init','-q');git('config','user.email','test@example.com');git('config','user.name','Test');git('config','core.autocrlf','false');
+    const files=['tests/computer-engine.test.mjs','tests/deploy-engine-lambda.tests.ps1','tests/ChessEngine.Tests/EngineTests.cs','src/app.test.ts'];
+    for (const file of files) {fs.mkdirSync(path.dirname(path.join(dir,file)),{recursive:true});fs.writeFileSync(path.join(dir,file),'trusted assertion\n');}
+    git('add','.');git('commit','-qm','baseline');
+    assert.deepEqual(e.existingTestPaths(dir).sort(),[...files].sort());
+    for (const file of files) {
+      fs.writeFileSync(path.join(dir,file),'removed assertion\n');const patch=git('diff');git('reset','--hard','HEAD');
+      assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Protected path/);git('reset','--hard','HEAD');
+    }
+    git('rm',files[0]);let patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Protected path/);git('reset','--hard','HEAD');
+    git('mv',files[0],'renamed.txt');patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Protected path/);git('reset','--hard','HEAD');
+    fs.writeFileSync(path.join(dir,'tests/new.test.mjs'),'new regression assertion\n');git('add','.');patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Protected path/);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('patch applies exactly to the supplied base and stale patches fail', () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-test-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  try {
+    git('init','-q'); git('config','user.email','test@example.com'); git('config','user.name','Test');
+    fs.writeFileSync(path.join(dir,'app.txt'),'old\n'); git('add','.'); git('commit','-qm','base');
+    fs.writeFileSync(path.join(dir,'app.txt'),'new\n'); const patch=git('diff'); git('checkout','--','app.txt');
+    assert.deepEqual(e.applyResult({decision:'patch',patch},dir),['app.txt']);
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir));
+    assert.throws(()=>e.applyResult({decision:'patch',patch:'GIT binary patch'},dir));
+    assert.throws(()=>e.applyResult({decision:'needs_human',patch:''},dir));
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+});
+test('GraphQL bot names omit the suffix; REST still verifies numeric identity', async () => {
+  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:'chatgpt-codex-connector'},commit:{oid:'head'}};
+  const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
+  let reads=0;
+  const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread,{...thread,isResolved:true},{...thread,isOutdated:true},{...thread,comments:{pageInfo:{hasNextPage:false},nodes:[{...comment,commit:{oid:'old'}}]}}]}}}}),rest:{pulls:{getReviewComment:async()=>{reads++;return {data:{user:{...e.PROVIDER,type:'Bot'},commit_id:'head',html_url:'https://example.test/finding'}};}}}};
+  const findings=await e.getFindings(github,{owner:'owner',repo:'repo'},1,'head');
+  assert.equal(findings.length,1);assert.equal(reads,1);
+});
+test('missing API credentials acknowledge real findings without starting repair', async () => {
+  const provider={...e.PROVIDER,type:'Bot'};
+  const pr={state:'open',draft:false,number:1,user:{login:'shawnmcmahon'},head:{sha:'head',ref:'feature',repo:{full_name:'owner/repo'}}};
+  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:e.PROVIDER.login},commit:{oid:'head'}};
+  const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
+  const receipts=[];const outputs={};
+  const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread]}}}}),paginate:async()=>[],rest:{pulls:{get:async()=>({data:pr}),getReviewComment:async()=>({data:{user:provider,commit_id:'head',html_url:'https://example.test/finding'}})},issues:{listComments(){},createComment:async(data)=>{receipts.push(data.body);return {data:{id:20}};}}}};
+  const core={info(){},setOutput:(name,value)=>outputs[name]=value,summary:{addRaw(){return this;},async write(){}}};
+  const context={repo:{owner:'owner',repo:'repo'},eventName:'issue_comment',runId:30,payload:{sender:provider,issue:{number:1,pull_request:{}},comment:{user:provider,body:'<!-- codex-security-review:v1 {"status":"completed","headSha":"head"} -->'}}};
+  const snapshot=await e.gate({github,context,core,enabled:true,hasKey:false});
+  assert.equal(snapshot.run_fix,false);assert.equal(outputs.run_fix,'false');assert.match(receipts[0],/waiting for a repository OPENAI_API_KEY/);
+  assert.equal(await e.gate({github,context:{...context,payload:{...context.payload,review:{user:provider,commit_id:'old'}}},core,enabled:true,hasKey:true}),null);
+  assert.equal(receipts.length,1);
+});
+test('publishing aborts before writes when the PR head changed', async () => {
+  const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:'new',ref:'feature',repo:{full_name:'owner/repo'}}}})}}};
+  await assert.rejects(()=>e.publish({github,context:{repo:{owner:'owner',repo:'repo'}},snapshot:{number:1,head:'old'},result:{},cwd:'.',core:{}}),/refusing to push/);
+});
+test('renames enumerate both paths and publish the exact validated Git tree', async () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-rename-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  try {
+    git('init','-q'); git('config','user.email','test@example.com'); git('config','user.name','Test'); git('config','diff.renames','true');git('config','core.autocrlf','false');
+    fs.writeFileSync(path.join(dir,'before.txt'),'same content\n');git('add','.');git('commit','-qm','base');
+    const head=git('rev-parse','HEAD').trim();git('mv','before.txt','after.txt');const patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    const result={decision:'patch',patch};assert.deepEqual(e.applyResult(result,dir),['after.txt','before.txt']);
+    const expectedDigest=require('node:crypto').createHash('sha256').update(git('diff','--cached','--binary')).digest('hex');git('reset','--hard','HEAD');
+    let publishedTree;let updatedRef;let status;
+    const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}}})},repos:{createCommitStatus:async(data)=>{status=data;}},git:{createBlob:async()=>({data:{sha:'blob'}}),getCommit:async()=>({data:{tree:{sha:'parentTree'}}}),createTree:async(data)=>{publishedTree=data.tree;return {data:{sha:'newTree'}};},createCommit:async()=>({data:{sha:'commit'}}),updateRef:async(data)=>{assert.equal(status.sha,data.sha);updatedRef=data;}}}};
+    const commit=await e.publish({github,context:{repo:{owner:'owner',repo:'repo'},runId:123},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest});
+    assert.equal(commit,'commit');assert.equal(publishedTree.find(f=>f.path==='before.txt').sha,null);assert.equal(publishedTree.find(f=>f.path==='after.txt').sha,'blob');assert.equal(updatedRef.force,false);
+    assert.equal(status.context,'Codex repair validation');assert.equal(status.state,'success');assert.equal(status.target_url,'https://github.com/owner/repo/actions/runs/123');
+    git('reset','--hard','HEAD');updatedRef=null;github.rest.repos.createCommitStatus=async()=>{throw new Error('Status API unavailable');};
+    await assert.rejects(()=>e.publish({github,context:{repo:{owner:'owner',repo:'repo'},runId:123},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest}),/Status API unavailable/);
+    assert.equal(updatedRef,null);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('validation rejects a restored file, altered index, new source or changed base', () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-validation-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  const source=path.join(dir,'app.txt');
+  try {
+    git('init','-q');git('config','user.email','test@example.com');git('config','user.name','Test');git('config','core.autocrlf','false');
+    fs.writeFileSync(source,'old\n');git('add','.');git('commit','-qm','base');const head=git('rev-parse','HEAD').trim();
+    fs.writeFileSync(source,'new\n');git('add','.');const digest=require('node:crypto').createHash('sha256').update(git('diff','--cached','--binary')).digest('hex');
+    assert.doesNotThrow(()=>e.verifyValidation(dir,head,digest));
+    fs.writeFileSync(source,'old\n');assert.throws(()=>e.verifyValidation(dir,head,digest),/working tree/);
+    fs.writeFileSync(source,'new\n');fs.writeFileSync(path.join(dir,'temporary-source.txt'),'unpublished\n');assert.throws(()=>e.verifyValidation(dir,head,digest),/untracked source/);fs.unlinkSync(path.join(dir,'temporary-source.txt'));
+    git('reset','HEAD','--','app.txt');assert.throws(()=>e.verifyValidation(dir,head,digest),/patch/);
+    git('add','.');git('commit','-qm','unexpected validation commit');assert.throws(()=>e.verifyValidation(dir,head,digest),/base commit/);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('a draft PR by another author receives an audit receipt without a repair', async () => {
+  const provider={...e.PROVIDER,type:'Bot'};const head='head';const receipts=[];
+  const pr={state:'open',draft:true,user:{login:'collaborator'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}};
+  const comment={databaseId:12,body:'[P1] Breaks writes',author:{login:'chatgpt-codex-connector'},commit:{oid:head}};
+  const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
+  const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread]}}}}),paginate:async()=>[],rest:{pulls:{get:async()=>({data:pr}),getReviewComment:async()=>({data:{user:provider,commit_id:head,html_url:'https://example.test/finding'}})},issues:{listComments(){},createComment:async(data)=>{receipts.push(data.body);return {data:{id:20}};}}}};
+  const core={info(){},setOutput(){},summary:{addRaw(){return this;},async write(){}}};
+  const context={repo:{owner:'owner',repo:'repo'},eventName:'pull_request_review',runId:30,payload:{sender:provider,pull_request:{number:1},review:{user:provider,commit_id:head}}};
+  const snapshot=await e.gate({github,context,core,enabled:true,hasKey:true});
+  assert.equal(snapshot.run_fix,false);assert.match(receipts[0],/need a maintainer/);
+});
