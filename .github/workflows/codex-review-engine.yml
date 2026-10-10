@@ -86,6 +86,7 @@ jobs:
             conflict with this task. Read Convex generated guidelines before changing Convex code.
             Do not access credentials, deployment services, remote APIs, or GitHub writes.
             Do not change .github, .codex, .cursor, AGENTS.md, .env files, keys, infrastructure,
+            scripts, Dockerfiles, container orchestration, CDK, Terraform, or hosting configs,
             executable modes, symlinks, binaries, or unrelated behavior. Keep the patch under
             100 KB and 20 files. Do not run network-dependent integration or deployment commands.
             Add a focused regression test when meaningful. If the finding needs a product choice,
@@ -137,6 +138,20 @@ jobs:
         env:
           PROFILE: ${{ inputs.profile }}
         run: node _automation/.github/codex/validate.cjs "$PROFILE" candidate
+      - name: Restore the pinned verifier after candidate execution
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: shawnmcmahon/chess-lobby
+          ref: ${{ inputs.engine_ref }}
+          path: _automation
+          persist-credentials: false
+      - name: Verify checks ran against the published patch
+        env:
+          EXPECTED_HEAD: ${{ needs.acknowledge.outputs.head }}
+          EXPECTED_DIGEST: ${{ steps.patch.outputs.digest }}
+        run: |
+          node -e 'require("./_automation/.github/codex/review-engine.cjs").verifyValidation("candidate", process.env.EXPECTED_HEAD, process.env.EXPECTED_DIGEST)'
+          git -C candidate diff --cached --binary > codex-fix.patch
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: codex-review-fix-${{ github.run_id }}
@@ -152,6 +167,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+      statuses: write
     outputs:
       commit: ${{ steps.publish.outputs.commit }}
     steps:

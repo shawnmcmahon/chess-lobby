@@ -37,7 +37,7 @@ test('audit state is accepted only from the workflow bot', () => {
   assert.equal(e.states([{id:2,body,user:{login:'github-actions[bot]',type:'Bot'}}])[0].comment_id,2);
 });
 test('patches cannot change automation, agent instructions, credentials or infrastructure', () => {
-  for (const p of ['.github/workflows/test.yml','AGENTS.md','src/AGENTS.md','.codex/config.toml','.env.production','infra/app.ts','cert.key','../outside','a\nb']) assert.throws(()=>e.validatePath(p));
+  for (const p of ['.github/workflows/test.yml','AGENTS.md','src/AGENTS.md','.codex/config.toml','.env.production','infra/app.ts','cert.key','../outside','a\nb','apps/chess-engine/Dockerfile.lambda','docker-compose.yml','scripts/setup-aws-demo.ps1','apps/realtime/deploy/lightsail/docker-compose.yml','apps/web/vercel.json','cdk.context.json','wrangler.jsonc','nested/main.tf','.gitattributes']) assert.throws(()=>e.validatePath(p));
   for (const p of ['src/app.ts','tests/app.test.ts','README.md']) assert.doesNotThrow(()=>e.validatePath(p));
 });
 test('patch applies exactly to the supplied base and stale patches fail', () => {
@@ -88,10 +88,29 @@ test('renames enumerate both paths and publish the exact validated Git tree', as
     const head=git('rev-parse','HEAD').trim();git('mv','before.txt','after.txt');const patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
     const result={decision:'patch',patch};assert.deepEqual(e.applyResult(result,dir),['after.txt','before.txt']);
     const expectedDigest=require('node:crypto').createHash('sha256').update(git('diff','--cached','--binary')).digest('hex');git('reset','--hard','HEAD');
-    let publishedTree;let updatedRef;
-    const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}}})},git:{createBlob:async()=>({data:{sha:'blob'}}),getCommit:async()=>({data:{tree:{sha:'parentTree'}}}),createTree:async(data)=>{publishedTree=data.tree;return {data:{sha:'newTree'}};},createCommit:async()=>({data:{sha:'commit'}}),updateRef:async(data)=>{updatedRef=data;}}}};
-    const commit=await e.publish({github,context:{repo:{owner:'owner',repo:'repo'}},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest});
+    let publishedTree;let updatedRef;let status;
+    const github={rest:{pulls:{get:async()=>({data:{state:'open',draft:false,user:{login:'shawnmcmahon'},head:{sha:head,ref:'feature',repo:{full_name:'owner/repo'}}}})},repos:{createCommitStatus:async(data)=>{status=data;}},git:{createBlob:async()=>({data:{sha:'blob'}}),getCommit:async()=>({data:{tree:{sha:'parentTree'}}}),createTree:async(data)=>{publishedTree=data.tree;return {data:{sha:'newTree'}};},createCommit:async()=>({data:{sha:'commit'}}),updateRef:async(data)=>{assert.equal(status.sha,data.sha);updatedRef=data;}}}};
+    const commit=await e.publish({github,context:{repo:{owner:'owner',repo:'repo'},runId:123},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest});
     assert.equal(commit,'commit');assert.equal(publishedTree.find(f=>f.path==='before.txt').sha,null);assert.equal(publishedTree.find(f=>f.path==='after.txt').sha,'blob');assert.equal(updatedRef.force,false);
+    assert.equal(status.context,'Codex repair validation');assert.equal(status.state,'success');assert.equal(status.target_url,'https://github.com/owner/repo/actions/runs/123');
+    git('reset','--hard','HEAD');updatedRef=null;github.rest.repos.createCommitStatus=async()=>{throw new Error('Status API unavailable');};
+    await assert.rejects(()=>e.publish({github,context:{repo:{owner:'owner',repo:'repo'},runId:123},core:{setOutput(){}},snapshot:{number:1,head,branch:'feature',key:'key'},result,cwd:dir,expectedDigest}),/Status API unavailable/);
+    assert.equal(updatedRef,null);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('validation rejects a restored file, altered index, new source or changed base', () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-validation-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  const source=path.join(dir,'app.txt');
+  try {
+    git('init','-q');git('config','user.email','test@example.com');git('config','user.name','Test');git('config','core.autocrlf','false');
+    fs.writeFileSync(source,'old\n');git('add','.');git('commit','-qm','base');const head=git('rev-parse','HEAD').trim();
+    fs.writeFileSync(source,'new\n');git('add','.');const digest=require('node:crypto').createHash('sha256').update(git('diff','--cached','--binary')).digest('hex');
+    assert.doesNotThrow(()=>e.verifyValidation(dir,head,digest));
+    fs.writeFileSync(source,'old\n');assert.throws(()=>e.verifyValidation(dir,head,digest),/working tree/);
+    fs.writeFileSync(source,'new\n');fs.writeFileSync(path.join(dir,'temporary-source.txt'),'unpublished\n');assert.throws(()=>e.verifyValidation(dir,head,digest),/untracked source/);fs.unlinkSync(path.join(dir,'temporary-source.txt'));
+    git('reset','HEAD','--','app.txt');assert.throws(()=>e.verifyValidation(dir,head,digest),/patch/);
+    git('add','.');git('commit','-qm','unexpected validation commit');assert.throws(()=>e.verifyValidation(dir,head,digest),/base commit/);
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('a draft PR by another author receives an audit receipt without a repair', async () => {

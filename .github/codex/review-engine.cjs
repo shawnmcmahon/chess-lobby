@@ -93,7 +93,9 @@ async function gate({ github, context, core, enabled, hasKey }) {
 function git(args, cwd) { return cp.execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }); }
 function validatePath(path) {
   if (!path || /[\x00-\x1f\\]/.test(path) || path.startsWith('/') || path.split('/').includes('..')) throw new Error('Invalid patch path.');
-  if (/^(?:\.github|\.codex|\.cursor|infra)(?:\/|$)|(?:^|\/)(?:AGENTS\.md|\.env(?:\..*)?|.*\.(?:pem|key))$/i.test(path)) throw new Error(`Protected path requires human review: ${path}`);
+  const protectedDirectory = /(?:^|\/)(?:\.github|\.codex|\.cursor|infra|infrastructure|deploy|deployment|terraform|cloudformation|cdk|scripts|bin)(?:\/|$)/i;
+  const protectedFile = /(?:^|\/)(?:AGENTS\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
+  if (protectedDirectory.test(path) || protectedFile.test(path)) throw new Error(`Protected path requires human review: ${path}`);
 }
 function applyResult(result, cwd) {
   if (result.decision !== 'patch') throw new Error('Codex deferred this finding for human judgment.');
@@ -114,6 +116,12 @@ function applyResult(result, cwd) {
   git(['diff', '--cached', '--check'], cwd);
   return paths;
 }
+function verifyValidation(cwd, expectedHead, expectedDigest) {
+  if (git(['rev-parse', 'HEAD'], cwd).trim() !== expectedHead) throw new Error('Validation changed the base commit.');
+  const digest = args => crypto.createHash('sha256').update(git(args, cwd)).digest('hex');
+  if (digest(['diff', '--cached', '--binary']) !== expectedDigest || digest(['diff', 'HEAD', '--binary']) !== expectedDigest) throw new Error('Validation changed the patch or working tree.');
+  if (git(['ls-files', '--others', '--exclude-standard', '-z'], cwd)) throw new Error('Validation left untracked source files.');
+}
 async function publish({ github, context, core, snapshot, result, cwd, expectedDigest }) {
   const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: snapshot.number });
   if (!eligible(pr, `${context.repo.owner}/${context.repo.repo}`) || pr.head.sha !== snapshot.head) throw new Error('PR changed while repair was running; refusing to push.');
@@ -130,6 +138,9 @@ async function publish({ github, context, core, snapshot, result, cwd, expectedD
   const parent = await github.rest.git.getCommit({ ...context.repo, commit_sha:snapshot.head });
   const newTree = await github.rest.git.createTree({ ...context.repo, base_tree:parent.data.tree.sha, tree });
   const commit = await github.rest.git.createCommit({ ...context.repo, message:`Address Codex review findings (${snapshot.key})`, tree:newTree.data.sha, parents:[snapshot.head] });
+  // Attach the completed checks to the exact tree before moving the branch.
+  // GITHUB_TOKEN pushes suppress ordinary downstream CI; this status does not.
+  await github.rest.repos.createCommitStatus({ ...context.repo, sha:commit.data.sha, state:'success', context:'Codex repair validation', description:'Bounded patch passed project checks and worktree verification', target_url:`https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}` });
   // A concurrent push makes this update non-fast-forward, so GitHub rejects it.
   await github.rest.git.updateRef({ ...context.repo, ref:`heads/${snapshot.branch}`, sha:commit.data.sha, force:false });
   core.setOutput('commit', commit.data.sha);
@@ -139,8 +150,8 @@ async function finish({ github, context, core, snapshot, result, validation, pub
   const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: snapshot.number });
   const current = eligible(pr, `${context.repo.owner}/${context.repo.repo}`) && pr.head.sha === snapshot.head;
   const explanation = clean(result?.explanation || 'The generation or validation job failed. Inspect the workflow logs.').replace(/@/g, '@\u200b');
-  const status = publishedCommit ? `Validated repair pushed as [\`${publishedCommit.slice(0,7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${publishedCommit}). Check the latest CI and verify the behavior before resolving findings. GitHub may require approval for workflows caused by its Actions token.` : validation === 'success' && current ? `A validated patch is available in the [workflow artifacts](${artifactUrl}), but publishing failed. Inspect the logs before applying it to this exact head.` : !current ? 'The PR head or eligibility changed. The patch must not be applied; replay against the latest review.' : 'No validated patch is available. This finding needs human attention; inspect the workflow logs.';
+  const status = publishedCommit ? `Validated repair pushed as [\`${publishedCommit.slice(0,7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${publishedCommit}). The Codex repair validation status links the checks for this exact patch. GitHub suppresses ordinary CI triggered by its Actions token; run any additional required checks manually and verify behavior before resolving findings or merging.` : validation === 'success' && current ? `A validated patch is available in the [workflow artifacts](${artifactUrl}), but publishing failed. Inspect the logs before applying it to this exact head.` : !current ? 'The PR head or eligibility changed. The patch must not be applied; replay against the latest review.' : 'No validated patch is available. This finding needs human attention; inspect the workflow logs.';
   await github.rest.issues.createComment({ ...context.repo, issue_number: snapshot.number, body: `Codex repair result for \`${snapshot.head}\`: ${status}\n\n${explanation}\n\nFindings remain unresolved. This hook never merges pull requests.` });
   await core.summary.addRaw(status).write();
 }
-module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, completedSummaryAt, states, canAttempt, getFindings, gate, validatePath, applyResult, publish, finish };
+module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, completedSummaryAt, states, canAttempt, getFindings, gate, validatePath, applyResult, verifyValidation, publish, finish };
