@@ -1,0 +1,21 @@
+name: Codex bot identity probe
+on:
+  pull_request:
+    types: [opened]
+permissions: {}
+jobs:
+  probe:
+    if: github.event.pull_request.head.ref == 'codex/review-bot-probe' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.payload.pull_request.number,
+              body: '@codex This is an installation trigger probe on a disposable PR. Fix only .github/codex/bot-probe.txt by replacing probe_failed with probe_passed, and push that single-file change to this PR. Do not merge, deploy, modify other files, or change settings. If this bot identity cannot start a linked cloud coding task, explain that limitation.'
+            });
