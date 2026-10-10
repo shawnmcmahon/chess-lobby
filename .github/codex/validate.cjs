@@ -1,6 +1,8 @@
 const cp = require('node:child_process');
+const fs = require('node:fs');
+const chessTests = process.argv[2] === 'chess-lobby' ? fs.readdirSync(`${process.argv[3]}/tests`).filter(name=>/\.test\.mjs$/.test(name)).sort().map(name=>`tests/${name}`) : [];
 const profiles = {
-  'chess-lobby': [['node',['node_modules/typescript/bin/tsc','--project','convex/tsconfig.json','--noEmit']],['npm',['run','build:web']],['node',['--experimental-strip-types','--test','tests/computer-engine.test.mjs']],['pwsh',['-File','tests/deploy-engine-lambda.tests.ps1']],['dotnet',['test','tests/ChessEngine.Tests/ChessEngine.Tests.csproj','-c','Release']]],
+  'chess-lobby': [['node',['node_modules/typescript/bin/tsc','--project','convex/tsconfig.json','--noEmit']],['npm',['run','build:web']],['node',['--experimental-strip-types','--test',...chessTests]],['pwsh',['-File','tests/deploy-engine-lambda.tests.ps1']],['dotnet',['test','tests/ChessEngine.Tests/ChessEngine.Tests.csproj','-c','Release']]],
   'community-tier-list': [['npm',['run','typecheck']],['npm',['test']],['npm',['run','lint']],['npm',['run','build']]],
   'adonea-metro-district': [['npm',['run','typecheck']],['npm',['run','verify']],['npm',['run','build']]],
   'tollgate-crossing-metro-district': [['npm',['run','typecheck']],['npm',['run','verify']],['npm',['run','build']]],

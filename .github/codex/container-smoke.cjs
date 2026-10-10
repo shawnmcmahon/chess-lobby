@@ -8,6 +8,7 @@ for (const name of ['GITHUB_ENV','GITHUB_OUTPUT','GITHUB_PATH','GITHUB_TOKEN','O
 const readOnly = path => assert.throws(()=>fs.appendFileSync(path,'attempted host mutation'),error=>['EACCES','EROFS'].includes(error.code));
 readOnly('/candidate/.git/config');
 readOnly('/automation/container-smoke.cjs');
+readOnly('/candidate/baseline.test.mjs');
 assert.throws(()=>fs.readFileSync('/tmp/codex-host-command-probe'),error=>error.code==='ENOENT');
 assert.match(cp.execFileSync('dotnet',['--version'],{encoding:'utf8'}),/^10\./);
 assert.match(cp.execFileSync('pwsh',['-NoLogo','-NoProfile','-Command','$PSVersionTable.PSVersion.ToString()'],{encoding:'utf8'}),/^7\./);

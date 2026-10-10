@@ -26,6 +26,7 @@ jobs:
         run: |
           mkdir -p isolation-candidate/.git
           printf 'read-only Git metadata\n' > isolation-candidate/.git/config
+          printf 'trusted baseline test\n' > isolation-candidate/baseline.test.mjs
           printf 'host-only runner command file\n' > /tmp/codex-host-command-probe
           bash .github/codex/validate-container.sh --smoke isolation-candidate
           test -f isolation-candidate/isolation-passed.txt
@@ -41,6 +42,8 @@ jobs:
           mkdir validation-candidate
           git archive HEAD | tar -x -C validation-candidate
           git -C validation-candidate init
+          git -C validation-candidate add .
+          git -C validation-candidate -c core.hooksPath=/dev/null -c user.name=Validation -c user.email=validation@example.invalid commit -qm 'Trusted baseline'
           bash .github/codex/validate-container.sh chess-lobby validation-candidate
       - name: Validate workflow syntax
         run: |

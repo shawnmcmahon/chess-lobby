@@ -63,5 +63,15 @@ if [[ "$profile" != '--smoke' ]]; then
   done < <(find "$restoreRoot/source" -type d -name node_modules -prune -print0)
 fi
 gitMount=(--mount "type=bind,source=$candidate/.git,target=/candidate/.git,readonly")
+if [[ "$profile" == '--smoke' ]]; then
+  gitMount+=(--mount "type=bind,source=$candidate/baseline.test.mjs,target=/candidate/baseline.test.mjs,readonly")
+else
+  node -e 'const fs=require("node:fs"),path=require("node:path"),files=require(process.argv[1]).existingTestPaths(process.argv[2]);for(const file of files){if(file.includes(",")||!fs.lstatSync(path.join(process.argv[2],file)).isFile())throw new Error("Existing test must be a regular mountable file");}process.stdout.write(files.join("\0")+"\0")' "$automation/review-engine.cjs" "$candidate" > "$restoreRoot/test-paths"
+  while IFS= read -r -d '' existingTest; do
+    if [[ -n "$existingTest" ]]; then
+      gitMount+=(--mount "type=bind,source=$candidate/$existingTest,target=/candidate/$existingTest,readonly")
+    fi
+  done < "$restoreRoot/test-paths"
+fi
 npmOffline=true
 runContainer none "$candidate" "$entry"

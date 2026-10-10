@@ -50,7 +50,28 @@ test('patches cannot change automation, agent instructions, credentials or infra
   assert.doesNotThrow(()=>e.validatePath('tests/app.test.mjs'));
 });
 test('repairs cannot redefine the commands or configuration that validate them', () => {
-  for (const p of ['package.json','apps/web/package.json','package-lock.json','pnpm-lock.yaml','tsconfig.json','apps/web/tsconfig.app.json','next.config.ts','vite.config.ts','vitest.config.mts','eslint.config.js','turbo.json','apps/chess-engine/ChessEngine.csproj','Directory.Build.props','Directory.Build.targets','NuGet.config','global.json']) assert.throws(()=>e.validatePath(p),/Protected path/);
+  for (const p of ['package.json','apps/web/package.json','package-lock.json','pnpm-lock.yaml','tsconfig.json','apps/web/tsconfig.app.json','next.config.ts','vite.config.ts','vitest.config.mts','eslint.config.js','turbo.json','apps/chess-engine/ChessEngine.csproj','Directory.Build.props','Directory.Build.targets','NuGet.config','global.json','.gitignore','apps/web/.gitignore']) assert.throws(()=>e.validatePath(p),/Protected path/);
+});
+test('existing tests cannot be weakened, deleted or renamed; new tests remain allowed', () => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-tests-'));
+  const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});
+  try {
+    git('init','-q');git('config','user.email','test@example.com');git('config','user.name','Test');git('config','core.autocrlf','false');
+    const files=['tests/computer-engine.test.mjs','tests/deploy-engine-lambda.tests.ps1','tests/ChessEngine.Tests/EngineTests.cs','src/app.test.ts'];
+    for (const file of files) {fs.mkdirSync(path.dirname(path.join(dir,file)),{recursive:true});fs.writeFileSync(path.join(dir,file),'trusted assertion\n');}
+    git('add','.');git('commit','-qm','baseline');
+    assert.deepEqual(e.existingTestPaths(dir).sort(),[...files].sort());
+    for (const file of files) {
+      fs.writeFileSync(path.join(dir,file),'removed assertion\n');const patch=git('diff');git('reset','--hard','HEAD');
+      assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Existing test coverage/);git('reset','--hard','HEAD');
+    }
+    git('rm',files[0]);let patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Existing test coverage/);git('reset','--hard','HEAD');
+    git('mv',files[0],'renamed.txt');patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.throws(()=>e.applyResult({decision:'patch',patch},dir),/Existing test coverage/);git('reset','--hard','HEAD');
+    fs.writeFileSync(path.join(dir,'tests/new.test.mjs'),'new regression assertion\n');git('add','.');patch=git('diff','--cached','--binary');git('reset','--hard','HEAD');
+    assert.deepEqual(e.applyResult({decision:'patch',patch},dir),['tests/new.test.mjs']);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('patch applies exactly to the supplied base and stale patches fail', () => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-test-'));

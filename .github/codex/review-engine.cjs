@@ -91,10 +91,14 @@ async function gate({ github, context, core, enabled, hasKey }) {
   return snapshot;
 }
 function git(args, cwd) { return cp.execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }); }
+function existingTestPaths(cwd) {
+  const testPath = /(?:^|\/)(?:tests?|specs?|__tests__|__mocks__|fixtures)(?:\/|$)|(?:^|\/)[^/]+\.(?:test|spec|tests)\.[^/]+$|(?:^|\/)(?:test|spec)[-_][^/]+$|Tests\.(?:cs|fs|vb)$/i;
+  return git(['ls-tree','-r','--name-only','-z','HEAD'],cwd).split('\0').filter(path=>path && testPath.test(path));
+}
 function validatePath(path) {
   if (!path || /[\x00-\x1f\\]/.test(path) || path.startsWith('/') || path.split('/').includes('..')) throw new Error('Invalid patch path.');
   const protectedDirectory = /(?:^|\/)(?:\.github|\.codex|\.cursor|\.agents|\.claude|_generated\/ai|infra|infrastructure|deploy|deployment|terraform|cloudformation|cdk|scripts|bin)(?:\/|$)/i;
-  const protectedFile = /(?:^|\/)(?:(?:AGENTS|CLAUDE|GEMINI|SKILL)\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
+  const protectedFile = /(?:^|\/)(?:(?:AGENTS|CLAUDE|GEMINI|SKILL)\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitignore|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
   const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
   const rootScript = !path.includes('/') && /\.(?:[cm]?js|ps1|psm1|sh|py|bat|cmd)$/i.test(path);
   const keyGenerator = /(?:^|\/)(?:(?:generate|create)[-_]?(?:keys|jwks|jwt)|keygen)(?:\.[^/]*)?\.(?:[cm]?[jt]s|py|ps1|sh)$/i.test(path);
@@ -110,9 +114,11 @@ function applyResult(result, cwd) {
   // Enumerate a rename as its deletion and addition so the REST tree matches the
   // validated Git index exactly, even if rename detection is configured globally.
   const paths = git(['diff', '--cached', '--no-renames', '--name-only', '-z'], cwd).split('\0').filter(Boolean);
+  const existingTests = new Set(existingTestPaths(cwd));
   if (!paths.length || paths.length > 20) throw new Error('A patch must change between one and twenty files.');
   for (const path of paths) {
     validatePath(path);
+    if (existingTests.has(path)) throw new Error(`Existing test coverage requires human review: ${path}`);
     const entries = git(['ls-files', '--stage', '--', path], cwd);
     if (entries && !entries.startsWith('100644 ')) throw new Error(`Unsupported file mode: ${path}`);
   }
@@ -157,4 +163,4 @@ async function finish({ github, context, core, snapshot, result, validation, pub
   await github.rest.issues.createComment({ ...context.repo, issue_number: snapshot.number, body: `Codex repair result for \`${snapshot.head}\`: ${status}\n\n${explanation}\n\nFindings remain unresolved. This hook never merges pull requests.` });
   await core.summary.addRaw(status).write();
 }
-module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, completedSummaryAt, states, canAttempt, getFindings, gate, validatePath, applyResult, verifyValidation, publish, finish };
+module.exports = { PROVIDER, trusted, actionable, clean, fingerprint, eligible, completedSummaryAt, states, canAttempt, getFindings, gate, existingTestPaths, validatePath, applyResult, verifyValidation, publish, finish };
