@@ -8,4 +8,4 @@ Automatic repair is credential-gated and disabled at installation. Securely add 
 
 Disable repair with `CODEX_REVIEW_REPAIR_ENABLED=false`; cancel already-running attempts in Actions. Disable the entire follow-up workflow in Actions to stop receipts. Native review switches are independent. A maintainer can replay the hook through Run workflow with a PR number, or use the documented linked-account comment `@codex fix the findings` after configuring a legacy cloud environment for the repository.
 
-Shared source, validation profiles, usage implications and recovery details: [engine guide](https://github.com/shawnmcmahon/chess-lobby/blob/e011d9fa624ad7f3d95ad65aceed93297c4647a9/.github/codex/README.md). The workflow pins that immutable source commit; later engine updates require an explicit reviewed pin update.
+Shared source, validation profiles, usage implications and recovery details: [engine guide](https://github.com/shawnmcmahon/chess-lobby/blob/6f831f1a60296b479627a1e14c0547f68ac9c9e5/.github/codex/README.md). The workflow pins that immutable source commit; later engine updates require an explicit reviewed pin update.
