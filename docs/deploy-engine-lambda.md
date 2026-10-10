@@ -2,7 +2,7 @@
 
 Deployment status (2026-10-10 UTC): the .NET 10 + native Stockfish Lambda replacement is deployed in account `058264467102`, us-east-1. Production Convex now uses its Function URL. Native cold/warm requests, concurrent requests, timed production computer games, human multiplayer, private chat, password sign-in, and presence passed. The dedicated `chess-lobby-engine` Lightsail container service was deleted and its absence verified. Existing S3/CloudFront/DNS hosting is unchanged. Local Docker Desktop work is stopped; Linux image builds and validation ran in GitHub CI, and deployment used connected AWS access.
 
-Function URL: `https://4epw473km3adiseigmyve5oggm0utkkp.lambda-url.us-east-1.on.aws/`. The initial verified cutover used image digest `sha256:7a87fda0270d7be896d625174306e8b1653e739b82301c326197ccb86b64a945`, from CI run `38010891434`. Subsequent releases are recorded by the function stack's `ImageUri` parameter and the ECR `release-*` tags. Failed startup candidates were removed. `keep-current` protects the validated active release and `keep-rollback` protects its validated predecessor after subsequent deployments.
+Function URL: `https://4epw473km3adiseigmyve5oggm0utkkp.lambda-url.us-east-1.on.aws/`. The active image is `sha256:348f319bc57e1549fa156942042a5a5ae412c1b1dc100a8679432c192ef9d0e7`, built from runtime source `fe578d8` in validated CI run `38012716147`; its real AWS endpoint suite passed after deployment. `keep-rollback` retains the initial verified cutover image `sha256:7a87fda0270d7be896d625174306e8b1653e739b82301c326197ccb86b64a945` (CI `38010891434`). The function stack's `ImageUri` parameter and ECR `release-*` tags record deployments. Failed startup candidates and unused documentation-only builds were removed. `keep-current` protects the active validated release.
 
 ## Architecture and resources
 
@@ -177,6 +177,7 @@ AWS `REPORT` records separate handler and initialization time from billed durati
 | Cold development Convex → Lambda game | 995.19 ms | 13,403 ms | 14,463.36 ms | 15,459 ms |
 | Second cold direct endpoint check | 903.53 ms | Included in handler | 5,099.48 ms | 6,004 ms |
 | Final cold production game | 851.98 ms | Included in handler | 2,074.92 ms | 2,927 ms |
+| Cold endpoint after review fixes | 657.23 ms | 991 ms | 2,056.92 ms | 2,715 ms |
 | Representative warm 800 ms search | — | Reused process | 814.25 ms | 815 ms |
 
 Cold startup varied across environments. Earlier five- and twelve-second initialization limits timed out, so the final deployment allows 22 seconds for native initialization within a 25-second app deadline, followed by a 30-second Lambda deadline and a 35-second Convex fetch deadline. Search remains capped at 1.5 seconds. The cold development game finished in about 16.5 seconds and the final cold production game in about 3.5 seconds, both within the existing timed-game first-move grace period and with no fallback. Six additional production computer replies at skills 1 and 20 passed concurrently with no fallback. Maximum observed memory was 383 MiB. Temporary verification functions, games, messages, and auth records were removed afterward.
@@ -187,9 +188,9 @@ Retained compressed storage was calculated from unique manifest layer/config des
 
 | Repository | Purpose | Compressed bytes | Estimated storage/month |
 |---|---|---:|---:|
-| `chess-lobby-engine-lambda-ecr-images` | Current verified Lambda image | 379,132,647 | $0.03531 |
+| `chess-lobby-engine-lambda-ecr-images` | Current verified Lambda image plus verified rollback | 718,983,404 | $0.06696 |
 | `chess-engine` | Original Lightsail image for recreation | 117,120,017 | $0.01091 |
-| Total | Current engine plus old image | 496,252,664 (0.46217 GiB) | $0.04622 |
+| Total | Active engine, Lambda rollback, and old image | 836,103,421 (0.77868 GiB) | $0.07787 |
 
 The 567.4 MiB uncompressed Docker image size is not the ECR billing size. ECR cleanup may take up to 24 hours. Subsequent retained release candidates and rollback images increase storage; remeasure all retained unique layers after deployments. Rates used: [Lambda](https://aws.amazon.com/lambda/pricing/) $0.0000166667/GB-second and $0.20/million requests; [ECR](https://aws.amazon.com/ecr/pricing/) $0.10/GB-month; [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/) $0.50/GB ingested and $0.03/GB archived, with seven-day retention.
 
@@ -197,15 +198,15 @@ Light-traffic estimate: one game per visitor, 60 computer replies per game, one 
 
 | Visitors/games per month | Lambda compute + requests | Estimated logs | Total ECR storage | Engine total/month |
 |---:|---:|---:|---:|---:|
-| 1 | $0.00213 | $0.00002 | $0.04622 | **$0.04836** |
-| 10 | $0.02130 | $0.00017 | $0.04622 | **$0.06769** |
+| 1 | $0.00213 | $0.00002 | $0.07787 | **$0.08002** |
+| 10 | $0.02130 | $0.00017 | $0.07787 | **$0.09934** |
 
-Idle compute/request cost is zero; ECR storage remains recurring. Compared with the recent 30-day charge and the $10 plan maximum, expected net savings are approximately **$9.60–$9.95/month** at this traffic. The old image storage existed before migration, so it is shown in the engine total but is not treated as a new migration charge. Even the conservative scenario of 600 invocations all billed at 15.459 seconds costs under $0.36/month including the current retained storage and estimated logs. These estimates precede free allowances/credits, exclude data transfer and existing site/Convex/DNS/domain costs, and are not actual future bills. Remaining shared-account free allowances were not verified.
+Idle compute/request cost is zero; ECR storage remains recurring. Compared with the recent 30-day charge and the $10 plan maximum, expected net savings are approximately **$9.59–$9.93/month** at this traffic, after subtracting the added Lambda/storage/log costs. The old image storage existed before migration, so it is shown in the engine total but is not treated as a new migration charge. Even the conservative scenario of 600 invocations all billed at 15.459 seconds costs under $0.39/month including the current retained storage and estimated logs. These estimates precede free allowances/credits, exclude data transfer and existing site/Convex/DNS/domain costs, and are not actual future bills. Remaining shared-account free allowances were not verified.
 
 Reproduce or vary the measured scenario:
 
 ```powershell
-node scripts/estimate-engine-cost.mjs --games 10 --moves 60 --billed-seconds 0.815 --cold-starts-per-game 1 --cold-billed-seconds 15.459 --retained-ecr-gib 0.4621713087
+node scripts/estimate-engine-cost.mjs --games 10 --moves 60 --billed-seconds 0.815 --cold-starts-per-game 1 --cold-billed-seconds 15.459 --retained-ecr-gib 0.7786819907
 ```
 
 The first 57 verification invocations totaled 74.203 billed seconds: approximately $0.00247 compute plus $0.000011 requests before allowances. This includes failed startup investigations; CI, image storage during validation, logs, API-query fees, and temporary Lightsail overlap are separate. The monthly bill will retain prorated Lightsail charges accrued before deletion.

@@ -180,7 +180,7 @@ Open http://localhost:5173
 | Vs computer (Stockfish) | **AWS Lambda + ECR** | `chess-lobby-engine-lambda` — on-demand .NET 10 + native Stockfish (HTTPS) |
 | Engine configuration | **Convex Cloud** | `ENGINE_API_URL` / `ENGINE_API_KEY` point at the Lambda Function URL |
 
-**Measured engine estimate:** ~$0.05–$0.07/month for 1–10 computer games with 60 engine replies each, including current ECR storage, before allowances/credits and transfer. Existing static hosting, Convex, DNS, and domain charges are separate. See the [measurement assumptions and savings](docs/deploy-engine-lambda.md#deployed-measurements-and-monthly-savings).
+**Measured engine estimate:** ~$0.08–$0.10/month for 1–10 computer games with 60 engine replies each, including the active image, verified Lambda rollback, and original Lightsail image storage, before allowances/credits and transfer. Existing static hosting, Convex, DNS, and domain charges are separate. See the [measurement assumptions and savings](docs/deploy-engine-lambda.md#deployed-measurements-and-monthly-savings).
 
 Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)** (site + Convex)  
 Engine hosting: **[docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md)**
