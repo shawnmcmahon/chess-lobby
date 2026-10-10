@@ -25,9 +25,9 @@ jobs:
       pull-requests: write
       issues: write
       statuses: write
-    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@4ded11f757aaa0f23a75d0ca63292ecce1598582
+    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@e011d9fa624ad7f3d95ad65aceed93297c4647a9
     with:
-      engine_ref: 4ded11f757aaa0f23a75d0ca63292ecce1598582
+      engine_ref: e011d9fa624ad7f3d95ad65aceed93297c4647a9
       profile: chess-lobby
       node_version: '22'
       repair_enabled: ${{ vars.CODEX_REVIEW_REPAIR_ENABLED == 'true' }}
