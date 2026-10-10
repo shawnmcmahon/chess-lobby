@@ -96,7 +96,9 @@ function validatePath(path) {
   const protectedDirectory = /(?:^|\/)(?:\.github|\.codex|\.cursor|\.agents|\.claude|_generated\/ai|infra|infrastructure|deploy|deployment|terraform|cloudformation|cdk|scripts|bin)(?:\/|$)/i;
   const protectedFile = /(?:^|\/)(?:(?:AGENTS|CLAUDE|GEMINI|SKILL)\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
   const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
-  if (protectedDirectory.test(path) || protectedFile.test(path) || validationControl.test(path)) throw new Error(`Protected path requires human review: ${path}`);
+  const rootScript = !path.includes('/') && /\.(?:[cm]?js|ps1|psm1|sh|py|bat|cmd)$/i.test(path);
+  const keyGenerator = /(?:^|\/)(?:(?:generate|create)[-_]?(?:keys|jwks|jwt)|keygen)(?:\.[^/]*)?\.(?:[cm]?[jt]s|py|ps1|sh)$/i.test(path);
+  if (protectedDirectory.test(path) || protectedFile.test(path) || validationControl.test(path) || rootScript || keyGenerator) throw new Error(`Protected path requires human review: ${path}`);
 }
 function applyResult(result, cwd) {
   if (result.decision !== 'patch') throw new Error('Codex deferred this finding for human judgment.');

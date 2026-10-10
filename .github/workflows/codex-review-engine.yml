@@ -89,6 +89,7 @@ jobs:
             scripts, Dockerfiles, container orchestration, CDK, Terraform, or hosting configs,
             package manifests, dependency lockfiles, or project/build/test configuration,
             repository skill/agent instructions or Convex _generated/ai guidance,
+            standalone root utility scripts or key-generation helpers,
             executable modes, symlinks, binaries, or unrelated behavior. Keep the patch under
             100 KB and 20 files. Do not run network-dependent integration or deployment commands.
             Add a focused regression test when meaningful. If the finding needs a product choice,
