@@ -126,7 +126,7 @@ export async function getBestMove(
         },
         body: JSON.stringify({ fen, skill, movetimeMs }),
         // Include cold-start headroom; bound failures so computer games can fall back.
-        signal: AbortSignal.timeout(25_000),
+        signal: AbortSignal.timeout(35_000),
       });
 
       if (response.ok) {

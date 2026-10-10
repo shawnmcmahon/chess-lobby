@@ -20,14 +20,14 @@ public sealed partial class StockfishService(IConfiguration configuration, ILogg
     {
         if (!FenValidation.IsValid(fen)) throw new ArgumentException("Invalid FEN", nameof(fen));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        timeout.CancelAfter(TimeSpan.FromSeconds(25));
         await _lock.WaitAsync(timeout.Token);
         try
         {
             // Lambda lazily loads image pages; cold native initialization needs separate headroom.
             using (var initialization = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token))
             {
-                initialization.CancelAfter(TimeSpan.FromSeconds(12));
+                initialization.CancelAfter(TimeSpan.FromSeconds(22));
                 await EnsureProcessAsync(initialization.Token);
             }
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
