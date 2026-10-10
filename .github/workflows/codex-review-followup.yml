@@ -1,7 +1,5 @@
 name: Codex review follow-up
 on:
-  pull_request_review:
-    types: [submitted]
   issue_comment:
     types: [created, edited]
   workflow_dispatch:
@@ -11,23 +9,22 @@ on:
         required: true
         type: string
 permissions: {}
-concurrency:
-  group: codex-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request }}
-  cancel-in-progress: false
 jobs:
   follow-up:
+    concurrency:
+      group: codex-review-${{ github.event.issue.number || inputs.pull_request }}
+      cancel-in-progress: false
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.review.user.login == 'chatgpt-codex-connector[bot]' && github.event.review.user.id == 199175422) ||
+      (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
       (github.event.issue.pull_request && github.event.comment.user.login == 'chatgpt-codex-connector[bot]' && github.event.comment.user.id == 199175422)
     permissions:
       contents: write
       pull-requests: write
       issues: write
       statuses: write
-    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@6f831f1a60296b479627a1e14c0547f68ac9c9e5
+    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@33fa3b6d4595ed95ae8a0787dcf07a37fec610a2
     with:
-      engine_ref: 6f831f1a60296b479627a1e14c0547f68ac9c9e5
+      engine_ref: 33fa3b6d4595ed95ae8a0787dcf07a37fec610a2
       profile: chess-lobby
       node_version: '22'
       repair_enabled: ${{ vars.CODEX_REVIEW_REPAIR_ENABLED == 'true' }}
