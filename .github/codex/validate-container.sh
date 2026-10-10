@@ -40,6 +40,12 @@ if [[ "$profile" != '--smoke' ]]; then
   # The networked container sees manifests only: no source, .git, repository
   # configuration, lifecycle scripts, or runner credentials/command files.
   cp "$candidate/package.json" "$candidate/package-lock.json" "$restoreRoot/source/"
+  if [[ "$profile" == 'community-tier-list' ]]; then
+    for workspace in apps/web apps/realtime; do
+      mkdir -p "$restoreRoot/source/$workspace"
+      cp "$candidate/$workspace/package.json" "$restoreRoot/source/$workspace/"
+    done
+  fi
   if [[ "$profile" == 'chess-lobby' ]]; then
     mkdir -p "$restoreRoot/source/apps/web"
     cp "$candidate/apps/web/package.json" "$restoreRoot/source/apps/web/"
@@ -48,7 +54,13 @@ if [[ "$profile" != '--smoke' ]]; then
     cp "$candidate/tests/ChessEngine.Tests/ChessEngine.Tests.csproj" "$restoreRoot/source/manifests/tests.csproj"
   fi
   runContainer bridge "$restoreRoot/source" /automation/restore.cjs
-  mv "$restoreRoot/source/node_modules" "$candidate/node_modules"
+  while IFS= read -r -d '' dependencyDir; do
+    relative="${dependencyDir#"$restoreRoot/source/"}"
+    mkdir -p "$(dirname "$candidate/$relative")"
+    # Validation starts from a fresh checkout, never overlay existing modules.
+    test ! -e "$candidate/$relative"
+    mv "$dependencyDir" "$candidate/$relative"
+  done < <(find "$restoreRoot/source" -type d -name node_modules -prune -print0)
 fi
 gitMount=(--mount "type=bind,source=$candidate/.git,target=/candidate/.git,readonly")
 npmOffline=true
