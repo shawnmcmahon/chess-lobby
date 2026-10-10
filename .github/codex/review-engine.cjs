@@ -114,7 +114,7 @@ function applyResult(result, cwd) {
   try { git(['-c', 'core.hooksPath=/dev/null', 'apply', '--index', '--whitespace=error-all', patchPath], cwd); } finally { fs.unlinkSync(patchPath); }
   // Enumerate a rename as its deletion and addition so the REST tree matches the
   // validated Git index exactly, even if rename detection is configured globally.
-  const paths = git(['diff', '--cached', '--no-renames', '--name-only', '-z'], cwd).split('\0').filter(Boolean);
+  const paths = git(['diff', '--cached', '--name-only', '-z'], cwd).split('\0').filter(Boolean);
   const existingTests = new Set(existingTestPaths(cwd));
   if (!paths.length || paths.length > 20) throw new Error('A patch must change between one and twenty files.');
   for (const path of paths) {
