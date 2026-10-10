@@ -58,7 +58,7 @@ async function gate({ github, context, core, enabled, hasKey }) {
   const event = context.payload;
   const manual = context.eventName === 'workflow_dispatch';
   const source = event.review || event.comment;
-  if (!manual && !trusted(source?.user)) { core.info('Ignored untrusted review provider.'); return null; }
+  if (!manual && (!trusted(source?.user) || !trusted(event.sender))) { core.info('Ignored untrusted review provider or event sender.'); return null; }
   if (manual) {
     const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ ...context.repo, username: context.actor });
     if (!['admin', 'maintain', 'write'].includes(data.permission)) throw new Error('Manual replay requires repository write permission.');
@@ -99,7 +99,7 @@ function validatePath(path) {
   if (!path || /[\x00-\x1f\\]/.test(path) || path.startsWith('/') || path.split('/').includes('..')) throw new Error('Invalid patch path.');
   const protectedDirectory = /(?:^|\/)(?:\.github|\.codex|\.cursor|\.agents|\.claude|_generated\/ai|infra|infrastructure|deploy|deployment|terraform|cloudformation|cdk|scripts|bin)(?:\/|$)/i;
   const protectedFile = /(?:^|\/)(?:(?:AGENTS|CLAUDE|GEMINI|SKILL)\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitignore|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
-  const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
+  const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo|postcss|tailwind)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|[^/]+\.config(?:\.[^/]+)?|\.[^/]+(?:rc|ignore)(?:\.[^/]+)?|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
   const rootScript = !path.includes('/') && /\.(?:[cm]?js|ps1|psm1|sh|py|bat|cmd)$/i.test(path);
   const keyGenerator = /(?:^|\/)(?:(?:generate|create)[-_]?(?:keys|jwks|jwt)|keygen)(?:\.[^/]*)?\.(?:[cm]?[jt]s|py|ps1|sh)$/i.test(path);
   const testPath = /(?:^|\/)(?:tests?|specs?|__tests__|__mocks__|fixtures)(?:\/|$)|(?:^|\/)[^/]+\.(?:test|spec|tests)\.[^/]+$|(?:^|\/)(?:test|spec)[-_][^/]+$|Tests\.(?:cs|fs|vb)$/i;

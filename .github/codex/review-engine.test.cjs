@@ -5,6 +5,13 @@ const os = require('node:os');
 const path = require('node:path');
 const cp = require('node:child_process');
 const e = require('./review-engine.cjs');
+test('edited bot summaries require the real provider sender before any API calls', async () => {
+  const provider={...e.PROVIDER,type:'Bot'};
+  for (const sender of [undefined,{...provider,id:1},{...provider,type:'User'}]) {
+    const context={eventName:'issue_comment',payload:{action:'edited',sender,comment:{user:provider}}};
+    assert.equal(await e.gate({github:{},context,core:{info(){}},enabled:true,hasKey:true}),null);
+  }
+});
 test('networked dependency restore accepts package data without MSBuild execution', () => {
   const {packageReferences}=require('./restore.cjs');
   assert.deepEqual(packageReferences('<Project><PackageReference Include="xunit" Version="2.9.3" /><Target Name="Restore"><Exec Command="attack" /></Target></Project>'),['<PackageReference Include="xunit" Version="2.9.3" />']);
@@ -50,6 +57,7 @@ test('patches cannot change automation, agent instructions, credentials or infra
   assert.throws(()=>e.validatePath('tests/app.test.mjs'),/Protected path/);
 });
 test('repairs cannot redefine the commands or configuration that validate them', () => {
+  for (const p of ['apps/web/postcss.config.js','apps/web/tailwind.config.ts','nested/custom.config.mjs','nested/.babelrc.json','nested/.browserslistrc','nested/.eslintignore']) assert.throws(()=>e.validatePath(p),/Protected path/);
   for (const p of ['package.json','apps/web/package.json','package-lock.json','pnpm-lock.yaml','tsconfig.json','apps/web/tsconfig.app.json','next.config.ts','vite.config.ts','vitest.config.mts','eslint.config.js','turbo.json','apps/chess-engine/ChessEngine.csproj','Directory.Build.props','Directory.Build.targets','NuGet.config','global.json','.gitignore','apps/web/.gitignore']) assert.throws(()=>e.validatePath(p),/Protected path/);
 });
 test('baseline and candidate-added tests require human review', () => {
@@ -102,7 +110,7 @@ test('missing API credentials acknowledge real findings without starting repair'
   const receipts=[];const outputs={};
   const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread]}}}}),paginate:async()=>[],rest:{pulls:{get:async()=>({data:pr}),getReviewComment:async()=>({data:{user:provider,commit_id:'head',html_url:'https://example.test/finding'}})},issues:{listComments(){},createComment:async(data)=>{receipts.push(data.body);return {data:{id:20}};}}}};
   const core={info(){},setOutput:(name,value)=>outputs[name]=value,summary:{addRaw(){return this;},async write(){}}};
-  const context={repo:{owner:'owner',repo:'repo'},eventName:'pull_request_review',runId:30,payload:{pull_request:{number:1},review:{user:provider,commit_id:'head'}}};
+  const context={repo:{owner:'owner',repo:'repo'},eventName:'issue_comment',runId:30,payload:{sender:provider,issue:{number:1,pull_request:{}},comment:{user:provider,body:'<!-- codex-security-review:v1 {"status":"completed","headSha":"head"} -->'}}};
   const snapshot=await e.gate({github,context,core,enabled:true,hasKey:false});
   assert.equal(snapshot.run_fix,false);assert.equal(outputs.run_fix,'false');assert.match(receipts[0],/waiting for a repository OPENAI_API_KEY/);
   assert.equal(await e.gate({github,context:{...context,payload:{...context.payload,review:{user:provider,commit_id:'old'}}},core,enabled:true,hasKey:true}),null);
@@ -153,7 +161,7 @@ test('a draft PR by another author receives an audit receipt without a repair', 
   const thread={id:'thread',path:'src/app.ts',line:4,isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[comment]}};
   const github={graphql:async()=>({repository:{pullRequest:{reviewThreads:{pageInfo:{hasNextPage:false},nodes:[thread]}}}}),paginate:async()=>[],rest:{pulls:{get:async()=>({data:pr}),getReviewComment:async()=>({data:{user:provider,commit_id:head,html_url:'https://example.test/finding'}})},issues:{listComments(){},createComment:async(data)=>{receipts.push(data.body);return {data:{id:20}};}}}};
   const core={info(){},setOutput(){},summary:{addRaw(){return this;},async write(){}}};
-  const context={repo:{owner:'owner',repo:'repo'},eventName:'pull_request_review',runId:30,payload:{pull_request:{number:1},review:{user:provider,commit_id:head}}};
+  const context={repo:{owner:'owner',repo:'repo'},eventName:'pull_request_review',runId:30,payload:{sender:provider,pull_request:{number:1},review:{user:provider,commit_id:head}}};
   const snapshot=await e.gate({github,context,core,enabled:true,hasKey:true});
   assert.equal(snapshot.run_fix,false);assert.match(receipts[0],/need a maintainer/);
 });
