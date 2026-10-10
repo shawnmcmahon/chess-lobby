@@ -20,7 +20,7 @@ function deliver() {
   const job = queue.shift();
   nextResponse.writeHead(200, {
     'content-type': 'application/json', 'lambda-runtime-aws-request-id': job.id,
-    'lambda-runtime-deadline-ms': String(Date.now() + 10_000),
+    'lambda-runtime-deadline-ms': String(Date.now() + 20_000),
     'lambda-runtime-invoked-function-arn': 'arn:aws:lambda:us-east-1:123456789012:function:local-test',
   });
   nextResponse.end(job.body);

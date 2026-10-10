@@ -25,7 +25,7 @@ Two small CloudFormation stacks in `infra/engine-lambda` create these resources 
 | ECR stack | Repository policy | Lambda service may pull only for this account/region's `chess-lobby-engine-*` functions |
 | ECR stack | Lifecycle policy | Protect two rotating current/rollback pins, retain three recent release candidates, expire untagged images after one day |
 | ECR stack | Image-publisher IAM role and managed policy | GitHub OIDC trust restricted to this repository's PRs; image upload/read permissions on this ECR repository only, without Lambda or website access |
-| `chess-lobby-engine-lambda` | Lambda function | Image pinned by digest, x86_64, 2,048 MiB memory, 512 MiB temporary storage, 10-second timeout, reserved concurrency 2 |
+| `chess-lobby-engine-lambda` | Lambda function | Image pinned by digest, x86_64, 2,048 MiB memory, 512 MiB temporary storage, 20-second timeout, reserved concurrency 2 |
 | Function stack | Function URL | Buffered HTTP API v2 payloads, HTTPS, `AuthType: NONE`, no CORS configuration |
 | Function stack | Two Lambda resource permissions | Public Function URL invocation; underlying `InvokeFunction` grant restricted to URL calls |
 | Function stack | Execution IAM role | Trusts Lambda; attached policy permits only creating streams and writing events in the engine log group |
@@ -45,8 +45,8 @@ The app requires a configured key at startup and compares hashes in constant tim
 - Request body limit: 4 KiB, including under the Lambda adapter.
 - FEN: six fields, structurally valid board with one king per side, no adjacent kings or pawns on promotion ranks, no newlines/UCI injection. Convex remains the legal-position authority.
 - Stockfish: one thread, 32 MiB hash, skill clamped to 0–20, thinking time clamped to 100–1,500 ms. Existing requests still ask for 800 ms.
-- App deadline: five seconds including startup, UCI handshake and semaphore wait. Failed/cancelled searches kill the subprocess; EOF is an error, not a busy loop. Next request starts a clean process.
-- Lambda deadline: ten seconds. Convex fetch deadline: fifteen seconds including cold-start headroom. Error responses avoid exposing process details.
+- App deadline: fifteen seconds, with a twelve-second native initialization allowance and a separate five-second UCI/search deadline once ready. Failed/cancelled searches kill the subprocess; EOF is an error, not a busy loop. Next request starts a clean process.
+- Lambda deadline: twenty seconds. Convex fetch deadline: twenty-five seconds including cold-start headroom. Error responses avoid exposing process details.
 - Every request issues `ucinewgame` and a complete FEN. Warm environments reuse the native process without sharing another game's position. There is no requirement to keep a particular environment alive.
 
 The HTTP contract stays `POST /api/best-move` with `{ "fen": "...", "skill": 10, "movetimeMs": 800 }` and `{ "bestMove": "e7e5" }`. Convex now trims trailing slashes, bounds the fetch, and checks that external output is a legal move before applying it. The existing minimax fallback remains available for timeouts, throttling, bad output, and service failures.

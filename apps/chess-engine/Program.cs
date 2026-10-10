@@ -60,7 +60,7 @@ app.MapPost("/api/best-move", async (HttpContext http, IChessEngine engine, ILog
         return Results.BadRequest(new { error = "a valid six-field fen is required" });
 
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(http.RequestAborted);
-    timeout.CancelAfter(TimeSpan.FromSeconds(5));
+    timeout.CancelAfter(TimeSpan.FromSeconds(15));
     try
     {
         var move = await engine.GetBestMoveAsync(request.Fen!, request.Skill ?? 10, request.MovetimeMs ?? 800, timeout.Token);

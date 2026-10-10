@@ -9,7 +9,7 @@ public interface IChessEngine
     Task<string> GetBestMoveAsync(string fen, int skill = 10, int movetimeMs = 800, CancellationToken cancellationToken = default);
 }
 
-public sealed partial class StockfishService(IConfiguration configuration) : IChessEngine, IDisposable
+public sealed partial class StockfishService(IConfiguration configuration, ILogger<StockfishService>? logger = null) : IChessEngine, IDisposable
 {
     public const int MaxMovetimeMs = 1500;
     private readonly string _stockfishPath = configuration["STOCKFISH_PATH"] ?? (OperatingSystem.IsWindows() ? "stockfish.exe" : "stockfish");
@@ -20,11 +20,17 @@ public sealed partial class StockfishService(IConfiguration configuration) : ICh
     {
         if (!FenValidation.IsValid(fen)) throw new ArgumentException("Invalid FEN", nameof(fen));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
         await _lock.WaitAsync(timeout.Token);
         try
         {
-            await EnsureProcessAsync(timeout.Token);
+            // Lambda lazily loads image pages; cold native initialization needs separate headroom.
+            using (var initialization = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token))
+            {
+                initialization.CancelAfter(TimeSpan.FromSeconds(12));
+                await EnsureProcessAsync(initialization.Token);
+            }
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
             // Independent requests across Lambda freeze/thaw and different games.
             await SendAsync("ucinewgame", timeout.Token);
             await SendAsync($"setoption name Skill Level value {Math.Clamp(skill, 0, 20)}", timeout.Token);
@@ -54,6 +60,7 @@ public sealed partial class StockfishService(IConfiguration configuration) : ICh
     {
         if (_process is { HasExited: false }) return;
         ResetProcess();
+        var startup = Stopwatch.StartNew();
         _process = Process.Start(new ProcessStartInfo
         {
             FileName = _stockfishPath,
@@ -67,10 +74,12 @@ public sealed partial class StockfishService(IConfiguration configuration) : ICh
         _ = DrainErrorsAsync(_process.StandardError);
         await SendAsync("uci", token);
         await ReadUntilAsync("uciok", token);
+        logger?.LogInformation("Stockfish UCI initialized in {ElapsedMs} ms", startup.ElapsedMilliseconds);
         await SendAsync("setoption name Threads value 1", token);
         await SendAsync("setoption name Hash value 32", token);
         await SendAsync("isready", token);
         await ReadUntilAsync("readyok", token);
+        logger?.LogInformation("Stockfish ready in {ElapsedMs} ms", startup.ElapsedMilliseconds);
     }
 
     private async Task SendAsync(string command, CancellationToken token) =>

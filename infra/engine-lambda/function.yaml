@@ -56,7 +56,7 @@ Resources:
         ImageUri: !Ref ImageUri
       Role: !GetAtt ExecutionRole.Arn
       MemorySize: 2048
-      Timeout: 10
+      Timeout: 20
       ReservedConcurrentExecutions: !Ref ReservedConcurrency
       EphemeralStorage:
         Size: 512
@@ -65,7 +65,7 @@ Resources:
           ENGINE_API_KEY: !Ref EngineApiKey
           STOCKFISH_PATH: /opt/stockfish
           ASPNETCORE_ENVIRONMENT: Production
-          Logging__LogLevel__Default: Warning
+          Logging__LogLevel__Default: Information
       LoggingConfig:
         LogGroup: !Ref Logs
   FunctionUrl:

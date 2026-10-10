@@ -25,7 +25,7 @@ async function request(path, body, apiKey = key, method = 'POST') {
   const headers = { 'content-type': 'application/json', ...(apiKey ? { 'x-api-key': apiKey } : {}) };
   const started = performance.now();
   if (url) {
-    const response = await fetch(`${url.replace(/\/+$/, '')}${path}`, { method, headers, ...(method === 'POST' ? { body } : {}), signal: AbortSignal.timeout(20_000) });
+    const response = await fetch(`${url.replace(/\/+$/, '')}${path}`, { method, headers, ...(method === 'POST' ? { body } : {}), signal: AbortSignal.timeout(25_000) });
     return { status: response.status, body: await response.text(), elapsedMs: performance.now() - started };
   }
   const event = {
@@ -37,7 +37,7 @@ async function request(path, body, apiKey = key, method = 'POST') {
     },
     body, isBase64Encoded: false,
   };
-  const response = await fetch(runtime || `${base}/2015-03-31/functions/function/invocations`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event), signal: AbortSignal.timeout(20_000) });
+  const response = await fetch(runtime || `${base}/2015-03-31/functions/function/invocations`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event), signal: AbortSignal.timeout(25_000) });
   const result = await response.json();
   assert.ok(result.statusCode, JSON.stringify(result));
   return { status: result.statusCode, body: result.isBase64Encoded ? Buffer.from(result.body, 'base64').toString() : result.body, elapsedMs: performance.now() - started };
