@@ -22,6 +22,9 @@ jobs:
 
   engine:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -43,6 +46,25 @@ jobs:
           python-version: '3.12'
       - run: pip install cfn-lint
       - run: cfn-lint infra/engine-lambda/*.yaml
+      - name: Authenticate image publisher
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && vars.ENGINE_IMAGE_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.ENGINE_IMAGE_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Publish validated candidate image
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && vars.ENGINE_IMAGE_ROLE_ARN != ''
+        env:
+          ENGINE_ECR_REPOSITORY: ${{ vars.ENGINE_ECR_REPOSITORY }}
+        run: |
+          account=$(aws sts get-caller-identity --query Account --output text)
+          repository="${ENGINE_ECR_REPOSITORY:-chess-lobby-engine-lambda-ecr-images}"
+          registry="$account.dkr.ecr.us-east-1.amazonaws.com"
+          tag="release-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$registry"
+          docker tag chess-engine-lambda:test "$registry/$repository:$tag"
+          docker push "$registry/$repository:$tag"
+          aws ecr describe-images --repository-name "$repository" --image-ids imageTag="$tag" --query 'imageDetails[0].{digest:imageDigest,compressedBytes:imageSizeInBytes}' --output json
 
   convex:
     runs-on: ubuntu-latest
