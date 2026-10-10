@@ -40,6 +40,9 @@ test('patches cannot change automation, agent instructions, credentials or infra
   for (const p of ['.github/workflows/test.yml','AGENTS.md','src/AGENTS.md','.codex/config.toml','.env.production','infra/app.ts','cert.key','../outside','a\nb','apps/chess-engine/Dockerfile.lambda','docker-compose.yml','scripts/setup-aws-demo.ps1','apps/realtime/deploy/lightsail/docker-compose.yml','apps/web/vercel.json','cdk.context.json','wrangler.jsonc','nested/main.tf','.gitattributes']) assert.throws(()=>e.validatePath(p));
   for (const p of ['src/app.ts','tests/app.test.ts','README.md']) assert.doesNotThrow(()=>e.validatePath(p));
 });
+test('repairs cannot redefine the commands or configuration that validate them', () => {
+  for (const p of ['package.json','apps/web/package.json','package-lock.json','pnpm-lock.yaml','tsconfig.json','apps/web/tsconfig.app.json','next.config.ts','vite.config.ts','vitest.config.mts','eslint.config.js','turbo.json','apps/chess-engine/ChessEngine.csproj','Directory.Build.props','Directory.Build.targets','NuGet.config','global.json']) assert.throws(()=>e.validatePath(p),/Protected path/);
+});
 test('patch applies exactly to the supplied base and stale patches fail', () => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-review-test-'));
   const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8'});

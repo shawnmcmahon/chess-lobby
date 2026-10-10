@@ -95,7 +95,8 @@ function validatePath(path) {
   if (!path || /[\x00-\x1f\\]/.test(path) || path.startsWith('/') || path.split('/').includes('..')) throw new Error('Invalid patch path.');
   const protectedDirectory = /(?:^|\/)(?:\.github|\.codex|\.cursor|infra|infrastructure|deploy|deployment|terraform|cloudformation|cdk|scripts|bin)(?:\/|$)/i;
   const protectedFile = /(?:^|\/)(?:AGENTS\.md|\.env(?:\..*)?|\.npmrc|\.gitmodules|\.gitattributes|\.dockerignore|Dockerfile(?:\..*)?|(?:docker-)?compose(?:\..*)?\.ya?ml|cdk(?:\..*)?\.json|wrangler(?:\..*)?\.(?:toml|jsonc?)|vercel\.json|serverless\.(?:ya?ml|json|[cm]?js|ts)|.*\.(?:pem|key|tf|tfvars))$/i;
-  if (protectedDirectory.test(path) || protectedFile.test(path)) throw new Error(`Protected path requires human review: ${path}`);
+  const validationControl = /(?:^|\/)(?:package(?:-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-(?:lock|workspace)\.ya?ml|(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json|(?:next|vite|vitest|jest|webpack|rollup|babel|eslint|playwright|turbo)(?:\.[^/]*)?\.(?:[cm]?js|[cm]?ts|json|ya?ml)|global\.json|NuGet\.config|.*\.(?:csproj|fsproj|vbproj|sln|slnx|props|targets))$/i;
+  if (protectedDirectory.test(path) || protectedFile.test(path) || validationControl.test(path)) throw new Error(`Protected path requires human review: ${path}`);
 }
 function applyResult(result, cwd) {
   if (result.decision !== 'patch') throw new Error('Codex deferred this finding for human judgment.');

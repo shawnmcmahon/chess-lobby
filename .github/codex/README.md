@@ -8,7 +8,7 @@ Native Codex Code Review and Security Review are configured separately in ChatGP
 
 The GitHub hook accepts submitted reviews and created/edited PR summary comments only from `chatgpt-codex-connector[bot]` (GitHub user ID `199175422`). It reads unresolved, current-head inline findings, confirms the bot's numeric identity through GitHub, and posts an audit receipt with links. Event delivery is serialized per PR and repeated finding sets are acknowledged once. A maintainer can replay the hook in Actions with a PR number; replay still fetches and validates real provider findings. It does not accept a human comment containing a forged bot name or priority.
 
-Repairs apply only to open, ready PRs authored by Shawn in the same repository. Forks, drafts, closed PRs, stale/outdated/resolved findings, and repair branches are excluded. Review coverage still applies to other PRs. Large finding sets, ambiguous changes, protected automation/infrastructure/credential files, binaries and executable mode changes require human attention.
+Repairs apply only to open, ready PRs authored by Shawn in the same repository. Forks, drafts, closed PRs, stale/outdated/resolved findings, and repair branches are excluded. Review coverage still applies to other PRs. Large finding sets, ambiguous changes, protected automation/infrastructure/credential files, package manifests, dependency lockfiles, project/build/test configuration, binaries and executable mode changes require human attention. A repair cannot redefine the commands or compiler configuration used to validate itself.
 
 ## Automatic repair activation
 
