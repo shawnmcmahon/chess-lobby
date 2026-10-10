@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: On-demand .NET and Stockfish engine; no provisioned capacity or VPC
+Parameters:
+  ImageUri:
+    Type: String
+    AllowedPattern: '[0-9]{12}\.dkr\.ecr\.us-east-1\.amazonaws\.com/.+@sha256:[a-f0-9]{64}'
+    Description: Single linux/amd64 ECR image pinned by digest
+  EngineApiKey:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    MaxLength: 256
+    AllowedPattern: '[A-Za-z0-9+/=_-]+'
+    Description: High entropy server-side key shared only with Convex
+  ReservedConcurrency:
+    Type: Number
+    Default: 2
+    AllowedValues: [0, 1, 2]
+    Description: Maximum concurrent invocations; zero stops all invocation work
+Resources:
+  Logs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}'
+      RetentionInDays: 7
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns: [!Ref LogPolicy]
+  LogPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Write only to this engine's CloudWatch log streams
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: [logs:CreateLogStream, logs:PutLogEvents]
+            Resource: !GetAtt Logs.Arn
+  Engine:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref AWS::StackName
+      PackageType: Image
+      Architectures: [x86_64]
+      Code:
+        ImageUri: !Ref ImageUri
+      Role: !GetAtt ExecutionRole.Arn
+      MemorySize: 2048
+      Timeout: 30
+      ReservedConcurrentExecutions: !Ref ReservedConcurrency
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          ENGINE_API_KEY: !Ref EngineApiKey
+          STOCKFISH_PATH: /opt/stockfish
+          ASPNETCORE_ENVIRONMENT: Production
+          Logging__LogLevel__Default: Information
+      LoggingConfig:
+        LogGroup: !Ref Logs
+  FunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref Engine
+      AuthType: NONE
+      InvokeMode: BUFFERED
+  UrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Engine
+      Principal: '*'
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+  UrlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Engine
+      Principal: '*'
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+Outputs:
+  EngineUrl:
+    Description: HTTPS base URL to test before a separate Convex cutover
+    Value: !GetAtt FunctionUrl.FunctionUrl
+  FunctionName:
+    Description: Function name for metrics, rollback, and emergency concurrency control
+    Value: !Ref Engine
+  ExecutionRoleArn:
+    Description: Execution role with access only to this function's log streams
+    Value: !GetAtt ExecutionRole.Arn
+  LogGroup:
+    Description: CloudWatch log group retained for seven days
+    Value: !Ref Logs

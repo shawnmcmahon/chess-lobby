@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Private image storage for the on-demand Chess Lobby engine
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: shawnmcmahon/chess-lobby
+    AllowedPattern: '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'
+    Description: Repository allowed to publish validated candidate images from PR CI
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: !Sub '${AWS::StackName}-images'
+      ImageTagMutability: IMMUTABLE_WITH_EXCLUSION
+      ImageTagMutabilityExclusionFilters:
+        - ImageTagMutabilityExclusionFilterType: WILDCARD
+          ImageTagMutabilityExclusionFilterValue: 'keep-*'
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      RepositoryPolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: LambdaImageRetrieval
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer]
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:chess-lobby-engine-*'
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules":[{"rulePriority":1,"description":"Protect the two rotating deployment pins","selection":{"tagStatus":"tagged","tagPrefixList":["keep-"],"countType":"imageCountMoreThan","countNumber":2},"action":{"type":"expire"}},{"rulePriority":2,"description":"Expire untagged builds after one day","selection":{"tagStatus":"untagged","countType":"sinceImagePushed","countUnit":"days","countNumber":1},"action":{"type":"expire"}},{"rulePriority":3,"description":"Keep the three most recent candidate images","selection":{"tagStatus":"tagged","tagPrefixList":["release-"],"countType":"imageCountMoreThan","countNumber":3},"action":{"type":"expire"}}]}
+  ImagePublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: GitHub PR CI can publish engine images, without Lambda or website access
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubRepo}:pull_request'
+      ManagedPolicyArns: [!Ref ImagePublisherPolicy]
+  ImagePublisherPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Authentication and image uploads only to this engine repository
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: ecr:GetAuthorizationToken
+            # ECR requires Resource '*'; effective image permissions below are repository-scoped.
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:RequestedRegion: us-east-1
+          - Effect: Allow
+            Action: [ecr:BatchCheckLayerAvailability, ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload, ecr:PutImage, ecr:BatchGetImage, ecr:GetDownloadUrlForLayer, ecr:DescribeImages]
+            Resource: !GetAtt Repository.Arn
+Outputs:
+  RepositoryName:
+    Description: Private ECR repository name
+    Value: !Ref Repository
+  RepositoryUri:
+    Description: Private ECR image URI prefix
+    Value: !GetAtt Repository.RepositoryUri
+  ImagePublisherRoleArn:
+    Description: ECR-only OIDC role for the ENGINE_IMAGE_ROLE_ARN GitHub repository variable
+    Value: !GetAtt ImagePublisherRole.Arn

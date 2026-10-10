@@ -1,0 +1,44 @@
+name: Deploy engine Lambda
+
+on:
+  workflow_dispatch:
+
+# Independent of website/Convex deployment; never changes production's ENGINE_API_URL.
+concurrency:
+  group: deploy-engine-lambda
+  cancel-in-progress: false
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: engine-lambda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: dotnet test tests/ChessEngine.Tests/ChessEngine.Tests.csproj -c Release
+      - run: node --experimental-strip-types --test tests/computer-engine.test.mjs
+      - run: ./tests/deploy-engine-lambda.tests.ps1
+        shell: pwsh
+      - run: pip install cfn-lint
+      - run: cfn-lint infra/engine-lambda/*.yaml
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ENGINE_AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Build, validate, and deploy the replacement
+        shell: pwsh
+        env:
+          ENGINE_API_KEY: ${{ secrets.ENGINE_API_KEY }}
+        run: ./scripts/deploy-engine-lambda.ps1 -ImageTag "release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}"
