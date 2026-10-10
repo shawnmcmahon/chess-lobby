@@ -16,15 +16,15 @@ jobs:
       cancel-in-progress: false
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
-      (github.event.issue.pull_request && github.event.comment.user.login == 'chatgpt-codex-connector[bot]' && github.event.comment.user.id == 199175422)
+      (github.event.issue.pull_request && github.event.comment.user.login == 'chatgpt-codex-connector[bot]' && github.event.comment.user.id == 199175422 && github.event.sender.id == 199175422)
     permissions:
       contents: write
       pull-requests: write
       issues: write
       statuses: write
-    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@33fa3b6d4595ed95ae8a0787dcf07a37fec610a2
+    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@1e5d3f9f0da29c59a3c9cb324b039ac5c7350f13
     with:
-      engine_ref: 33fa3b6d4595ed95ae8a0787dcf07a37fec610a2
+      engine_ref: 1e5d3f9f0da29c59a3c9cb324b039ac5c7350f13
       profile: chess-lobby
       node_version: '22'
       repair_enabled: ${{ vars.CODEX_REVIEW_REPAIR_ENABLED == 'true' }}
