@@ -82,6 +82,8 @@ try {
     catch { $caught = $_.Exception.Message -match 'Deployed endpoint validation failed' }
     Assert-True $caught 'A failed deployed endpoint must fail the deployment command'
     foreach ($path in $global:EngineParameterFiles) { Assert-True (!(Test-Path -LiteralPath $path)) 'Temporary parameter file must be removed on every path' }
+    # GitHub's pwsh wrapper propagates LASTEXITCODE; the failure above was expected and asserted.
+    $global:LASTEXITCODE = 0
     Write-Host 'PASS: deployment sequencing, secret files, cleanup, no-op updates, rollback pins, smoke failure, and no cutover (all commands mocked)'
 }
 finally {
