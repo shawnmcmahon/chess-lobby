@@ -47,6 +47,7 @@ public class EngineTests
     [InlineData("{}")]
     [InlineData("{")]
     [InlineData("{\"fen\":\"8/8/8/8/8/8/8/8 w - - 0 1\"}")]
+    [InlineData("{\"fen\":\"4k3/8/8/8/8/8/8/4K3 w  - 0 1\"}")]
     [InlineData("{\"fen\":\"4k3/8/8/8/8/8/8/4K3 w - - 0 1\\ngo infinite\"}")]
     public async Task MalformedInputDoesNotInvokeNativeEngine(string body)
     {
@@ -57,6 +58,16 @@ public class EngineTests
         var response = await client.PostAsync("/api/best-move", new StringContent(body, Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(0, fake.Calls);
+    }
+
+    [Fact]
+    public void ValidCastlingSubsetsRemainAccepted()
+    {
+        for (var mask = 0; mask < 16; mask++)
+        {
+            var castling = new string("KQkq".Where((_, index) => (mask & (1 << index)) != 0).ToArray());
+            Assert.True(FenValidation.IsValid(Fen.Replace("KQkq", mask == 0 ? "-" : castling)));
+        }
     }
 
     [Fact]

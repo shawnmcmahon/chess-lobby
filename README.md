@@ -65,10 +65,10 @@ Screenshots from [thechesslobby.com](https://thechesslobby.com): landing, sign-i
 | **Frontend** | **AWS** (S3 + CloudFront) | Serves the built React app (HTML, JS, CSS, assets) |
 | **Backend** | **Convex Cloud** | Auth, database, real-time games, chat, lobby presence, vs-computer moves |
 | **CI deploy** | **GitHub Actions** | Builds the SPA, syncs to S3, invalidates CloudFront; deploys Convex |
-| **Chess engine** | **AWS Lightsail Container Service** | Docker image: ASP.NET Core 8 API + Stockfish (`apps/chess-engine`), ~$10/mo Micro |
+| **Chess engine** | **AWS Lambda + ECR** | On-demand .NET 10 API + native Stockfish (`apps/chess-engine`); no idle compute charge |
 | **Engine fallback** | **Convex** | Minimax via `chess.js` if the external engine is unreachable |
 
-**On AWS:** S3 + CloudFront + Route 53 (stack `chess-lobby-demo`), plus Lightsail Container Service `chess-lobby-engine` running the `chess-engine` Docker image (ASP.NET Core 8 + Stockfish).
+**On AWS:** S3 + CloudFront + Route 53 (stack `chess-lobby-demo`), plus the on-demand function `chess-lobby-engine-lambda` and its digest-pinned ECR image (.NET 10 + Stockfish). The dedicated Lightsail container service was retired.
 
 **Not on AWS:** Convex (auth, database, realtime games, chat, lobby presence).
 
@@ -80,7 +80,7 @@ Runtime traffic and deploy path in production:
 
 - **Player browser** loads the React app from CloudFront/S3, then talks to Convex over WebSocket for auth, games, chat, and lobby presence.
 - **GitHub Actions** builds the SPA, syncs to S3, invalidates CloudFront, and runs `convex deploy`.
-- **Vs computer:** Convex calls the Lightsail container over HTTPS (`POST /api/best-move` on the ASP.NET Core API); falls back to built-in minimax if the engine is down.
+- **Vs computer:** Convex calls the Lambda Function URL over HTTPS (`POST /api/best-move` on the .NET 10 API); falls back to built-in minimax if the engine is down. Engine images are validated in Linux CI and deployed separately from the site.
 
 ### How the SPA is served
 
@@ -177,14 +177,14 @@ Open http://localhost:5173
 |-----------|------|----------------|
 | React SPA | **AWS S3 + CloudFront + Route 53** | https://thechesslobby.com |
 | Convex prod | **Convex Cloud** | https://pastel-buffalo-515.convex.cloud |
-| Vs computer (Stockfish) | **AWS Lightsail Container Service** | `chess-lobby-engine` — Docker image with ASP.NET Core 8 + Stockfish (HTTPS) |
-| Convex prod | **Convex Cloud** | `ENGINE_API_URL` / `ENGINE_API_KEY` point at Lightsail |
+| Vs computer (Stockfish) | **AWS Lambda + ECR** | `chess-lobby-engine-lambda` — on-demand .NET 10 + native Stockfish (HTTPS) |
+| Engine configuration | **Convex Cloud** | `ENGINE_API_URL` / `ENGINE_API_KEY` point at the Lambda Function URL |
 
-**Est. cost:** ~$10–12/mo (static hosting ~$0–2 + Lightsail Micro ~$10) + Convex free tier.
+**Measured engine estimate:** ~$0.05–$0.07/month for 1–10 computer games with 60 engine replies each, including current ECR storage, before allowances/credits and transfer. Existing static hosting, Convex, DNS, and domain charges are separate. See the [measurement assumptions and savings](docs/deploy-engine-lambda.md#deployed-measurements-and-monthly-savings).
 
 Step-by-step setup: **[docs/deploy-demo.md](docs/deploy-demo.md)** (site + Convex)  
-Engine hosting: **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**  
-On-demand replacement and migration: **[docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md)**
+Engine hosting: **[docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md)**
+Historical Lightsail recreation: **[docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md)**
 Stack outputs: **[docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example)**  
 CI deploy: [.github/workflows/deploy-aws.yml](.github/workflows/deploy-aws.yml) (Actions → **Deploy AWS** → Run workflow)
 
@@ -216,6 +216,6 @@ Wire Convex to the engine: `.\scripts\setup-convex-engine.ps1` (after setting `E
 |-------|--------|
 | SPA routing (React Router, refresh / CloudFront fallback) | [docs/spa-routing.md](docs/spa-routing.md) |
 | Demo deploy (S3 + CloudFront + Convex) | [docs/deploy-demo.md](docs/deploy-demo.md) |
-| Stockfish on Lightsail | [docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md) |
-| On-demand Stockfish Lambda migration | [docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md) |
+| On-demand Stockfish Lambda deployment | [docs/deploy-engine-lambda.md](docs/deploy-engine-lambda.md) |
+| Historical Lightsail recreation | [docs/deploy-engine-lightsail.md](docs/deploy-engine-lightsail.md) |
 | AWS stack outputs (env template) | [docs/demo-aws-outputs.env.example](docs/demo-aws-outputs.env.example) |

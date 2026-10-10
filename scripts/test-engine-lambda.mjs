@@ -75,6 +75,7 @@ try {
   assert.equal((await request('/api/best-move', JSON.stringify({ fen: new Chess().fen() + '\ngo infinite' }))).status, 400);
   assert.equal((await request('/api/best-move', ' '.repeat(4097))).status, 413);
   assert.equal((await request('/api/best-move', JSON.stringify({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' }))).status, 400);
+  assert.equal((await request('/api/best-move', JSON.stringify({ fen: '4k3/8/8/8/8/8/8/4K3 w  - 0 1' }))).status, 400);
   const capped = await bestMove(new Chess(), 20, 30000);
   assert.ok(capped.elapsedMs < 8000, 'Thinking time must be clamped');
   const mate = new Chess('7k/5Q2/6K1/8/8/8/8/8 w - - 0 1');

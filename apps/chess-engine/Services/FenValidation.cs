@@ -32,6 +32,6 @@ public static partial class FenValidation
         return int.TryParse(fields[4], out _) && int.TryParse(fields[5], out var fullmove) && fullmove > 0;
     }
 
-    [GeneratedRegex(@"\A[pnbrqkPNBRQK1-8/]+ [wb] (-|K?Q?k?q?) (-|[a-h][36]) [0-9]{1,9} [0-9]{1,9}\z")]
+    [GeneratedRegex(@"\A[pnbrqkPNBRQK1-8/]+ [wb] (-|(?=[KQkq])K?Q?k?q?) (-|[a-h][36]) [0-9]{1,9} [0-9]{1,9}\z")]
     private static partial Regex FenPattern();
 }

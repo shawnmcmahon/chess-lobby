@@ -2,7 +2,7 @@
 
 Deployment status (2026-10-10 UTC): the .NET 10 + native Stockfish Lambda replacement is deployed in account `058264467102`, us-east-1. Production Convex now uses its Function URL. Native cold/warm requests, concurrent requests, timed production computer games, human multiplayer, private chat, password sign-in, and presence passed. The dedicated `chess-lobby-engine` Lightsail container service was deleted and its absence verified. Existing S3/CloudFront/DNS hosting is unchanged. Local Docker Desktop work is stopped; Linux image builds and validation ran in GitHub CI, and deployment used connected AWS access.
 
-Current function URL: `https://4epw473km3adiseigmyve5oggm0utkkp.lambda-url.us-east-1.on.aws/`. Deployed image digest: `sha256:7a87fda0270d7be896d625174306e8b1653e739b82301c326197ccb86b64a945`, from validated CI run `38010891434`. The runtime/backend/infrastructure source is unchanged from that tested revision. Failed startup candidates were removed; `keep-current` protects this first verified release. Future verified releases can also retain `keep-rollback`.
+Function URL: `https://4epw473km3adiseigmyve5oggm0utkkp.lambda-url.us-east-1.on.aws/`. The initial verified cutover used image digest `sha256:7a87fda0270d7be896d625174306e8b1653e739b82301c326197ccb86b64a945`, from CI run `38010891434`. Subsequent releases are recorded by the function stack's `ImageUri` parameter and the ECR `release-*` tags. Failed startup candidates were removed. `keep-current` protects the validated active release and `keep-rollback` protects its validated predecessor after subsequent deployments.
 
 ## Architecture and resources
 
@@ -80,7 +80,7 @@ npx tsc --noEmit -p convex/tsconfig.json
 npm run build:web
 ```
 
-The PowerShell test harness mocks every AWS, Docker, and Node command: it verifies deployment sequencing, secret-file cleanup, no-op updates, failed smoke checks, and the absence of cutover/retirement actions. It creates no resources and starts no Docker processes.
+The PowerShell test harness mocks every AWS, Docker, and Node command: it verifies deployment sequencing, secret/template-file cleanup, no-op updates, promotion only after smoke checks, automatic restoration and validation after candidate failure, explicit rollback-validation failure, initial-deployment failure, and the absence of Convex cutover/retirement actions. It creates no resources and starts no Docker processes.
 
 Docker-free native/adapter check, with a Stockfish binary for the local OS:
 
@@ -121,7 +121,7 @@ $env:ENGINE_API_KEY = 'your-existing-strong-key-from-secure-storage'
 ./scripts/deploy-engine-lambda.ps1 -Profile shawnmdev
 ```
 
-The script checks identity, builds and validates the Linux image before creating resources, deploys the repository stack, pushes a unique immutable release tag, resolves the image digest, and deploys the function stack. It protects the active and previous image with rotating `keep-current`/`keep-rollback` tags so failed future candidate builds cannot expire the active image. It runs the endpoint smoke test and prints the Function URL, digest, and ECR **compressed** size. It never invokes Convex or Lightsail commands. Both stacks have passed account-specific change-set review and deployment. The connected-AWS path and real endpoint checks passed; the local CLI script itself has mocked sequencing coverage because local CLI credentials and Docker were unavailable.
+The script checks identity, builds and validates the Linux image before creating resources, deploys the repository stack, pushes a unique immutable release tag, and resolves the image digest. Before updating an existing function it saves the deployed image and infrastructure template, protects the deployed image from cleanup, and preserves the existing key and capacity parameters with `UsePreviousValue`. Supply the existing key for endpoint validation; key rotation is a separate operation. If the stack update or AWS smoke test fails, it restores the prior image and template and smoke-tests the restored endpoint before reporting failure. An AWS-only failure can briefly affect the stable production URL during validation/rollback. Failed candidates are never promoted to `keep-current`; an initial deployment has no prior release to restore. Successful smoke checks precede rotation of `keep-current`/`keep-rollback`. The script prints the validated URL, digest, and ECR **compressed** size, and never invokes Convex or Lightsail commands. Both stacks passed account-specific change-set review and deployment. Connected-AWS deployment and real endpoint checks passed; the local CLI script, including rollback behavior, has mocked coverage because local CLI credentials and Docker were unavailable.
 
 On failure, inspect the specific operation and validation events before retrying:
 

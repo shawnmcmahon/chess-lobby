@@ -85,22 +85,69 @@ if ($LASTEXITCODE -ne 0) { throw 'Image tagging failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Image push failed.' }
 $image = (Invoke-Aws @('ecr','describe-images','--repository-name',$repository,'--image-ids',"imageTag=$ImageTag",'--output','json') | ConvertFrom-Json).imageDetails[0]
 $imageUri = "$repositoryUri@$($image.imageDigest)"
-Deploy-Stack $StackName "$repoRoot/infra/engine-lambda/function.yaml" @(
-    @{ ParameterKey = 'ImageUri'; ParameterValue = $imageUri },
-    @{ ParameterKey = 'EngineApiKey'; ParameterValue = $env:ENGINE_API_KEY }
-)
-# Protect the active digest and one rollback from candidate cleanup, even after failed future builds.
-$previous = (Invoke-Aws @('ecr','batch-get-image','--repository-name',$repository,'--image-ids','imageTag=keep-current','--output','json') | ConvertFrom-Json).images
-if ($previous.Count -gt 0 -and $previous[0].imageId.imageDigest -ne $image.imageDigest) {
-    Pin-Image $repository $previous[0] 'keep-rollback'
+$existing = & aws cloudformation describe-stacks --stack-name $StackName @awsOptions 2>&1
+$previousStack = $null
+if ($LASTEXITCODE -eq 0) { $previousStack = (($existing -join "`n") | ConvertFrom-Json).Stacks[0] }
+elseif (($existing -join "`n") -notmatch 'does not exist') { throw "Cannot inspect stack $StackName before deployment." }
+$rollbackTemplateFile = $null
+$previousImage = $null
+try {
+    $parameters = @(
+        @{ ParameterKey = 'ImageUri'; ParameterValue = $imageUri },
+        @{ ParameterKey = 'EngineApiKey'; ParameterValue = $env:ENGINE_API_KEY }
+    )
+    if ($previousStack) {
+        $previousImageUri = ($previousStack.Parameters | Where-Object ParameterKey -eq 'ImageUri').ParameterValue
+        if (!$previousImageUri -or !$previousImageUri.StartsWith("$repositoryUri@sha256:")) {
+            throw 'The previous deployment must use a digest from this repository for automatic rollback.'
+        }
+        $previousDigest = $previousImageUri.Split('@')[1]
+        $previousImage = (Invoke-Aws @('ecr','batch-get-image','--repository-name',$repository,'--image-ids',"imageDigest=$previousDigest",'--output','json') | ConvertFrom-Json).images[0]
+        if (!$previousImage) { throw 'The previous deployed image is missing; restore it before deploying.' }
+        $pinned = (Invoke-Aws @('ecr','batch-get-image','--repository-name',$repository,'--image-ids','imageTag=keep-current','--output','json') | ConvertFrom-Json).images
+        if ($pinned.Count -eq 0 -or $pinned[0].imageId.imageDigest -ne $previousDigest) {
+            Pin-Image $repository $previousImage 'keep-current'
+        }
+        $previousTemplate = Invoke-Aws @('cloudformation','get-template','--stack-name',$StackName,'--query','TemplateBody','--output','json') | ConvertFrom-Json
+        $rollbackTemplateFile = [IO.Path]::GetTempFileName()
+        $templateText = if ($previousTemplate -is [string]) { $previousTemplate } else { ConvertTo-Json $previousTemplate -Depth 100 }
+        [IO.File]::WriteAllText($rollbackTemplateFile, $templateText, [Text.UTF8Encoding]::new($false))
+        # Preserve the existing key and capacity settings. Key rotation is a separate operation.
+        $parameters = @(@{ ParameterKey = 'ImageUri'; ParameterValue = $imageUri })
+        $parameters += @($previousStack.Parameters | Where-Object ParameterKey -ne 'ImageUri' | ForEach-Object {
+            @{ ParameterKey = $_.ParameterKey; UsePreviousValue = $true }
+        })
+        $rollbackParameters = @($parameters | Where-Object ParameterKey -ne 'ImageUri')
+        $rollbackParameters += @{ ParameterKey = 'ImageUri'; ParameterValue = $previousImageUri }
+    }
+    try {
+        Deploy-Stack $StackName "$repoRoot/infra/engine-lambda/function.yaml" $parameters
+        $engineUrl = (Stack-Output $StackName 'EngineUrl').TrimEnd('/')
+        & node scripts/test-engine-lambda.mjs --url $engineUrl
+        if ($LASTEXITCODE -ne 0) { throw 'Deployed endpoint validation failed.' }
+    }
+    catch {
+        $deploymentFailure = $_.Exception.Message
+        if (!$previousStack) { throw "$deploymentFailure No previous deployment exists to restore; the candidate was not pinned." }
+        try {
+            Deploy-Stack $StackName $rollbackTemplateFile $rollbackParameters
+            $rollbackUrl = (Stack-Output $StackName 'EngineUrl').TrimEnd('/')
+            & node scripts/test-engine-lambda.mjs --url $rollbackUrl
+            if ($LASTEXITCODE -ne 0) { throw 'Restored endpoint validation failed.' }
+        }
+        catch { throw "Deployment failed ($deploymentFailure), and rollback could not be validated: $($_.Exception.Message) Inspect stack events before retrying." }
+        throw "$deploymentFailure The previous image and template were restored and validated; image pins were not promoted."
+    }
+    # Promote only after the real endpoint passed, preserving the previous validated release.
+    if ($previousImage -and $previousDigest -ne $image.imageDigest) { Pin-Image $repository $previousImage 'keep-rollback' }
+    if (!$previousImage -or $previousDigest -ne $image.imageDigest) {
+        $current = (Invoke-Aws @('ecr','batch-get-image','--repository-name',$repository,'--image-ids',"imageDigest=$($image.imageDigest)",'--output','json') | ConvertFrom-Json).images[0]
+        Pin-Image $repository $current 'keep-current'
+    }
 }
-if ($previous.Count -eq 0 -or $previous[0].imageId.imageDigest -ne $image.imageDigest) {
-    $current = (Invoke-Aws @('ecr','batch-get-image','--repository-name',$repository,'--image-ids',"imageDigest=$($image.imageDigest)",'--output','json') | ConvertFrom-Json).images[0]
-    Pin-Image $repository $current 'keep-current'
+finally {
+    if ($rollbackTemplateFile) { Remove-Item -LiteralPath $rollbackTemplateFile -Force -ErrorAction SilentlyContinue }
 }
-$engineUrl = (Stack-Output $StackName 'EngineUrl').TrimEnd('/')
-& node scripts/test-engine-lambda.mjs --url $engineUrl
-if ($LASTEXITCODE -ne 0) { throw 'Deployed endpoint validation failed. Production Convex still uses its existing endpoint.' }
 Write-Host "Validated replacement: $engineUrl"
 Write-Host "Image digest: $($image.imageDigest); ECR compressed image size: $([Math]::Round($image.imageSizeInBytes / 1MB, 1)) MiB"
 Write-Host 'No Convex cutover or Lightsail retirement was performed. Follow docs/deploy-engine-lambda.md.'
