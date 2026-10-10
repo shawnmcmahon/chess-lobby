@@ -1,6 +1,6 @@
 # On-demand Stockfish engine on AWS Lambda
 
-Implementation status (2026-10-09): the .NET 10 adapter, native engine packaging, infrastructure, deployment workflow, and tests are implemented. Production still uses Lightsail. No AWS resources or Convex production settings were changed. Local Docker Desktop fails during startup; Linux container and AWS verification remain pending. AWS profile `shawnmdev` has no credentials.
+Implementation status (2026-10-09): the .NET 10 adapter, native engine packaging, infrastructure, deployment workflow, and tests are implemented. Production still uses Lightsail. GitHub's Linux CI has passed the container/emulator tests. Local Docker Desktop startup attempts are stopped. Local AWS CLI profiles have no credentials, but the connected AWS MCP identity has been verified in account `058264467102`, including the existing website stack and live Lightsail service; replacement deployment is underway through that connection. Production Convex settings have not been changed.
 
 ## Architecture and resources
 
@@ -24,6 +24,7 @@ Two small CloudFormation stacks in `infra/engine-lambda` create these resources 
 | `chess-lobby-engine-lambda-ecr` | Private ECR repository | AES256 encryption, basic scan on push, immutable `release-*` tags; only `keep-*` pins are mutable |
 | ECR stack | Repository policy | Lambda service may pull only for this account/region's `chess-lobby-engine-*` functions |
 | ECR stack | Lifecycle policy | Protect two rotating current/rollback pins, retain three recent release candidates, expire untagged images after one day |
+| ECR stack | Image-publisher IAM role and managed policy | GitHub OIDC trust restricted to this repository's PRs; image upload/read permissions on this ECR repository only, without Lambda or website access |
 | `chess-lobby-engine-lambda` | Lambda function | Image pinned by digest, x86_64, 2,048 MiB memory, 512 MiB temporary storage, 10-second timeout, reserved concurrency 2 |
 | Function stack | Function URL | Buffered HTTP API v2 payloads, HTTPS, `AuthType: NONE`, no CORS configuration |
 | Function stack | Two Lambda resource permissions | Public Function URL invocation; underlying `InvokeFunction` grant restricted to URL calls |
@@ -89,7 +90,9 @@ node scripts/test-engine-runtime.mjs --assembly engine-publish.local/ChessEngine
 
 This starts the actual .NET Lambda runtime client against a local Runtime API stub and tests Function URL-shaped events with native Stockfish. It does not prove the Linux image works. Local results on Windows: 12 .NET tests passed, the Linux subprocess fixture skipped; six Convex integration tests passed; native adapter check passed legal moves, skill extremes, search clamping, authentication, malformed/oversized input, mate-in-one, and a 12-ply game sequence. First request was approximately 1,690 ms and warm request 810 ms on this machine, including 800 ms requested search. These are not AWS cold-start or billed-duration measurements. Web build and Convex TypeScript checks passed. Both templates passed AWS IaC MCP schema and bundled security validation with no findings.
 
-Required remaining Linux check, once a Linux Docker environment is available:
+Linux CI passed all thirteen .NET tests, including the real subprocess cancellation/exit fixture, and built the image successfully. The image is **567.4 MiB uncompressed**. The Runtime Interface Emulator check passed read-only/unprivileged operation, native architecture, crash recovery, pause/resume, source packaging, and all request/move tests. First/warm requests were approximately **1,465/811 ms on the GitHub runner**, not AWS cold-start measurements. Web and Convex CI checks also passed. After adding the ECR publisher role, generic security validation reports one wildcard-resource finding: `ecr:GetAuthorizationToken` requires `Resource: '*'` by AWS design. It is limited to us-east-1 and all effective image permissions are repository-scoped. This is a documented exception, not an additional broad runtime grant.
+
+Repeat the Linux check in CI or once a Linux Docker environment is available:
 
 ```powershell
 docker buildx build --platform linux/amd64 --provenance=false --load -f apps/chess-engine/Dockerfile.lambda -t chess-engine-lambda:test .
@@ -125,6 +128,8 @@ aws cloudformation describe-events --stack-name chess-lobby-engine-lambda --filt
 ```
 
 The new **Deploy engine Lambda** GitHub workflow calls the same script and is manual, independent of the website/Convex workflow. Set up the `engine-lambda` GitHub environment with `ENGINE_AWS_ROLE_ARN` and `ENGINE_API_KEY`. Configure the deployment role's OIDC trust for `repo:OWNER/REPO:environment:engine-lambda`, audience `sts.amazonaws.com`, and the permissions above. Optional environment reviewers can gate deployment. Workflow concurrency serializes releases; it never cuts production over.
+
+For deployment through the connected AWS MCP without local Docker/CLI credentials, the ECR stack also creates an **ECR-only image publisher** role. Set the repository variable `ENGINE_IMAGE_ROLE_ARN` to the `ImagePublisherRoleArn` stack output and `ENGINE_ECR_REPOSITORY` to the repository name. The engine PR CI job publishes its image only after tests pass, only for PRs originating inside this repository, and uses a unique release tag. This role cannot deploy Lambda, read engine keys, change IAM, or access the existing website. A separately authenticated CloudFormation caller deploys the function from the validated digest and may reuse the existing Lightsail key server-side without displaying it or putting it into CI. The publisher's OIDC trust assumes the existing GitHub OIDC provider from the website stack.
 
 ## Cutover, gameplay verification, and rollback
 
@@ -171,4 +176,4 @@ Replace assumed duration and retained storage with actual AWS measurements, for 
 node scripts/estimate-engine-cost.mjs --billed-seconds 3 --retained-ecr-gib 0.8
 ```
 
-No Linux image size or AWS runtime has been measured here because Docker and AWS access are blocked. ECR charges reflect unique retained layers, not simply image count times uncompressed Docker size. Cleanup may take up to 24 hours; retain only the two documented `keep-*` pins so the protection rule works as intended. This removes the engine's always-running charge after Lightsail retirement, while retaining on-demand Stockfish strength and the live .NET component.
+Linux CI measured 567.4 MiB uncompressed for the image. ECR compressed storage and AWS runtime must be measured after deployment. ECR charges reflect unique retained layers, not simply image count times uncompressed Docker size. Cleanup may take up to 24 hours; retain only the two documented `keep-*` pins so the protection rule works as intended. This removes the engine's always-running charge after Lightsail retirement, while retaining on-demand Stockfish strength and the live .NET component.
