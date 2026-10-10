@@ -1,0 +1,34 @@
+name: Codex review follow-up
+on:
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: 'PR number to replay against its current trusted review findings'
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: codex-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request }}
+  cancel-in-progress: false
+jobs:
+  follow-up:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.review.user.login == 'chatgpt-codex-connector[bot]' && github.event.review.user.id == 199175422) ||
+      (github.event.issue.pull_request && github.event.comment.user.login == 'chatgpt-codex-connector[bot]' && github.event.comment.user.id == 199175422)
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    uses: shawnmcmahon/chess-lobby/.github/workflows/codex-review-engine.yml@17dd12f226d95d7976d2c898a2dd554268cefcb6
+    with:
+      engine_ref: 17dd12f226d95d7976d2c898a2dd554268cefcb6
+      profile: chess-lobby
+      node_version: '22'
+      repair_enabled: ${{ vars.CODEX_REVIEW_REPAIR_ENABLED == 'true' }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
